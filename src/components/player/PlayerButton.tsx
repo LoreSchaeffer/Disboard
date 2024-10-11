@@ -9,10 +9,7 @@ interface PlayerButtonProps {
     onClick?: () => void;
 }
 
-const PlayerButton = ({icon, size, disabled, onClick}: PlayerButtonProps) => {
-    if (disabled == null) disabled = false;
-    if (size == null) size = '26px';
-
+const PlayerButton = ({icon, size = '26px', disabled = false, onClick}: PlayerButtonProps) => {
     return (
         <span className={`player-button${disabled ? ' disabled' : ''}`} onClick={disabled ? undefined : onClick} style={{width: size, height: size}}>
             <SvgIcon icon={icon} size={size} color="var(--text-primary)"/>

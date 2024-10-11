@@ -1,7 +1,7 @@
 import {Song} from "../utils/store/profiles";
 import {isRemoteUrl} from "./utils";
 
-type RepeatMode = 'none' | 'one' | 'all';
+export type RepeatMode = 'none' | 'one' | 'all';
 
 type EventHandler = (...args: any[]) => void;
 
@@ -10,7 +10,7 @@ export class Player {
     private audio: HTMLAudioElement = new Audio();
     private queue: Song[] = [];
     private index = 0;
-    private currentTrack: Song | null = null;
+    private currentSong: Song | null = null;
     private playingQueue = false;
     private isPlaying = false;
     private isPaused = false;
@@ -30,10 +30,10 @@ export class Player {
             this.isPlaying = false;
 
             if (this.queue.length !== 0) {
-                this._clearTrack();
+                this._clearSong();
 
                 if (this.repeat === 'one') {
-                    this.currentTrack = this.queue[this.index];
+                    this.currentSong = this.queue[this.index];
                     this._play();
                 } else if (this.repeat === 'none' && this.index === this.queue.length - 1) {
                     // Do nothing
@@ -44,7 +44,7 @@ export class Player {
                 if (this.repeat === 'all' || this.repeat === 'one') {
                     this._play();
                 } else {
-                    this._clearTrack();
+                    this._clearSong();
                 }
             }
 
@@ -69,8 +69,8 @@ export class Player {
                 this.isPaused = false;
                 this.dispatchEvent('resume');
             } else {
-                const duration = this.currentTrack?.duration || 0;
-                this.dispatchEvent('play', this.currentTrack, duration);
+                const duration = this.currentSong?.duration || 0;
+                this.dispatchEvent('play', this.currentSong, duration);
             }
         });
 
@@ -112,7 +112,7 @@ export class Player {
         if (this.repeat === 'all' && this.index >= this.queue.length) this.index = 0;
 
         this.playingQueue = true;
-        this.currentTrack = this.queue[this.index];
+        this.currentSong = this.queue[this.index];
         this._play();
     }
 
@@ -123,7 +123,7 @@ export class Player {
         if (this.index < 0) this.index = this.queue.length - 1;
 
         this.playingQueue = true;
-        this.currentTrack = this.queue[this.index];
+        this.currentSong = this.queue[this.index];
         this._play();
     }
 
@@ -136,7 +136,7 @@ export class Player {
 
         if (this.queue.length === 0) return;
 
-        this.currentTrack = this.queue[this.index];
+        this.currentSong = this.queue[this.index];
         this.playingQueue = true;
         this._play();
     }
@@ -145,7 +145,7 @@ export class Player {
         if (this.isPlaying) this.stop();
 
         this.playingQueue = false;
-        this.currentTrack = song;
+        this.currentSong = song;
         this._play();
     }
 
@@ -154,18 +154,18 @@ export class Player {
 
         if (this.isPlaying) this.stop();
         this.index = index;
-        this.currentTrack = this.queue[this.index];
+        this.currentSong = this.queue[this.index];
         this.playingQueue = true;
         this._play();
     }
 
     stop() {
-        if (this.currentTrack == null) return;
+        if (this.currentSong == null) return;
 
         this.isPlaying = false;
         this.isPaused = false;
         this.audio.pause();
-        this._clearTrack();
+        this._clearSong();
 
         this.dispatchEvent('stop', this.queue);
     }
@@ -203,9 +203,9 @@ export class Player {
     }
 
     private _play() {
-        if (this.currentTrack) {
-            if (isRemoteUrl(this.currentTrack.uri)) this.audio.src = this.currentTrack.uri;
-            else this.audio.src = `dftp://file/${encodeURIComponent(this.currentTrack.uri)}`;
+        if (this.currentSong) {
+            if (isRemoteUrl(this.currentSong.uri)) this.audio.src = this.currentSong.uri;
+            else this.audio.src = `dftp://file/${encodeURIComponent(this.currentSong.uri)}`;
             this.audio.load();
             this.audio.play();
         }
@@ -224,9 +224,9 @@ export class Player {
         this.dispatchEvent('timeupdate', currentTime - this.startTime);
     }
 
-    private _clearTrack() {
+    private _clearSong() {
         this.audio.currentTime = 0;
-        this.currentTrack = null;
+        this.currentSong = null;
         this.startTime = 0;
         this.endTime = 0;
     }

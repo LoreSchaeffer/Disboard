@@ -2,12 +2,12 @@ import './TrackInfo.css';
 import {playerContext} from "../../ui/playerContext";
 
 const TrackInfo = () => {
-    const {track} = playerContext();
+    const {song} = playerContext();
 
-    const display = track ? 'flex' : 'none';
-    const thumbnail = track ? `url(${track.thumbnail})` : 'url("/images/track.png")';
-    const title = track ? track.title : '';
-    const src = track ? track.uri : '';
+    const display = song ? 'flex' : 'none';
+    const thumbnail = song ? `url(${song.thumbnail})` : 'url("/images/track.png")';
+    const title = song ? song.title : '';
+    const src = song ? (song.original_url ? song.original_url : song.uri) : '';
 
     return (
         <div className="track-info" style={{display: display}}>

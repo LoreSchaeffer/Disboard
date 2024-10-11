@@ -99,8 +99,12 @@ app.on('activate', () => {
 
 app.whenReady().then(() => {
     protocol.handle('dftp', (request) => {
-        const filePath = decodeURIComponent(request.url.slice('dftp://file/'.length));
-        return net.fetch(filePath);
+        try {
+            const filePath = decodeURIComponent(request.url.slice('dftp://file/'.length));
+            return net.fetch(filePath);
+        } catch (e) {
+            return new Response('File not found', {status: 404});
+        }
     });
 });
 

@@ -1,0 +1,49 @@
+.sb-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: var(--background-primary);
+    color: var(--text-primary);
+    font-weight: 400;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition: all 100ms ease-in-out;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.sb-btn:not(.dropping):hover {
+    background-color: var(--background-primary-hover);
+    color: var(--text-primary-hover);
+}
+
+.sb-btn.dropping {
+    filter: brightness(150%);
+}
+
+.sb-btn-img {
+    min-width: 35px;
+    min-height: 35px;
+    width: 35px;
+    height: 35px;
+    aspect-ratio: 1;
+    border-radius: 5px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin-left: 5px;
+    margin-right: 8px;
+}
+
+.sb-btn span {
+    text-overflow: ellipsis;
+    white-space: normal;
+    max-width: 100%;
+    margin-right: 5px;
+    font-size: 13px;
+    line-height: 13px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}

@@ -1,0 +1,23 @@
+.titlebar {
+    height: var(--titlebar-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--background-tertiary);
+    user-select: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    -webkit-app-region: drag;
+    z-index: 1000;
+}
+
+.window-title {
+    justify-self: flex-start;
+    margin: 0 auto 0 6px;
+    font-weight: 900;
+    font-size: 9pt;
+    line-height: 9pt;
+    color: var(--text-disabled);
+}

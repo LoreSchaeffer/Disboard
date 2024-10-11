@@ -1,0 +1,61 @@
+:root {
+    --thumbnail-size: 80px;
+}
+
+.track-info {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    max-width: 400px;
+}
+
+.track-thumbnail {
+    width: var(--thumbnail-size);
+    min-width: var(--thumbnail-size);
+    height: var(--thumbnail-size);
+    margin: 0 10px;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    user-select: none;
+}
+
+.track-data {
+    height: var(--thumbnail-size);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+}
+
+.track-title {
+    font-size: 1.1rem;
+    line-height: 1.1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    color: var(--text-primary);
+}
+
+.track-src {
+    font-size: 0.75rem;
+    line-height: 0.75rem;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    cursor: pointer;
+}
+
+.track-src:hover {
+    color: var(--text-secondary-hover);
+}

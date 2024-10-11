@@ -1,0 +1,13 @@
+.player-button {
+    display: block;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.disabled {
+    cursor: default;
+}
+
+.player-button.disabled svg {
+    fill: var(--text-disabled);
+}

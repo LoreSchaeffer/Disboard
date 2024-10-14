@@ -1,0 +1,65 @@
+.select {
+    width: fit-content;
+    min-width: 100px;
+    height: 20px;
+    min-height: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 0 4px;
+    border-radius: 6px;
+    background-color: var(--background-tertiary);
+    transition: background-color 500ms ease;
+    outline: none !important;
+    color: var(--text-primary);
+    font-size: 9pt;
+    cursor: pointer;
+}
+
+.select svg {
+    justify-self: flex-end;
+    margin-left: auto;
+}
+
+.disabled {
+    background-color: var(--gray-645);
+    color: var(--text-disabled);
+    cursor: default;
+}
+
+.disabled svg {
+    fill: var(--text-disabled);
+}
+
+.select-dropdown {
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    border-radius: 6px;
+    background-color: var(--background-tertiary);
+    color: var(--text-primary);
+    font-size: 9pt;
+}
+
+.select-option {
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 9pt;
+    padding: 3px 4px;
+    cursor: pointer;
+    transition: background-color 200ms ease;
+}
+
+.select-option:hover {
+    background-color: var(--primary-500);
+}
+
+.select-option.selected {
+    background-color: var(--primary-500);
+}
+
+.select-option.selected:hover {
+    background-color: var(--primary-530);
+}

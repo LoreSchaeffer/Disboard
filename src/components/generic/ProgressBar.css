@@ -20,7 +20,7 @@
     height: 100%;
     border-radius: 1000px;
     background-color: var(--primary-500);
-    transition: background-color 100ms ease-in-out;
+    transition: background-color 100ms ease;
 }
 
 .cursor {
@@ -44,7 +44,7 @@
     text-align: center;
     color: var(--text-primary);
     transform: translateY(calc(-100% - var(--height) - 3px));
-    transition: opacity 100ms ease-in-out;
+    transition: opacity 100ms ease;
 }
 
 .cursor-progress::before {

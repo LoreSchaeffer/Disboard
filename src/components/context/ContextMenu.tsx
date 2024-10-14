@@ -7,15 +7,31 @@ export interface ContextMenuProps {
     x: number;
     y: number;
     items: MenuItemProps[];
+    submenus?: Submenu[];
 }
 
-// TODO Submenus
+export interface Submenu {
+    id: string;
+    items: MenuItemProps[];
+}
 
-const ContextMenu = ({x, y, items}: ContextMenuProps) => {
+const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
     const {setContextMenu} = useData();
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const submenuRef = useRef<HTMLDivElement | null>(null);
+    const submenuTimeoutRef = useRef<number | null>(null);
+
     const [position, setPosition] = useState({x, y});
     const [visible, setVisible] = useState(false);
+    const [submenuList, setSubmenuList] = useState<Submenu[]>([]);
+    const [activeSubmenu, setActiveSubmenu] = useState<Submenu | null>(null);
+    const [submenuPosition, setSubmenuPosition] = useState({x: 0, y: 0});
+
+    useEffect(() => {
+        if (submenus) {
+            setSubmenuList(submenus);
+        }
+    }, [submenus]);
 
     useEffect(() => {
         const updatePosition = () => {
@@ -41,6 +57,7 @@ const ContextMenu = ({x, y, items}: ContextMenuProps) => {
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) setContextMenu(null);
+            if (submenuRef.current && !submenuRef.current.contains(e.target as Node)) setActiveSubmenu(null);
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -49,23 +66,67 @@ const ContextMenu = ({x, y, items}: ContextMenuProps) => {
         };
     }, [setContextMenu]);
 
+    const showSubmenu = (e: React.MouseEvent, submenuId: string, hovering: boolean) => {
+        if (submenuTimeoutRef.current) clearTimeout(submenuTimeoutRef.current);
+
+        if (hovering) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setSubmenuPosition({x: rect.right, y: rect.top});
+            setActiveSubmenu(submenuList.find(submenu => submenu.id === submenuId) || null);
+        } else {
+            submenuTimeoutRef.current = window.setTimeout(() => setActiveSubmenu(null), 100);
+        }
+    };
+
+    const keepShowingSubmenu = (e: React.MouseEvent, submenuId: string, hovering: boolean) => {
+        if (submenuTimeoutRef.current) clearTimeout(submenuTimeoutRef.current);
+
+        if (hovering) {
+            setActiveSubmenu(submenuList.find(submenu => submenu.id === submenuId) || null);
+        } else {
+            submenuTimeoutRef.current = window.setTimeout(() => setActiveSubmenu(null), 100);
+        }
+    }
+
     return (
-        <div
-            ref={menuRef}
-            className="context-menu"
-            style={{
-                top: position.y + 'px',
-                left: position.x + 'px',
-                opacity: visible ? 1 : 0
-        }}
-        >
-            <ul>
-                {items.map((item, index) => (
-                    <MenuItem key={index} {...item} />
-                ))}
-            </ul>
-        </div>
-    );
+        <>
+            <div
+                ref={menuRef}
+                className="context-menu"
+                style={{
+                    top: position.y + 'px',
+                    left: position.x + 'px',
+                    opacity: visible ? 1 : 0
+                }}
+            >
+                <ul>
+                    {items.map((item, index) => (
+                        <MenuItem key={index} {...item} onHover={showSubmenu} />
+                    ))}
+                </ul>
+            </div>
+            {activeSubmenu && (
+                <div
+                    ref={submenuRef}
+                    className="context-menu context-sumbenu"
+                    style={{
+                        top: submenuPosition.y + 'px',
+                        left: submenuPosition.x + 'px',
+                        opacity: 1
+                    }}
+                    onMouseEnter={(e) => keepShowingSubmenu(e, activeSubmenu.id, true)}
+                    onMouseLeave={(e) => keepShowingSubmenu(e, activeSubmenu.id, false)}
+                >
+                    <ul>
+                        {activeSubmenu.items.map((item, index) => (
+                            <MenuItem key={index} {...item} />
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </>
+    )
+        ;
 }
 
 export default ContextMenu;

@@ -1,7 +1,6 @@
 import {Song} from "../utils/store/profiles";
 import {isRemoteUrl} from "./utils";
-
-export type RepeatMode = 'none' | 'one' | 'all';
+import {RepeatMode} from "../utils/store/settings";
 
 type EventHandler = (...args: any[]) => void;
 
@@ -200,6 +199,14 @@ export class Player {
         (this.audio as any).setSinkId(deviceId).catch((e: any) => {
             console.error(e);
         });
+    }
+
+    getLoopMode(): RepeatMode {
+        return this.repeat;
+    }
+
+    isPlayerPlaying() : boolean {
+        return this.isPlaying;
     }
 
     private _play() {

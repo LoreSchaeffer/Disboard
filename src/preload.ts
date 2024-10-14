@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import {Settings} from "./utils/store/settings";
+import {SbButton} from "./utils/store/profiles";
 
 contextBridge.exposeInMainWorld('electron', {
     /* === FROM MAIN PROCESS === */
@@ -7,6 +8,17 @@ contextBridge.exposeInMainWorld('electron', {
     handleReady: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
     handleSettings: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
     handleProfiles: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+
+    // SoundboardWin
+    handleButtonUpdate: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    handlePlayNow: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    handleMediaPlayPause: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    handleMediaStop: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    handleMediaNext: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    handleMediaPrev: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+
+    // ButtonWin
+    handleButton: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
 
     /* === TO MAIN PROCESS === */
     // Navbar
@@ -18,55 +30,34 @@ contextBridge.exposeInMainWorld('electron', {
     getSettings: () => ipcRenderer.invoke('get_settings'),
     getProfiles: () => ipcRenderer.invoke('get_profiles'),
     saveSettings: (settings: Settings) => ipcRenderer.send('save_settings', settings),
+    saveButton: (profile: string, button: SbButton) => ipcRenderer.send('save_button', profile, button),
+
+    // Windows
+    openMediaSelectorWin: (row: number, col: number, winId: number) => ipcRenderer.send('open_media_selector_win', row, col, winId),
+    openButtonSettingsWin: (row: number, col: number) => ipcRenderer.send('open_button_settings_win', row, col),
+    openPlayNowWindowWin: () => ipcRenderer.send('open_play_now_win'),
+
+    // System
+    openBrowser: (url: string) => ipcRenderer.send('open_browser', url),
+    openFileMediaSelector: () => ipcRenderer.invoke('open_file_media_selector'),
+
+    // Profiles
+    createProfile: (name: string, rows: number, cols: number) => ipcRenderer.invoke('create_profile', name, rows, cols),
+    renameProfile: (id: string, name: string) => ipcRenderer.invoke('rename_profile', id, name),
+    deleteProfile: (id: string) => ipcRenderer.invoke('delete_profile', id),
+    importProfile: () => ipcRenderer.invoke('import_profile'),
+    exportProfile: (id: string) => ipcRenderer.send('export_profile', id),
 
     // Audio
     search: (query: string) => ipcRenderer.invoke('search', query),
+    playNow: (track: string) => ipcRenderer.invoke('play_now', track),
 });
 
 /* === FROM MAIN PROCESS === */
-// All windows
-// handleParent: (callback) => ipcRenderer.on('parent', callback),
-
-// Main window
-// handleButtonUpdate: (callback) => ipcRenderer.on('button_update', callback),
-// handlePlayNow: (callback) => ipcRenderer.on('play_now', callback),
-// handleMediaPlayPause: (callback) => ipcRenderer.on('media_play_pause', callback),
-// handleMediaStop: (callback) => ipcRenderer.on('media_stop', callback),
-// handleMediaNext: (callback) => ipcRenderer.on('media_next', callback),
-// handleMediaPrev: (callback) => ipcRenderer.on('media_prev', callback),
-
-// Buttons windows
-// handleButton: (callback) => ipcRenderer.on('button', callback),
-
 // // Media selector windows
 // handleCallback: (callback) => ipcRenderer.on('callback', callback),
 
 /* === TO MAIN PROCESS === */
-
-// Windows
-// openBrowser: (url) => ipcRenderer.send('open_browser', url),
-// openMediaSelector: (profile, row, col, winId, callback) => ipcRenderer.send('open_media_selector', profile, row, col, winId, callback),
-// openFileMediaSelector: () => ipcRenderer.invoke('open_file_media_selector'),
-// openButtonSettings: (profile, row, col) => ipcRenderer.send('open_button_settings', profile, row, col),
-// openPlayNowWindow: () => ipcRenderer.send('open_play_now_window'),
-
-// Settings
-// getSoundboardSettings: () => ipcRenderer.invoke('get_soundboard_settings'),
-// setSoundboardSize: (profile, rows, cols) => ipcRenderer.send('set_soundboard_size', profile, rows, cols),
-// setVolume: (volume) => ipcRenderer.send('set_volume', volume),
-// setMediaOutput: (device) => ipcRenderer.send('set_media_output', device),
-// setActiveProfile: (profile) => ipcRenderer.invoke('set_active_profile', profile),
-// setLoop: (loop) => ipcRenderer.send('set_loop', loop),
-// setFontSize: (size) => ipcRenderer.send('set_font_size', size),
-
-// Profiles
-// getProfiles: () => ipcRenderer.invoke('get_profiles'),
-// createProfile: (name) => ipcRenderer.invoke('create_profile', name),
-// renameProfile: (id, name) => ipcRenderer.invoke('rename_profile', id, name),
-// deleteProfile: (id) => ipcRenderer.invoke('delete_profile', id),
-// importProfile: () => ipcRenderer.invoke('import_profile'),
-// exportProfile: (id) => ipcRenderer.send('export_profile', id),
-
 // Buttons
 // getButtons: (profile) => ipcRenderer.invoke('get_buttons', profile),
 // getButton: (profile, row, col) => ipcRenderer.invoke('get_button', profile, row, col),
@@ -76,7 +67,3 @@ contextBridge.exposeInMainWorld('electron', {
 // deleteButton: (profile, row, col) => ipcRenderer.send('delete_button', profile, row, col),
 // mediaSelectorButton: (profile, button, parent, callback) => ipcRenderer.send('media_selector_button', profile, button, parent, callback),
 // refreshUrl: (profile, row, col) => ipcRenderer.send('refresh_url', profile, row, col),
-
-// Misc
-// playNow: (track) => ipcRenderer.send('play_now', track),
-// getStreamUrl: (uri) => ipcRenderer.invoke('get_stream_url', uri),

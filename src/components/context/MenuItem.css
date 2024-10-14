@@ -25,7 +25,7 @@
     margin-right: 6px;
 }
 
-.separator {
+.context-menu-item.separator {
     cursor: default;
     border-top: 1px solid var(--background-secondary);
     padding: 0 10px;
@@ -43,19 +43,16 @@
 }
 
 .primary {
-    color: var(--primary-500);
+    color: var(--gray-0);
+    background-color: var(--primary-500);
 }
 
 .primary .context-menu-item-icon {
-    fill: var(--primary-500);
+    fill: var(--gray-0);
 }
 
 .primary:hover {
-    color: var(--gray-0);
-}
-
-.primary:hover .context-menu-item-icon {
-    fill: var(--gray-0);
+    background-color: var(--primary-560) !important;
 }
 
 .danger {

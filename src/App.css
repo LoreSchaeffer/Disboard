@@ -212,9 +212,64 @@ body {
     background-color: var(--background-primary);
 }
 
+::-webkit-scrollbar {
+    width: 8px;
+    border-radius: 8px;
+    background-color: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--background-tertiary);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--background-tertiary);
+}
+
+::-webkit-scrollbar:horizontal {
+    height: 8px;
+    border-radius: 8px;
+    background-color: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+    background: var(--background-tertiary);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:horizontal:hover {
+    background: var(--background-tertiary);
+}
+
 .app::before {
     content: '';
     display: block;
     width: 100%;
     height: var(--titlebar-height);
+}
+
+.subtitle {
+    font-weight: 600;
+    font-size: 9pt;
+    line-height: 9pt;
+    color: var(--text-disabled);
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+label {
+    color: var(--text-primary);
+    font-weight: 400;
 }

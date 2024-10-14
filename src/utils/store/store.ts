@@ -9,7 +9,7 @@ export class Store {
     private readonly def: any;
     private store: any;
 
-    constructor(storeName: string, defValue?: any) {
+    constructor(storeName: string, defValue?: any, onReload?: (store: Store) => void) {
         this.filePath = path.join(root, storeName);
         this.def = defValue;
 
@@ -23,6 +23,14 @@ export class Store {
         } else {
             try {
                 this.load();
+
+                fs.watch(this.filePath, (event) => {
+                    if (event === 'change') {
+                        console.log(`File ${this.filePath} changed. Reloading...`);
+                        this.load();
+                        if (onReload) onReload(this.store)
+                    }
+                })
             } catch (e) {
                 return e;
             }

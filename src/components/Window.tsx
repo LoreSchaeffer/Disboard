@@ -1,16 +1,17 @@
 import Titlebar from "./titlebar/Titlebar";
-import Soundboard from "./soundboard/Soundboard";
-
-import {useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {useData} from "../ui/context";
-import Player from "./player/Player";
 import {SettingsData} from "../utils/store/settings";
 import {Profile} from "../utils/store/profiles";
-import {PlayerContextProvider} from "../ui/playerContext";
 import ContextMenu from "./context/ContextMenu";
 
-const Window = () => {
-    const {setWinId, setParent, setResizable, settings, setSettings, profiles, setProfiles, contextMenu} = useData();
+type WindowProps = {
+    children?: React.ReactNode;
+    titlebar?: React.ReactNode;
+};
+
+const Window = ({children, titlebar}: WindowProps) => {
+    const {setWinId, setParent, setResizable, settings, setSettings, profiles, setProfiles, setActiveProfile, contextMenu} = useData();
     const [loading, setLoading] = useState<number>(0);
 
     useEffect(() => {
@@ -36,18 +37,23 @@ const Window = () => {
         (window as any).electron.handleProfiles('profiles', (profiles: Profile[]) => setProfiles(profiles));
     }, []);
 
+    useEffect(() => {
+        if (!settings || !profiles) return;
+        const activeProfile = settings.active_profile;
+        setActiveProfile(profiles.find(p => p.id === activeProfile));
+    }, [settings, profiles]);
+
     if (loading < 2 || !settings || !profiles) {
         return <Titlebar/>;
     } else {
         return (
             <>
-                <Titlebar/>
+                <Titlebar>
+                    {titlebar}
+                </Titlebar>
                 <div className="app">
                     {contextMenu && <ContextMenu {...contextMenu}/>}
-                    <Soundboard/>
-                    <PlayerContextProvider>
-                        <Player/>
-                    </PlayerContextProvider>
+                    {children}
                 </div>
             </>
         );

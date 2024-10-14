@@ -13,9 +13,19 @@
     z-index: 1000;
 }
 
-.window-title {
+.left-data {
+    height: var(--titlebar-height);
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
     justify-self: flex-start;
-    margin: 0 auto 0 6px;
+    margin-right: auto;
+    padding-left: 6px;
+    gap: 15px;
+    -webkit-app-region: no-drag;
+}
+
+.window-title {
     font-weight: 900;
     font-size: 9pt;
     line-height: 9pt;

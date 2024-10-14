@@ -11,6 +11,11 @@ let mainWindow: BrowserWindow | undefined;
 let settingsStore: Settings;
 let profilesStore: Profiles;
 
+// TODO Missing disabled buttons
+// TODO Missing disabled inputs
+// TODO Font size
+// TODO Movable buttons
+
 if (require('electron-squirrel-startup')) {
     app.quit();
 }
@@ -31,21 +36,21 @@ protocol.registerSchemesAsPrivileged([
 const start = () => {
     initYouTube();
 
-    settingsStore = new Settings();
-    profilesStore = new Profiles();
+    settingsStore = new Settings(() => mainWindow.webContents.send('settings', settingsStore.get()));
+    profilesStore = new Profiles(() => mainWindow.webContents.send('profiles', profilesStore.get()));
 
-    const settings : SettingsData = settingsStore.get();
-    const profiles : Profile[] = profilesStore.get();
+    const settings: SettingsData = settingsStore.get();
+    const profiles: Profile[] = profilesStore.get();
 
     if (settings.active_profile == null || profiles.find(p => p.id === settings.active_profile) == null) {
         settings.active_profile = profiles[0].id;
         settingsStore.save();
     }
 
-    createWindow();
+    createMainWindow();
 };
 
-const createWindow = () => {
+const createMainWindow = () => {
     mainWindow = new BrowserWindow({
         icon: path.join('icons', 'icon.png'),
         width: settingsStore.get().width,
@@ -79,9 +84,40 @@ const createWindow = () => {
         settingsStore.save();
         mainWindow.webContents.send('settings', settingsStore.get());
     });
-
-    mainWindow.webContents.openDevTools();
 };
+
+const createButtonSettings = (parent: number, row: number, col: number) => {
+    const buttonSettings = new BrowserWindow({
+        modal: true,
+        parent: mainWindow,
+        icon: path.join('icons', 'icon.png'),
+        width: 500,
+        height: 600,
+        resizable: false,
+        frame: false,
+        titleBarStyle: 'hidden',
+        autoHideMenuBar: true,
+        show: false,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+        },
+    });
+
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+        buttonSettings.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/button_settings.html`);
+    } else {
+        buttonSettings.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/button_settings.html`));
+    }
+
+    buttonSettings.webContents.on('did-finish-load', () => {
+        buttonSettings.webContents.send('ready', buttonSettings.id, parent, false);
+        buttonSettings.webContents.send('button', row, col);
+    });
+
+    buttonSettings.once('ready-to-show', () => {
+        buttonSettings.show();
+    });
+}
 
 app.on('ready', start);
 
@@ -93,7 +129,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        createMainWindow();
     }
 });
 
@@ -141,6 +177,26 @@ ipcMain.handle('get_profiles', () => profilesStore.get());
 ipcMain.on('save_settings', (event: any, settings: SettingsData) => {
     settingsStore.set(settings);
     settingsStore.save();
+});
+
+ipcMain.on('save_button', (event: any, profile: string, button: any) => {
+    const profiles: Profile[] = profilesStore.get();
+
+    const activeProfile = profiles.find(p => p.id === profile);
+    if (activeProfile) {
+        const index = activeProfile.buttons.findIndex(b => b.row === button.row && b.col === button.col);
+        if (index === -1) activeProfile.buttons.push(button);
+        else activeProfile.buttons[index] = button;
+        profilesStore.set(profiles);
+        profilesStore.save();
+    }
+
+    mainWindow.webContents.send('profiles', profiles);
+});
+
+// Windows
+ipcMain.on('open_button_settings_win', (event: any, row: number, col: number) => {
+    createButtonSettings(mainWindow.id, row, col);
 });
 
 // Audio

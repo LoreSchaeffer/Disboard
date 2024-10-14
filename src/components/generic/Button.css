@@ -1,0 +1,65 @@
+.btn {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    background-color: var(--gray-500);
+    color: var(--gray-0);
+    border: none;
+    border-radius: 4px;
+    padding: 5px 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 200ms ease;
+}
+
+.btn:hover {
+    background-color: var(--gray-530);
+}
+
+.btn:active {
+    background-color: var(--gray-560);
+}
+
+.btn-primary {
+    background-color: var(--primary-500);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-530);
+}
+
+.btn-primary:active {
+    background-color: var(--primary-560);
+}
+
+.btn-danger {
+    background-color: var(--red-430);
+}
+
+.btn-danger:hover {
+    background-color: var(--red-460);
+}
+
+.btn-danger:active {
+    background-color: var(--red-500);
+}
+
+.btn-success {
+    background-color: var(--green-430);
+}
+
+.btn-success:hover {
+    background-color: var(--green-460);
+}
+
+.btn-success:active {
+    background-color: var(--green-500);
+}
+
+.btn-icon {
+    fill: var(--gray-0);
+    width: 18px;
+    height: 18px;
+}

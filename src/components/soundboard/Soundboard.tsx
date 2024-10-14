@@ -1,16 +1,10 @@
 import './Soundboard.css';
 
 import {useData} from "../../ui/context";
-import {useEffect} from "react";
 import SoundboardButton from "./SoundboardButton";
 
 const Soundboard = () => {
-    const {settings, profiles, activeProfile, setActiveProfile} = useData();
-
-    useEffect(() => {
-        const activeProfile = settings.active_profile;
-        setActiveProfile(profiles.find(p => p.id === activeProfile));
-    }, []);
+    const {activeProfile} = useData();
 
     const rows = activeProfile?.rows || 8;
     const cols = activeProfile?.cols || 10;

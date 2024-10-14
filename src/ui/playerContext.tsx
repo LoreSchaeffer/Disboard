@@ -1,16 +1,11 @@
 import {Song} from "../utils/store/profiles";
 import {createContext, Dispatch, FC, ReactNode, SetStateAction, useContext, useState} from "react";
-import {RepeatMode} from "./player";
 
 interface PlayerData {
     song: Song;
     setSong: Dispatch<SetStateAction<Song>>
     duration: number;
     setDuration: Dispatch<SetStateAction<number>>;
-    isSeeking: boolean;
-    setIsSeeking: Dispatch<SetStateAction<boolean>>;
-    repeatMode: RepeatMode;
-    setRepeatMode: Dispatch<SetStateAction<RepeatMode>>;
     isPlaylist: boolean;
     setIsPlaylist: Dispatch<SetStateAction<boolean>>;
 }
@@ -20,16 +15,12 @@ export const PlayerContext = createContext<PlayerData | undefined>(undefined);
 export const PlayerContextProvider: FC<{ children: ReactNode }> = ({children}) => {
     const [song, setSong] = useState<Song>();
     const [duration, setDuration] = useState<number>(0);
-    const [isSeeking, setIsSeeking] = useState<boolean>(false);
-    const [repeatMode, setRepeatMode] = useState<RepeatMode>('none');
     const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
 
     return (
         <PlayerContext.Provider value={{
             song, setSong,
             duration, setDuration,
-            isSeeking, setIsSeeking,
-            repeatMode, setRepeatMode,
             isPlaylist, setIsPlaylist
         }}>
             {children}

@@ -48,7 +48,7 @@
 .player-progress-group .progress-bar {
     min-width: 500px;
     height: 5px;
-    transition: width 500ms ease-in-out;
+    transition: width 500ms ease;
 }
 
 .progress-time {

@@ -15,7 +15,16 @@ type ProgressBarProps = {
 
 const defDisplayFunction = (value: number) => value.toString();
 
-const ProgressBar = ({className, min = 0, max = 100, val = 0, seek = false, showProgress = true, disabled = false, onChange, displayFunction = defDisplayFunction}: ProgressBarProps) => {
+const ProgressBar = ({
+                         className, min = 0,
+                         max = 100,
+                         val = 0,
+                         seek = false,
+                         showProgress = true,
+                         disabled = false,
+                         onChange,
+                         displayFunction = defDisplayFunction
+                     }: ProgressBarProps) => {
     const [value, setValue] = useState<number>(min);
     const [dragging, setDragging] = useState<boolean>(false);
     const progressBarRef = useRef<HTMLDivElement>(null);
@@ -49,8 +58,8 @@ const ProgressBar = ({className, min = 0, max = 100, val = 0, seek = false, show
     }
 
     useEffect(() => {
-        setValue(val);
-    }, [val]);
+        if (!dragging) setValue(val);
+    }, [val, dragging]);
 
     useEffect(() => {
         if (dragging) {

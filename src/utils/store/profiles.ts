@@ -6,10 +6,10 @@ export interface Profile {
     name: string;
     rows: number;
     cols: number;
-    buttons: Button[];
+    buttons: SbButton[];
 }
 
-export interface Button {
+export interface SbButton {
     row: number;
     col: number;
     title: string;
@@ -17,6 +17,8 @@ export interface Button {
     text_color_hover: string;
     background_color: string;
     background_color_hover: string;
+    border_color: string;
+    border_color_hover: string;
     song: Song;
 }
 
@@ -45,12 +47,16 @@ const defProfile: Profile = {
 export class Profiles {
     private store: Store;
 
-    constructor() {
-        this.store = new Store('profiles.json', [defProfile]);
+    constructor(onReload?: (store: Store) => void) {
+        this.store = new Store('profiles.json', [defProfile], onReload);
     }
 
     get(): Profile[] {
         return this.store.get() as Profile[];
+    }
+
+    set(profiles: Profile[]) {
+        this.store.set(profiles);
     }
 
     save() {

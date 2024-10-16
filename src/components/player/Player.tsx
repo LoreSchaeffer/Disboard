@@ -109,7 +109,7 @@ const Player = () => {
             return {...prev, loop: mainPlayer.getLoopMode()};
         });
 
-        setTimeout(() => (window as any).electron.saveSettings(settings), 50);
+        setTimeout(() => (window as any).electron.saveSettings(settings), 100);
     };
 
     const handleSeek = (oldValue: number, newValue: number) => {

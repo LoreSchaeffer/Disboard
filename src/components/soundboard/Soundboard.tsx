@@ -1,12 +1,14 @@
 import './Soundboard.css';
 
 import {useData} from "../../ui/windowContext";
-import SoundboardButton from "./SoundboardButton";
 import {SbButton} from "../../utils/store/profiles";
 import {ContextMenuProps} from "../context/ContextMenu";
 import React from "react";
+import {DndProvider} from 'react-dnd';
+import {HTML5Backend} from 'react-dnd-html5-backend';
 import {MenuItemProps} from "../context/MenuItem";
 import {usePlayer} from "../../ui/playerContext";
+import DraggableButton from "./DraggableButton";
 
 const Soundboard = () => {
     const {winId, activeProfile, mainPlayer, setContextMenu, copiedButton, setCopiedButton, copiedStyle, setCopiedStyle} = useData();
@@ -14,7 +16,6 @@ const Soundboard = () => {
 
     const rows = activeProfile?.rows || 8;
     const cols = activeProfile?.cols || 10;
-    const buttons = [];
 
     const handleClick = (e: React.MouseEvent, btn: SbButton) => {
         if (btn == null) return;
@@ -146,25 +147,40 @@ const Soundboard = () => {
         } as ContextMenuProps);
     }
 
-    for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-            buttons.push(<SoundboardButton
-                key={`btn-${row}-${col}`}
-                row={row}
-                col={col}
-                onClick={handleClick}
-                onContextMenu={handleContextMenu}
-            />);
+    const swapButtons = (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+        const fromButton = activeProfile.buttons.find(b => b.row === fromRow && b.col === fromCol);
+        const toButton = activeProfile.buttons.find(b => b.row === toRow && b.col === toCol);
+
+        if (fromButton && toButton) {
+            [fromButton.row, fromButton.col, toButton.row, toButton.col] = [toButton.row, toButton.col, fromButton.row, fromButton.col];
+            (window as any).electron.saveProfile(activeProfile);
         }
-    }
+    };
 
     return (
-        <div className="soundboard" style={{
-            gridTemplateRows: `repeat(${rows}, 1fr)`,
-            gridTemplateColumns: `repeat(${cols}, 1fr)`
-        }}>
-            {buttons}
-        </div>
+        <DndProvider backend={HTML5Backend}>
+            <div className="soundboard" style={{
+                gridTemplateRows: `repeat(${rows}, 1fr)`,
+                gridTemplateColumns: `repeat(${cols}, 1fr)`
+            }}>
+                {Array.from({length: rows}).map((_, row) =>
+                    Array.from({length: cols}).map((_, col) => {
+                        const button = activeProfile.buttons.find(b => b.row === row && b.col === col) || null;
+                        return (
+                            <DraggableButton
+                                key={`btn-${row}-${col}`}
+                                row={row}
+                                col={col}
+                                button={button}
+                                onClick={handleClick}
+                                onContextMenu={handleContextMenu}
+                                swapButtons={swapButtons}
+                            />
+                        );
+                    })
+                )}
+            </div>
+        </DndProvider>
     );
 }
 

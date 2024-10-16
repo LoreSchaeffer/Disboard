@@ -8,11 +8,14 @@ import {app} from "electron";
 export function initYouTube(cookie: string) {
     const media = path.join(app.getPath('userData'), 'media');
     if (!fs.existsSync(media)) fs.mkdirSync(media);
-    setToken({
-        youtube: {
-            cookie: cookie
-        }
-    });
+
+    if (cookie != null && cookie.trim() !== '') {
+        setToken({
+            youtube: {
+                cookie: cookie
+            }
+        });
+    }
 }
 
 export async function search(query: string): Promise<YouTubeVideo[]> {
@@ -48,6 +51,8 @@ export async function download(title: string, id: string, url: string): Promise<
 
         const stream = ytdl(url, {filter: 'audioonly', quality: 'highestaudio'});
         const filePath = path.join(app.getPath('userData'), 'media', `${id}.mp3`);
+
+        if (fs.existsSync(filePath)) resolve(filePath);
 
         ffmpeg(stream)
             .audioCodec('libmp3lame')

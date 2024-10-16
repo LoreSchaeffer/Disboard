@@ -3,7 +3,7 @@ import Window from "./Window";
 import Soundboard from "../soundboard/Soundboard";
 import {PlayerContextProvider} from "../../ui/playerContext";
 import Player from "../player/Player";
-import React, {useRef} from "react";
+import React, {useEffect, useRef} from "react";
 import SvgIcon from "../generic/SvgIcon";
 import {useData} from "../../ui/windowContext";
 import {MenuItemProps} from "../context/MenuItem";
@@ -11,6 +11,29 @@ import {Submenu} from "../context/ContextMenu";
 
 const SoundboardWin = () => {
     const {settings, setSettings, profiles, activeProfile, setContextMenu, setActiveProfile} = useData();
+
+    useEffect(() => {
+        const handleWheel = (e: WheelEvent) => {
+            if (!e.ctrlKey) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const delta = e.deltaY;
+            const newFontSize = settings.font_size + (delta > 0 ? -1 : 1);
+
+            if (newFontSize < 1 || newFontSize > 24) return;
+
+            setSettings({...settings, font_size: newFontSize});
+            setTimeout(() => (window as any).electron.saveSettings(settings), 50);
+        }
+
+        window.addEventListener('wheel', handleWheel);
+
+        return () => {
+            window.removeEventListener('wheel', handleWheel);
+        }
+    }, [settings, setSettings]);
 
     const profilesRef = useRef<HTMLSpanElement>(null);
 

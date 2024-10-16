@@ -130,7 +130,7 @@ const ButtonSettingsWin = () => {
                     }
                 } else {
                     song = {
-                        title: uriField,
+                        title: uriField.split('/').pop(),
                         source: 'local',
                         original_url: uriField,
                         uri: uriField,

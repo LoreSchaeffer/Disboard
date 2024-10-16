@@ -4,6 +4,7 @@ import {Settings, SettingsData} from './utils/store/settings';
 import {Profile, Profiles, SbButton, Song} from './utils/store/profiles';
 import {search, getInfo, download, initYouTube, getStream} from './utils/youtube';
 import {YouTubeVideo} from "play-dl";
+import {parseFile} from "music-metadata";
 import {generateUUID} from "./utils/utils";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -13,11 +14,6 @@ let mainWindow: BrowserWindow | undefined;
 let settingsStore: Settings;
 let profilesStore: Profiles;
 
-// TODO Missing disabled buttons
-// TODO Missing disabled inputs
-// TODO Missing disabled style for select
-// TODO Font size
-// TODO Movable buttons
 // TODO Add different preview output device
 
 if (require('electron-squirrel-startup')) {
@@ -49,9 +45,11 @@ const start = () => {
         settingsStore.save();
     }
 
-    initYouTube(settings.youtube_cookie);
+    if (settings.youtube_cookie === null || settings.youtube_cookie === '') {
+        // TODO Ask for cookie
+    }
 
-    //TODO If cookie not set ask for cookie
+    initYouTube(settings.youtube_cookie);
 
     createMainWindow();
 };
@@ -203,6 +201,7 @@ function saveButton(profile: string, button: SbButton): Profile[] {
         const index = activeProfile.buttons.findIndex(b => b.row === button.row && b.col === button.col);
         if (index === -1) activeProfile.buttons.push(button);
         else activeProfile.buttons[index] = button;
+
         profilesStore.set(profiles);
         profilesStore.save();
     }
@@ -211,9 +210,11 @@ function saveButton(profile: string, button: SbButton): Profile[] {
 }
 
 function downloadAndUpdateSoundboard(profile: string, button: SbButton) {
-    download(button.song.title, button.song.id, button.song.uri).then((filePath) => {
+    download(button.song.title, button.song.id, button.song.original_url).then((filePath) => {
         button.song.uri = filePath;
         mainWindow.webContents.send('profiles', saveButton(profile, button));
+    }).catch((e) => {
+        console.error(e);
     });
 }
 
@@ -255,12 +256,16 @@ ipcMain.on('save_profile', (event: unknown, profile: Profile) => {
     }
 });
 
-ipcMain.on('save_button', (event: unknown, profile: string, button: any) => {
+ipcMain.on('save_button', async (event: unknown, profile: string, button: SbButton) => {
     const song = button.song;
     if (song.source === 'youtube') {
         if (song.uri === null) {
-            song.uri = getStream(song.orignal_url);
-            downloadAndUpdateSoundboard(profile, button);
+            try {
+                song.uri = await getStream(song.original_url);
+                downloadAndUpdateSoundboard(profile, button);
+            } catch (e) {
+                console.error(e.message);
+            }
         }
     } else if (song.source === 'remote') {
         if (song.uri === null) {
@@ -269,6 +274,9 @@ ipcMain.on('save_button', (event: unknown, profile: string, button: any) => {
             // TODO Evaluated if download is needed
         }
     } else {
+        const meta = await parseFile(song.uri);
+        song.title = meta.common.title || path.basename(song.uri);
+        song.duration = meta.format.duration * 1000 || 0;
         // TODO Get media info
     }
 

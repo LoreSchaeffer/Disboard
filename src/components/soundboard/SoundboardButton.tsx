@@ -1,6 +1,6 @@
 import './SoundboardButton.css';
 import {useData} from '../../ui/windowContext';
-import React from "react";
+import React, {forwardRef} from "react";
 import {getButton} from "../../ui/utils";
 import {SbButton} from "../../utils/store/profiles";
 
@@ -12,7 +12,7 @@ interface SoundboardButtonProps {
     onContextMenu?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
 }
 
-const SoundboardButton = ({row, col, button, onClick, onContextMenu}: SoundboardButtonProps) => {
+const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>(({ row, col, button, onClick, onContextMenu }: SoundboardButtonProps, ref) => {
     const {settings, activeProfile} = useData();
 
     const btn = button ? button : getButton(activeProfile, row, col);
@@ -43,14 +43,15 @@ const SoundboardButton = ({row, col, button, onClick, onContextMenu}: Soundboard
 
     return (
         <div
+            ref={ref}
             className={"sb-btn"}
             style={{justifyContent: image == null ? 'center' : 'flex-start', ...buttonStyle}}
             onClick={(e: React.MouseEvent) => handleClick(e)} onContextMenu={(e: React.MouseEvent) => handleContextMenu(e)}
         >
             {settings.show_images && image}
-            <span className={"sb-btn-title"}>Button {row}.{col}</span>
+            <span className={"sb-btn-title"} style={{fontSize: settings.font_size + "pt"}}>{btn ? btn.title : `Button ${row}.${col}`}</span>
         </div>
     );
-}
+});
 
 export default SoundboardButton;

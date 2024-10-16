@@ -20,7 +20,7 @@ const defSettings: SettingsData = {
     volume: 50,
     output_device: 'default',
     loop: 'none',
-    font_size: 13,
+    font_size: 11,
     active_profile: null,
     show_images: true,
     youtube_cookie: null

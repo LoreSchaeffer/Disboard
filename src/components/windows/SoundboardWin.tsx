@@ -1,16 +1,16 @@
 import './SoundboardWin.css';
-import Window from "../Window";
+import Window from "./Window";
 import Soundboard from "../soundboard/Soundboard";
 import {PlayerContextProvider} from "../../ui/playerContext";
 import Player from "../player/Player";
 import React, {useRef} from "react";
 import SvgIcon from "../generic/SvgIcon";
-import {useData} from "../../ui/context";
+import {useData} from "../../ui/windowContext";
 import {MenuItemProps} from "../context/MenuItem";
 import {Submenu} from "../context/ContextMenu";
 
 const SoundboardWin = () => {
-    const {settings, profiles, activeProfile, setContextMenu, setActiveProfile} = useData();
+    const {settings, setSettings, profiles, activeProfile, setContextMenu, setActiveProfile} = useData();
 
     const profilesRef = useRef<HTMLSpanElement>(null);
 
@@ -29,16 +29,16 @@ const SoundboardWin = () => {
         {
             text: 'Import profile',
             icon: 'input',
-            onClick: () => console.log('Import profile')
+            onClick: () => (window as any).electron.importProfile(),
         },
         {
             text: 'Export all',
             icon: 'output',
-            onClick: () => console.log('Export all profiles'),
+            onClick: () => (window as any).electron.exportAllProfiles(),
         }
     ];
 
-    const handleProfilesClick = (e: React.MouseEvent) => {
+    const handleProfilesClick = () => {
         if (!profilesRef.current) return;
 
         const rect = profilesRef.current.getBoundingClientRect();
@@ -52,8 +52,9 @@ const SoundboardWin = () => {
             submenu: profile.id,
             onClick: () => {
                 setActiveProfile(profile);
-                settings.active_profile = profile.id;
-                (window as any).electron.saveSettings(settings);
+                setSettings({...settings, active_profile: profile.id});
+
+                setTimeout(() => (window as any).electron.saveSettings(settings), 50);
             }
         }));
 
@@ -68,13 +69,13 @@ const SoundboardWin = () => {
                 {
                     text: 'Export',
                     icon: 'output',
-                    onClick: () => console.log('Export profile')
+                    onClick: () => (window as any).electron.exportProfile(profile.id),
                 },
                 {
                     text: 'Delete',
                     icon: 'delete',
                     type: 'danger',
-                    onClick: () => console.log('Delete profile')
+                    onClick: () => (window as any).electron.deleteProfile(profile.id),
                 }
             ]
         }));
@@ -88,18 +89,16 @@ const SoundboardWin = () => {
     }
 
     const titlebar = (
-        <>
         <span ref={profilesRef} className={"profiles"} onClick={handleProfilesClick}>
             {activeProfile?.name}
             <SvgIcon icon={"chevron_down"} size={"15px"} color={"var(--text-disabled)"}/>
         </span>
-        </>
     );
 
     return (
         <Window titlebar={titlebar}>
-            <Soundboard/>
             <PlayerContextProvider>
+                <Soundboard/>
                 <Player/>
             </PlayerContextProvider>
         </Window>

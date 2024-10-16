@@ -7,11 +7,14 @@ const root: string = app.getPath('userData');
 export class Store {
     private readonly filePath: string;
     private readonly def: any;
+    private readonly onReload: (store: Store) => void;
     private store: any;
+    private watch: fs.FSWatcher;
 
     constructor(storeName: string, defValue?: any, onReload?: (store: Store) => void) {
         this.filePath = path.join(root, storeName);
         this.def = defValue;
+        this.onReload = onReload;
 
         if (!fs.existsSync(this.filePath)) {
             try {
@@ -23,18 +26,12 @@ export class Store {
         } else {
             try {
                 this.load();
-
-                fs.watch(this.filePath, (event) => {
-                    if (event === 'change') {
-                        console.log(`File ${this.filePath} changed. Reloading...`);
-                        this.load();
-                        if (onReload) onReload(this.store)
-                    }
-                })
             } catch (e) {
                 return e;
             }
         }
+
+        this.startWatching();
     }
 
     get() {
@@ -58,8 +55,11 @@ export class Store {
         if (!this.store) return;
 
         try {
-            fs.writeFileSync(this.filePath, JSON.stringify(this.store));
+            this.stopWatching()
+            fs.writeFileSync(this.filePath, JSON.stringify(this.store, null, 2));
+            this.startWatching();
         } catch (e) {
+            this.startWatching();
             return e;
         }
     }
@@ -68,7 +68,7 @@ export class Store {
         if (!this.store) return;
 
         try {
-            await fs.promises.writeFile(this.filePath, JSON.stringify(this.store))
+            await fs.promises.writeFile(this.filePath, JSON.stringify(this.store, null, 2));
         } catch (e) {
             return e;
         }
@@ -85,5 +85,22 @@ export class Store {
         }
 
         if (save) this.save();
+    }
+
+    private startWatching() {
+        this.watch = fs.watch(this.filePath, (event) => {
+            if (event === 'change') {
+                console.log(`File ${this.filePath} changed. Reloading...`);
+                this.load();
+                if (this.onReload) this.onReload(this.store)
+            }
+        })
+    }
+
+    private stopWatching() {
+        if (this.watch) {
+            this.watch.close();
+            this.watch = null;
+        }
     }
 }

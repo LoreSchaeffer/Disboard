@@ -1,7 +1,7 @@
 import './Player.css';
 import TrackInfo from "./TrackInfo";
-import {playerContext} from "../../ui/playerContext";
-import {useData} from "../../ui/context";
+import {usePlayer} from "../../ui/playerContext";
+import {useData} from "../../ui/windowContext";
 import PlayerButton from "./PlayerButton";
 import ProgressBar from "../generic/ProgressBar";
 import React, {useEffect, useState} from "react";
@@ -16,52 +16,19 @@ function getVolumeIcon(volume: number) {
 }
 
 const Player = () => {
-    const {setSong, setDuration} = playerContext();
-    const {player} = useData();
-    const {settings} = useData();
+    const {mainPlayer, previewPlayer, settings, setSettings, winId} = useData();
+    const {setSong, setDuration} = usePlayer();
 
     const [stopDisabled, setStopDisabled] = useState(true);
     const [previousDisabled, setPreviousDisabled] = useState(true);
     const [skipDisabled, setSkipDisabled] = useState(true);
-    const [playStatus, setPlayStatus] = useState({
-        disabled: true,
-        icon: 'play_circle'
-    } as {
-        disabled: boolean,
-        icon: IconType
-    });
-    const [progressBarStatus, setProgressBarStatus] = useState({
-        disabled: true,
-        currentTime: 0,
-        totalTime: 100,
-        val: 0
-    } as {
-        disabled: boolean,
-        currentTime: number,
-        totalTime: number,
-        val: number
-    });
-    const [repeatStatus, setRepeatStatus] = useState({
-        fill: 'var(--text-disabled)',
-        icon: 'repeat'
-    } as {
-        fill: string,
-        icon: IconType
-    });
-    const [volumeStatus, setVolumeStatus] = useState({
-        volume: 0,
-        muted: false,
-        icon: 'volume_high'
-    } as {
-        volume: number,
-        muted: boolean,
-        icon: IconType
-    });
+    const [playStatus, setPlayStatus] = useState({disabled: true, icon: 'play_circle'} as { disabled: boolean, icon: IconType });
+    const [progressBarStatus, setProgressBarStatus] = useState({disabled: true, currentTime: 0, totalTime: 100, val: 0} as { disabled: boolean, currentTime: number, totalTime: number, val: number });
+    const [repeatStatus, setRepeatStatus] = useState({fill: 'var(--text-disabled)', icon: 'repeat'} as { fill: string, icon: IconType });
+    const [volumeStatus, setVolumeStatus] = useState({volume: 0, muted: false, icon: 'volume_high'} as { volume: number, muted: boolean, icon: IconType });
 
     useEffect(() => {
         setVolumeStatus({volume: settings.volume, muted: false, icon: getVolumeIcon(settings.volume)});
-        player.setVolume(settings.volume);
-        player.loop(settings.loop);
         setRepeatStatus({fill: settings.loop === 'none' ? 'var(--text-disabled)' : 'var(--text-primary)', icon: settings.loop === 'one' ? 'repeat_one' : 'repeat'});
     }, [settings]);
 
@@ -104,31 +71,29 @@ const Player = () => {
             setProgressBarStatus({disabled: true, currentTime: 0, totalTime: 100, val: 0});
         };
 
-        player.addEventListener('play', handlePlay);
-        player.addEventListener('timeupdate', handleTimeUpdate);
-        player.addEventListener('pause', handlePause);
-        player.addEventListener('resume', handleResume);
-        player.addEventListener('stop', handleStop);
-        player.addEventListener('ended', handleEnd);
+        mainPlayer.addEventListener('play', handlePlay);
+        mainPlayer.addEventListener('timeupdate', handleTimeUpdate);
+        mainPlayer.addEventListener('pause', handlePause);
+        mainPlayer.addEventListener('resume', handleResume);
+        mainPlayer.addEventListener('stop', handleStop);
+        mainPlayer.addEventListener('ended', handleEnd);
 
         return () => {
-            player.removeEventListener('play', handlePlay);
-            player.removeEventListener('timeupdate', handleTimeUpdate);
-            player.removeEventListener('pause', handlePause);
-            player.removeEventListener('resume', handleResume);
-            player.removeEventListener('stop', handleStop);
-            player.removeEventListener('ended', handleEnd);
+            mainPlayer.removeEventListener('play', handlePlay);
+            mainPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+            mainPlayer.removeEventListener('pause', handlePause);
+            mainPlayer.removeEventListener('resume', handleResume);
+            mainPlayer.removeEventListener('stop', handleStop);
+            mainPlayer.removeEventListener('ended', handleEnd);
         }
-    }, [player, setSong, setDuration]);
+    }, [mainPlayer, setSong, setDuration]);
 
-    const handleVolumeChange = (oldValue: number, newValue: number, updateVolumeInStatus = true) => {
-        player.setVolume(newValue);
-        settings.volume = newValue;
-        if (updateVolumeInStatus) setVolumeStatus({volume: newValue, muted: false, icon: getVolumeIcon(newValue)});
-        else setVolumeStatus((prev) => {
-            return {...prev, muted: false, icon: getVolumeIcon(newValue)};
+    const handleVolumeChange = (oldValue: number, newValue: number) => {
+        setSettings((prev) => {
+            return {...prev, volume: newValue};
         });
-        (window as any).electron.saveSettings(settings);
+
+        setTimeout(() => (window as any).electron.saveSettings(settings), 50);
     };
 
     const handleShowProgress = (val: number) => {
@@ -136,26 +101,26 @@ const Player = () => {
     };
 
     const handleRepeatMode = () => {
-        if (player.getLoopMode() === 'none') {
-            player.loop('all');
-            setRepeatStatus({fill: 'var(--text-primary)', icon: 'repeat'});
-        } else if (player.getLoopMode() === 'all') {
-            player.loop('one');
-            setRepeatStatus({fill: 'var(--text-primary)', icon: 'repeat_one'});
-        } else {
-            player.loop('none');
-            setRepeatStatus({fill: 'var(--text-disabled)', icon: 'repeat'});
-        }
+        if (mainPlayer.getLoopMode() === 'none') mainPlayer.loop('all');
+        else if (mainPlayer.getLoopMode() === 'all') mainPlayer.loop('one');
+        else mainPlayer.loop('none');
 
-        settings.loop = player.getLoopMode();
-        (window as any).electron.saveSettings(settings);
+        setSettings((prev) => {
+            return {...prev, loop: mainPlayer.getLoopMode()};
+        });
+
+        setTimeout(() => (window as any).electron.saveSettings(settings), 50);
     };
 
     const handleSeek = (oldValue: number, newValue: number) => {
-        player.seekTo(newValue);
+        mainPlayer.seekTo(newValue);
         setProgressBarStatus((prev) => {
             return {...prev, val: newValue};
         });
+    };
+
+    const handleSearch = () => {
+        (window as any).electron.openMediaSelectorWin(null, null, winId);
     };
 
     const handleShowQueue = (e: React.MouseEvent) => {
@@ -170,10 +135,9 @@ const Player = () => {
         if (volumeStatus.muted) {
             handleVolumeChange(0, volumeStatus.volume);
         } else {
-            handleVolumeChange(volumeStatus.volume, 0, false);
-            setVolumeStatus((prev) => {
-                return {...prev, muted: true, icon: 'volume_off'};
-            });
+            const vol = settings.volume;
+            handleVolumeChange(vol, 0);
+            setTimeout(() => setVolumeStatus({volume: vol, muted: true, icon: 'volume_off'}), 50);
         }
     };
 
@@ -186,14 +150,14 @@ const Player = () => {
             <TrackInfo/>
             <div className="player-controls">
                 <div className="player-buttons">
-                    <PlayerButton icon="stop" disabled={stopDisabled} onClick={() => player.stop()}/>
-                    <PlayerButton icon="previous" disabled={previousDisabled} onClick={() => player.previous()}/>
-                    <PlayerButton icon={playStatus.icon} size="44px" disabled={playStatus.disabled} onClick={() => player.playPause()}/>
-                    <PlayerButton icon="next" disabled={skipDisabled} onClick={() => player.next()}/>
+                    <PlayerButton icon="stop" disabled={stopDisabled} onClick={() => mainPlayer.stop()}/>
+                    <PlayerButton icon="previous" disabled={previousDisabled} onClick={() => mainPlayer.previous()}/>
+                    <PlayerButton icon={playStatus.icon} size="44px" disabled={playStatus.disabled} onClick={() => mainPlayer.playPause()}/>
+                    <PlayerButton icon="next" disabled={skipDisabled} onClick={() => mainPlayer.next()}/>
                     <PlayerButton icon={repeatStatus.icon} onClick={handleRepeatMode} fill={repeatStatus.fill}/>
                 </div>
                 <div className="player-progress-group">
-                    <span className="progress-time current-time" style={{display: player.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.val)}</span>
+                    <span className="progress-time current-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.val)}</span>
                     <ProgressBar
                         seek={true}
                         disabled={progressBarStatus.disabled}
@@ -202,11 +166,11 @@ const Player = () => {
                         displayFunction={handleShowProgress}
                         onChange={handleSeek}
                     />
-                    <span className="progress-time total-time" style={{display: player.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.totalTime)}</span>
+                    <span className="progress-time total-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.totalTime)}</span>
                 </div>
             </div>
             <div className={"player-secondary-controls"}>
-                <PlayerButton icon="search" onClick={() => (window as any).electron.open_search()}/>
+                <PlayerButton icon="search" onClick={handleSearch}/>
                 <PlayerButton icon="queue" onClick={handleShowQueue}/>
                 <PlayerButton icon="media_output" onClick={handleShowMediaOutput}/>
                 <PlayerButton icon={volumeStatus.icon} onClick={handleVolumeClick}/>

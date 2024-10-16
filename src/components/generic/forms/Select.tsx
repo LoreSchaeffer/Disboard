@@ -50,7 +50,12 @@ const Select = ({className, options, disabled, onChange}: SelectProps) => {
         else setChevron('chevron_down');
     }, [visible]);
 
+    useEffect(() => {
+        if (visible && disabled) setVisible(false);
+    }, [disabled]);
+
     const onDropdown = () => {
+        if (disabled) return;
         if (visible) {
             setVisible(false);
         } else {

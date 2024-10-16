@@ -9,8 +9,9 @@ export interface SettingsData {
     output_device: string;
     loop: RepeatMode;
     font_size: number;
-    active_profile: string;
+    active_profile?: string;
     show_images: boolean;
+    youtube_cookie?: string;
 }
 
 const defSettings: SettingsData = {
@@ -21,7 +22,8 @@ const defSettings: SettingsData = {
     loop: 'none',
     font_size: 13,
     active_profile: null,
-    show_images: true
+    show_images: true,
+    youtube_cookie: null
 };
 
 export class Settings {

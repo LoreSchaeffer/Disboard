@@ -1,8 +1,8 @@
 import './TrackInfo.css';
-import {playerContext} from "../../ui/playerContext";
+import {usePlayer} from "../../ui/playerContext";
 
 const TrackInfo = () => {
-    const {song} = playerContext();
+    const {song} = usePlayer();
 
     const display = song ? 'flex' : 'none';
     const thumbnail = song ? `url(${song.thumbnail})` : 'url("/images/track.png")';

@@ -1,4 +1,5 @@
 import {icons, IconType} from "../../ui/icons";
+import React from "react";
 
 
 interface IconProps {
@@ -6,7 +7,7 @@ interface IconProps {
     icon: IconType;
     color?: string;
     size?: string;
-    onClick?: () => void;
+    onClick?: (e: React.MouseEvent) => void;
 }
 
 const SvgIcon = ({className, icon, color = '#ffffff', size = '24px', onClick}: IconProps) => {

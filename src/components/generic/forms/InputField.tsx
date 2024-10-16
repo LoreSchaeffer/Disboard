@@ -1,5 +1,5 @@
 import './InputField.css';
-import React from "react";
+import React, {useEffect} from "react";
 
 type Type = 'text' | 'password' | 'number' | 'url';
 
@@ -22,6 +22,8 @@ type InputFieldProps = {
     defaultValue?: string | number;
     value?: string | number;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onSubmit?: (value: string | number) => void;
+    setValue?: (value: string | number) => void;
 };
 
 const InputField = ({
@@ -40,11 +42,33 @@ const InputField = ({
                         type = 'text',
                         defaultValue,
                         value,
-                        onChange
+                        onChange,
+                        onSubmit,
+                        setValue,
                     }: InputFieldProps) => {
+    const [val, setVal] = React.useState<string | number>(value ?? defaultValue ?? '');
+    const isControlled = value !== undefined;
+
+    useEffect(() => {
+        if (isControlled) setVal(value);
+    }, [value, isControlled]);
+
+    useEffect(() => {
+        if (setValue) setValue(val);
+    }, [val, setValue]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isControlled) setVal(e.target.value);
+        if (onChange) onChange(e);
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && onSubmit) onSubmit(isControlled ? (value as string | number) : val);
+    };
+
     return (
         <input
-            className={`input input-field${className? ' ' + className : ''}`}
+            className={`input input-field${className ? ' ' + className : ''}`}
             autoComplete={autoComplete}
             autoFocus={autoFocus}
             disabled={disabled}
@@ -57,9 +81,10 @@ const InputField = ({
             readOnly={readOnly}
             step={step}
             type={type}
-            value={value !== undefined ? value : undefined}
-            defaultValue={value === undefined ? defaultValue : undefined}
-            onChange={onChange}
+            value={isControlled ? value : val}
+            defaultValue={!isControlled ? defaultValue : undefined}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
         />
     );
 };

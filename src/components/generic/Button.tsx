@@ -15,8 +15,12 @@ type ButtonProps = {
 
 const Button = ({children, className, icon, onClick, disabled = false}: ButtonProps) => {
 
+    const handleClick = () => {
+        if (onClick && !disabled) onClick();
+    }
+
     return (
-        <button className={`btn${className ? ' ' + 'btn-' + className : ''}${disabled ? ' disabled' : ''}`} onClick={onClick}>
+        <button className={`btn${className ? ' ' + 'btn-' + className : ''}${disabled ? ' disabled' : ''}`} onClick={handleClick}>
             {icon && <SvgIcon className={"btn-icon"} icon={icon}/>}
             {children}
         </button>

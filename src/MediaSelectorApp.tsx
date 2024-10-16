@@ -1,13 +1,16 @@
 import * as React from "react";
 import {createRoot} from "react-dom/client";
 import {WindowContextProvider} from "./ui/windowContext";
-import SoundboardWin from "./components/windows/SoundboardWin";
+import {ButtonContextProvider} from "./ui/buttonContext";
+import MediaSelectorWin from "./components/windows/MediaSelectorWin";
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
 root.render(
     <React.StrictMode>
         <WindowContextProvider>
-            <SoundboardWin/>
+            <ButtonContextProvider>
+                <MediaSelectorWin/>
+            </ButtonContextProvider>
         </WindowContextProvider>
     </React.StrictMode>
 );

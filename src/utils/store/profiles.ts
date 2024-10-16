@@ -13,17 +13,23 @@ export interface SbButton {
     row: number;
     col: number;
     title: string;
-    text_color: string;
-    text_color_hover: string;
-    background_color: string;
-    background_color_hover: string;
-    border_color: string;
-    border_color_hover: string;
+    style?: Style;
     song: Song;
+}
+
+export interface Style {
+    text_color?: string;
+    text_color_hover?: string;
+    background_color?: string;
+    background_color_hover?: string;
+    border_color?: string;
+    border_color_hover?: string;
 }
 
 export interface Song {
     title: string;
+    source: Source;
+    id?: string;
     original_url?: string;
     uri: string;
     duration: number;
@@ -35,6 +41,8 @@ export interface Song {
     end_time_unit: string;
     // TODO Custom volume?
 }
+
+type Source = 'youtube' | 'local' | 'remote';
 
 const defProfile: Profile = {
     id: generateUUID(),

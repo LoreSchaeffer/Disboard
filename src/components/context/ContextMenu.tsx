@@ -1,7 +1,7 @@
 import './ContextMenu.css';
 import MenuItem, {MenuItemProps} from "./MenuItem";
 import React, {useEffect, useRef, useState} from "react";
-import {useData} from "../../ui/context";
+import {useData} from "../../ui/windowContext";
 
 export interface ContextMenuProps {
     x: number;

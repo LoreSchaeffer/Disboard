@@ -6,8 +6,8 @@ interface PlayerData {
     setSong: Dispatch<SetStateAction<Song>>
     duration: number;
     setDuration: Dispatch<SetStateAction<number>>;
-    isPlaylist: boolean;
-    setIsPlaylist: Dispatch<SetStateAction<boolean>>;
+    queue: Song[];
+    setQueue: Dispatch<SetStateAction<Song[]>>;
 }
 
 export const PlayerContext = createContext<PlayerData | undefined>(undefined);
@@ -15,20 +15,20 @@ export const PlayerContext = createContext<PlayerData | undefined>(undefined);
 export const PlayerContextProvider: FC<{ children: ReactNode }> = ({children}) => {
     const [song, setSong] = useState<Song>();
     const [duration, setDuration] = useState<number>(0);
-    const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
+    const [queue, setQueue] = useState<Song[]>([]);
 
     return (
         <PlayerContext.Provider value={{
             song, setSong,
             duration, setDuration,
-            isPlaylist, setIsPlaylist
+            queue, setQueue
         }}>
             {children}
         </PlayerContext.Provider>
     );
 };
 
-export const playerContext = () => {
+export const usePlayer = () => {
     const context = useContext(PlayerContext);
     if (!context) throw new Error('playerContext must be used within a PlayerContextProvider');
     return context;

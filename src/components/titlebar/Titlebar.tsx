@@ -1,6 +1,6 @@
 import "./Titlebar.css"
 import TitlebarButton from "./TitlebarButton"
-import {useData} from "../../ui/context";
+import {useData} from "../../ui/windowContext";
 import React from "react";
 
 type TitlebarProps = {

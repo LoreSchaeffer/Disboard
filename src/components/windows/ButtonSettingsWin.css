@@ -7,8 +7,16 @@
     gap: 10px;
 }
 
-.row .input-field{
+.row .input-field {
     flex-grow: 1;
+}
+
+.row .select {
+    flex-grow: 1;
+}
+
+.number {
+    max-width: 145px;
 }
 
 .btn {

@@ -11,6 +11,16 @@ input {
     color: var(--text-primary);
 }
 
+input:disabled {
+    background-color: var(--background-secondary);
+    color: var(--text-disabled);
+}
+
+input:read-only {
+    background-color: var(--gray-645);
+    color: var(--text-secondary);
+}
+
 input::placeholder {
     color: var(--gray-330);
 }

@@ -1,7 +1,7 @@
 import './MenuItem.css';
 import {IconType} from "../../ui/icons";
 import SvgIcon from "../generic/SvgIcon";
-import {useData} from "../../ui/context";
+import {useData} from "../../ui/windowContext";
 import {MouseEvent} from "react";
 
 type ItemType = 'normal' | 'separator' | 'primary' | 'danger';

@@ -5,7 +5,7 @@ const TrackInfo = () => {
     const {song} = usePlayer();
 
     const display = song ? 'flex' : 'none';
-    const thumbnail = song ? `url(${song.thumbnail})` : 'url("/images/track.png")';
+    const thumbnail = song ? `url(${song.thumbnail || 'url("/images/track.png")'})` : 'url("/images/track.png")';
     const title = song ? song.title : '';
     const src = song ? (song.original_url ? song.original_url : song.uri) : '';
 

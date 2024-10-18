@@ -8,6 +8,7 @@ import SvgIcon from "../generic/SvgIcon";
 import {useData} from "../../ui/windowContext";
 import {MenuItemProps} from "../context/MenuItem";
 import {Submenu} from "../context/ContextMenu";
+import {SettingsData} from "../../utils/store/settings";
 
 const SoundboardWin = () => {
     const {settings, setSettings, profiles, activeProfile, setContextMenu, setActiveProfile} = useData();
@@ -24,8 +25,11 @@ const SoundboardWin = () => {
 
             if (newFontSize < 1 || newFontSize > 24) return;
 
-            setSettings({...settings, font_size: newFontSize});
-            setTimeout(() => (window as any).electron.saveSettings(settings), 50);
+            setSettings((prev) => {
+                const newSettings = {...prev, font_size: newFontSize} as SettingsData;
+                (window as any).electron.saveSettings(newSettings);
+                return newSettings;
+            });
         }
 
         window.addEventListener('wheel', handleWheel);
@@ -44,7 +48,7 @@ const SoundboardWin = () => {
         {
             text: 'New profile',
             icon: 'add',
-            onClick: () => console.log('New profile')
+            onClick: () => (window as any).electron.openNewProfileWin(),
         },
         {
             type: 'separator'
@@ -57,7 +61,7 @@ const SoundboardWin = () => {
         {
             text: 'Export all',
             icon: 'output',
-            onClick: () => (window as any).electron.exportAllProfiles(),
+            onClick: () => (window as any).electron.exportProfiles(),
         }
     ];
 
@@ -75,20 +79,17 @@ const SoundboardWin = () => {
             submenu: profile.id,
             onClick: () => {
                 setActiveProfile(profile);
-                setSettings({...settings, active_profile: profile.id});
-
-                setTimeout(() => (window as any).electron.saveSettings(settings), 50);
+                setSettings((prev) => {
+                    const newSettings = {...prev, active_profile: profile.id} as SettingsData;
+                    (window as any).electron.saveSettings(newSettings);
+                    return newSettings;
+                });
             }
         }));
 
         const submenus = profiles.map(profile => ({
             id: profile.id,
             items: [
-                {
-                    text: 'Rename',
-                    icon: 'edit',
-                    onClick: () => console.log('Rename profile')
-                },
                 {
                     text: 'Export',
                     icon: 'output',

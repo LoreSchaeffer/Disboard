@@ -1,5 +1,6 @@
 import {Song} from "../utils/store/profiles";
-import {createContext, Dispatch, FC, ReactNode, SetStateAction, useContext, useState} from "react";
+import {createContext, Dispatch, FC, ReactNode, SetStateAction, useContext, useEffect, useState} from "react";
+import {useData} from "./windowContext";
 
 interface PlayerData {
     song: Song;
@@ -13,9 +14,14 @@ interface PlayerData {
 export const PlayerContext = createContext<PlayerData | undefined>(undefined);
 
 export const PlayerContextProvider: FC<{ children: ReactNode }> = ({children}) => {
+    const {mainPlayer} = useData();
     const [song, setSong] = useState<Song>();
     const [duration, setDuration] = useState<number>(0);
     const [queue, setQueue] = useState<Song[]>([]);
+
+    useEffect(() => {
+        mainPlayer.setQueue(queue);
+    }, [setQueue]);
 
     return (
         <PlayerContext.Provider value={{

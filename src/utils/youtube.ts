@@ -9,39 +9,48 @@ export function initYouTube(cookie: string) {
     const media = path.join(app.getPath('userData'), 'media');
     if (!fs.existsSync(media)) fs.mkdirSync(media);
 
-    if (cookie != null && cookie.trim() !== '') {
-        setToken({
-            youtube: {
-                cookie: cookie
-            }
-        });
+    if (cookie != null && cookie.trim()) {
+        setToken({youtube: {cookie: cookie}}).then(() => console.log('YouTube cookie set'));
     }
 }
 
-export async function search(query: string): Promise<YouTubeVideo[]> {
+export function search(query: string): Promise<YouTubeVideo[]> {
     return new Promise<YouTubeVideo[]>((resolve) => {
         if (query == null || query.trim() === '') resolve([]);
-        play.search(query, {limit: 20}).then((results) => {
-            resolve(results);
-        });
+        try {
+            play.search(query, {limit: 20}).then((results) => {
+                resolve(results);
+            });
+        } catch (e) {
+            console.error(e.message);
+            resolve([]);
+        }
     });
 }
 
-export async function getInfo(url: string): Promise<YouTubeVideo> {
+export function getInfo(url: string): Promise<YouTubeVideo> {
     return new Promise<YouTubeVideo>((resolve) => {
-        video_info(url).then((info) => resolve(info.video_details));
+        try {
+            video_info(url).then((info) => resolve(info.video_details));
+        } catch (e) {
+            console.error(e.message);
+            resolve(null);
+        }
     });
 }
 
 export function getStream(url: string): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-        try {
-            stream(url, {
-                discordPlayerCompatibility: true
-            }).then((stream) => resolve((stream as any).url));
-        } catch (e) {
-            reject(e);
-        }
+    if (url == null || url.trim() === '') return Promise.resolve(null);
+
+    return new Promise<string>((resolve) => {
+        stream(url, {
+            discordPlayerCompatibility: true
+        })
+            .then((stream) => resolve((stream as any).url))
+            .catch((e) => {
+                console.error(e.message);
+                resolve(null);
+            });
     });
 }
 
@@ -67,9 +76,9 @@ export async function download(title: string, id: string, url: string): Promise<
                 console.log(`Downloaded '${title}'`);
                 resolve(filePath);
             })
-            .on('error', (err: any) => {
-                console.error(`Error downloading '${title}': ${err.message}`);
-                reject(err.message);
+            .on('error', (e: any) => {
+                console.error(`Error downloading '${title}': ${e.message}`);
+                reject(e.message);
             })
             .save(filePath);
     });

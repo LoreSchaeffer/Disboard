@@ -1,6 +1,7 @@
 import {Song} from "../utils/store/profiles";
 import {isRemoteUrl} from "./utils";
 import {RepeatMode} from "../utils/store/settings";
+import {Time} from "./time";
 
 type EventHandler = (...args: any[]) => void;
 
@@ -14,12 +15,11 @@ export class Player {
     private isPlaying = false;
     private isPaused = false;
     private isSeeking = false;
-    private startTime = 0;
-    private endTime = 0;
+    private startTime: Time = null;
+    private endTime: Time = null;
     private repeat: RepeatMode = 'none';
 
     constructor() {
-        // Event listeners
         this.audio.addEventListener('abort', () => {
             console.log('abort');
         });
@@ -43,6 +43,7 @@ export class Player {
                 if (this.repeat === 'all' || this.repeat === 'one') {
                     this._play();
                 } else {
+                    this.stop();
                     this._clearSong();
                 }
             }
@@ -51,7 +52,7 @@ export class Player {
         });
 
         this.audio.addEventListener('error', () => {
-            console.log('error');
+            console.error('Audio error');
         });
 
         this.audio.addEventListener('pause', () => {
@@ -68,7 +69,10 @@ export class Player {
                 this.isPaused = false;
                 this.dispatchEvent('resume');
             } else {
-                const duration = this.currentSong?.duration || 0;
+                let duration = this.currentSong.duration;
+                if (this.endTime != null) duration = this.endTime.convertToMilliseconds();
+                if (this.startTime != null) duration -= this.startTime.convertToMilliseconds();
+
                 this.dispatchEvent('play', this.currentSong, duration);
             }
         });
@@ -80,26 +84,20 @@ export class Player {
         this.audio.addEventListener('timeupdate', () => {
             this._timeupdate();
         });
+
+        this.audio.addEventListener('loadedmetadata', () => {
+            if (this.startTime) this.audio.currentTime = this.startTime.toSeconds();
+            this.audio.play();
+        });
     }
 
-    addToQueue(song: Song) {
-        this.queue.push(song);
-        this.dispatchEvent('queued', this.queue);
-    }
-
-    removeFromQueue(index: number) {
-        if (index >= this.queue.length) return;
-
-        if (this.queue.length < 2) {
-            this.clearQueue();
-        } else {
-            if (index < this.index) this.index--;
-            this.queue.splice(index, 1);
-        }
+    setQueue(queue: Song[]) {
+        this.queue = queue;
+        if (queue.length === 0) this.clearQueue();
+        else this.playingQueue = true;
     }
 
     clearQueue() {
-        this.queue = [];
         this.index = 0;
         this.playingQueue = false;
     }
@@ -188,6 +186,8 @@ export class Player {
 
     seekTo(time: number) {
         this.isSeeking = true;
+
+        if (this.startTime != null) time += this.startTime.convertToMilliseconds();
         this.audio.currentTime = time / 1000;
     }
 
@@ -196,8 +196,8 @@ export class Player {
     }
 
     setOutputDevice(deviceId: string) {
-        (this.audio as any).setSinkId(deviceId).catch((e: any) => {
-            console.error(e);
+        (this.audio as any).setSinkId(deviceId).catch((e: Error) => {
+            console.error(e.message);
         });
     }
 
@@ -205,7 +205,7 @@ export class Player {
         return this.repeat;
     }
 
-    isPlayerPlaying() : boolean {
+    isPlayerPlaying(): boolean {
         return this.isPlaying;
     }
 
@@ -213,29 +213,40 @@ export class Player {
         if (this.currentSong) {
             if (isRemoteUrl(this.currentSong.uri)) this.audio.src = this.currentSong.uri;
             else this.audio.src = `dftp://file/${encodeURIComponent(this.currentSong.uri)}`;
+
+            if (this.currentSong.start_time && this.currentSong.start_time_unit && this.currentSong.start_time !== 0) {
+                this.startTime = new Time(this.currentSong.start_time, this.currentSong.start_time_unit);
+            }
+
+            if (this.currentSong.end_time_type && this.currentSong.end_time && this.currentSong.end_time_unit && this.currentSong.end_time !== 0) {
+                this.endTime = new Time(this.currentSong.end_time, this.currentSong.end_time_unit);
+                if (this.currentSong.end_time_type === 'after') this.endTime.add(this.startTime);
+            }
+
+            this.audio.preload = 'auto';
             this.audio.load();
-            this.audio.play();
         }
     }
 
     private _timeupdate() {
         if (!this.isPlaying || this.isPaused || this.isSeeking) return;
 
-        const currentTime = Math.round(this.audio.currentTime * 1000);
+        let currentTime = Math.round(this.audio.currentTime * 1000);
+        if (this.startTime) currentTime -= this.startTime.convertToMilliseconds();
 
-        if (this.endTime !== 0 && currentTime >= this.endTime) {
+        if (this.endTime != null && currentTime >= this.endTime.convertToMilliseconds()) {
             this.audio.dispatchEvent(new Event('ended'));
             return;
         }
 
-        this.dispatchEvent('timeupdate', currentTime - this.startTime);
+        this.dispatchEvent('timeupdate', currentTime);
     }
 
     private _clearSong() {
         this.audio.currentTime = 0;
         this.currentSong = null;
-        this.startTime = 0;
-        this.endTime = 0;
+        this.startTime = null;
+        this.endTime = null;
     }
 
     addEventListener(eventName: string, handler: EventHandler) {

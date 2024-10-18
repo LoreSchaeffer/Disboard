@@ -21,6 +21,7 @@ const Soundboard = () => {
         if (btn == null) return;
         const song = btn.song;
         if (song == null) return;
+        song.title = btn.title;
 
         mainPlayer.playNow(song);
     }
@@ -32,6 +33,7 @@ const Soundboard = () => {
             if (btn == null) return;
             const song = btn.song;
             if (song == null) return;
+            song.title = btn.title;
 
             mainPlayer.playNow(song);
         }
@@ -40,6 +42,7 @@ const Soundboard = () => {
             if (btn == null) return;
             const song = btn.song;
             if (song == null) return;
+            song.title = btn.title;
 
             setQueue((prev) => [...prev, song]);
         }
@@ -151,10 +154,19 @@ const Soundboard = () => {
         const fromButton = activeProfile.buttons.find(b => b.row === fromRow && b.col === fromCol);
         const toButton = activeProfile.buttons.find(b => b.row === toRow && b.col === toCol);
 
+        if (!fromButton && !toButton) return;
+
         if (fromButton && toButton) {
             [fromButton.row, fromButton.col, toButton.row, toButton.col] = [toButton.row, toButton.col, fromButton.row, fromButton.col];
-            (window as any).electron.saveProfile(activeProfile);
+        } else if (fromButton && !toButton) {
+            fromButton.row = toRow;
+            fromButton.col = toCol;
+        } else if (toButton && !fromButton) {
+            toButton.row = fromRow;
+            toButton.col = fromCol;
         }
+
+        (window as any).electron.saveProfile(activeProfile);
     };
 
     return (

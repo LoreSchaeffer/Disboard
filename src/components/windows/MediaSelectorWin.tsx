@@ -11,6 +11,7 @@ import {formatTime, getBiggestThumbnail, isRemoteUrl, isYouTubeUrl} from "../../
 import SvgIcon from "../generic/SvgIcon";
 import {YouTubeVideo} from "play-dl";
 import {Player} from "../../ui/player";
+import OpenDialogReturnValue = Electron.OpenDialogReturnValue;
 
 const ButtonSettingsWin = () => {
         const {settings, winId, winParent} = useData();
@@ -43,6 +44,13 @@ const ButtonSettingsWin = () => {
             }
         }, []);
 
+        const openMediaSelector = () => {
+            (window as any).electron.openFileMediaSelector().then((response: OpenDialogReturnValue) => {
+                if (response.canceled) return;
+                setUriField(response.filePaths[0]);
+            });
+        }
+
         const handleSearchFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
             setSearchField(e.target.value);
         }
@@ -74,8 +82,12 @@ const ButtonSettingsWin = () => {
                 return;
             }
 
+            console.log(result.url);
+
             const url = await (window as any).electron.getStream(result.url);
             if (!url) return;
+
+            console.log(url);
 
             (window as any).electron.pause();
             player.playNow({
@@ -129,8 +141,9 @@ const ButtonSettingsWin = () => {
                         thumbnail: null
                     }
                 } else {
+                    const sep = await (window as any).electron.getFileSeparator();
                     song = {
-                        title: uriField.split('/').pop(),
+                        title: uriField.split(sep).slice(-1)[0].split('.')[0],
                         source: 'local',
                         original_url: uriField,
                         uri: uriField,
@@ -187,7 +200,7 @@ const ButtonSettingsWin = () => {
                     <div className={"row"}>
                         <label>File or Url</label>
                         <InputField type={"text"} value={uriField} onChange={handleUriFieldChange}/>
-                        <Button icon={"folder_open"} className={'primary'}>Open</Button>
+                        <Button icon={"folder_open"} className={'primary'} onClick={openMediaSelector}>Open</Button>
                     </div>
                     <Separator/>
                     <div className={"row"}>

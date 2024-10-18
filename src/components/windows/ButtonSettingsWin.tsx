@@ -1,6 +1,6 @@
 import './ButtonSettingsWin.css';
 import Window from "./Window";
-import React, {ChangeEvent, useEffect} from "react";
+import React, {ChangeEvent} from "react";
 import {useButton} from "../../ui/buttonContext";
 import {useData} from "../../ui/windowContext";
 import InputField from "../generic/forms/InputField";
@@ -9,6 +9,8 @@ import Select from "../generic/forms/Select";
 import Separator from "../generic/Separator";
 import ColorSetting from "../button_settings/ColorSetting";
 import SoundboardButton from "../soundboard/SoundboardButton";
+import {TimeUnit} from "../../utils/store/profiles";
+import {Time} from "../../ui/time";
 
 const ButtonSettingsWin = () => {
     const {activeProfile, winId} = useData();
@@ -23,23 +25,194 @@ const ButtonSettingsWin = () => {
     });
 
     const handleStartTimeChange = (e: ChangeEvent<HTMLInputElement>) => setButton((prev) => {
-        return {...prev, song: {...prev.song, start_time: parseInt(e.target.value)}};
+        if (!button.song || !button.song.duration) return prev;
+
+        const startTime = new Time(parseInt(e.target.value), button.song.start_time_unit || 's');
+
+        if (startTime.isNegative()) {
+            startTime.setTime(0);
+        } else {
+            if (startTime.toMilliseconds() > button.song.duration) {
+                startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
+            }
+
+            if (button.song.end_time) {
+                let endTime = new Time(button.song.end_time, button.song.end_time_unit || 's');
+
+                if (button.song.end_time_type === 'at') {
+                    if (startTime.toMilliseconds() > endTime.toMilliseconds()) {
+                        startTime.setTimeKeepUnit(endTime);
+                    }
+                } else if (button.song.end_time_type === 'after') {
+                    endTime = endTime.add(startTime);
+
+                    if (endTime.toMilliseconds() > button.song.duration) {
+                        startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(endTime));
+                    }
+                }
+            }
+        }
+
+        return {
+            ...prev, song: {
+                ...prev.song,
+                start_time: startTime.getTime(),
+                start_time_unit: startTime.getTimeUnit()
+            }
+        };
     });
 
-    const handleStartTimeUnitChange = (value: string) => setButton((prev) => {
-        return {...prev, song: {...prev.song, start_time_unit: value}};
+    const handleStartTimeUnitChange = (value: TimeUnit) => setButton((prev) => {
+        if (!button.song || !button.song.duration) return prev;
+
+        const startTime = new Time(button.song.start_time || 0, value);
+
+        if (startTime.toMilliseconds() > button.song.duration) {
+            startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
+        }
+
+        if (button.song.end_time) {
+            let endTime = new Time(button.song.end_time, button.song.end_time_unit || 's');
+
+            if (button.song.end_time_type === 'at') {
+                if (startTime.toMilliseconds() > endTime.toMilliseconds()) {
+                    startTime.setTimeKeepUnit(endTime);
+                }
+            } else if (button.song.end_time_type === 'after') {
+                endTime = endTime.add(startTime);
+
+                if (endTime.toMilliseconds() > button.song.duration) {
+                    startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(endTime));
+                }
+            }
+        }
+
+        return {
+            ...prev, song: {
+                ...prev.song,
+                start_time: startTime.getTime(),
+                start_time_unit: startTime.getTimeUnit()
+            }
+        };
     });
 
     const handleEndTimeTypeChange = (value: string) => setButton((prev) => {
-        return {...prev, song: {...prev.song, end_time_type: value}};
+        if (!button.song || !button.song.duration) return prev;
+
+        const endTime = new Time(button.song.end_time || 0, button.song.end_time_unit || 's');
+        let endTimeToUpdate = null;
+
+        if (value === 'at') {
+            if (endTime.toMilliseconds() > button.song.duration) {
+                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
+                endTimeToUpdate = endTime;
+            }
+
+            if (button.song.start_time) {
+                const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
+
+                if (endTime.toMilliseconds() < startTime.toMilliseconds()) {
+                    endTime.setTimeKeepUnit(startTime);
+                    endTimeToUpdate = endTime;
+                }
+            }
+        } else if (value === 'after') {
+            const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
+            const et = endTime.add(startTime);
+
+            if (et.toMilliseconds() > button.song.duration) {
+                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
+                endTimeToUpdate = endTime;
+            }
+        }
+
+        return {
+            ...prev, song: {
+                ...prev.song,
+                end_time_type: value,
+                end_time: endTimeToUpdate ? endTimeToUpdate.getTime() : button.song.end_time,
+                end_time_unit: endTimeToUpdate ? endTimeToUpdate.getTimeUnit() : button.song.end_time_unit
+            }
+        };
     });
 
     const handleEndTimeChange = (e: ChangeEvent<HTMLInputElement>) => setButton((prev) => {
-        return {...prev, song: {...prev.song, end_time: parseInt(e.target.value)}};
+        if (!button.song || !button.song.duration) return prev;
+
+        const endTime = new Time(parseInt(e.target.value), button.song.end_time_unit || 's');
+
+        if (endTime.isNegative()) {
+            endTime.setTime(0);
+        } else {
+            const endTimeType = button.song.end_time_type || 'after';
+
+            if (endTimeType === 'at') {
+                if (endTime.toMilliseconds() > button.song.duration) {
+                    endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
+                }
+
+                if (button.song.start_time) {
+                    const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
+
+                    if (endTime.toMilliseconds() < startTime.toMilliseconds()) {
+                        endTime.setTimeKeepUnit(startTime);
+                    }
+                }
+            } else if (endTimeType === 'after') {
+                const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
+                const et = endTime.add(startTime);
+
+                if (et.toMilliseconds() > button.song.duration) {
+                    endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
+                }
+            }
+        }
+
+        return {
+            ...prev, song: {
+                ...prev.song,
+                end_time: endTime.getTime(),
+                end_time_unit: endTime.getTimeUnit(),
+                end_time_type: button.song.end_time_type || 'after'
+            }
+        };
     });
 
-    const handleEndTimeUnitChange = (value: string) => setButton((prev) => {
-        return {...prev, song: {...prev.song, end_time_unit: value}};
+    const handleEndTimeUnitChange = (value: TimeUnit) => setButton((prev) => {
+        if (!button.song || !button.song.duration) return prev;
+
+        const endTime = new Time(button.song.end_time || 0, value);
+
+        const endTimeType = button.song.end_time_type || 'after';
+        if (endTimeType === 'at') {
+            if (endTime.toMilliseconds() > button.song.duration) {
+                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
+            }
+
+            if (button.song.start_time) {
+                const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
+
+                if (endTime.toMilliseconds() < startTime.toMilliseconds()) {
+                    endTime.setTimeKeepUnit(startTime);
+                }
+            }
+        } else if (endTimeType === 'after') {
+            const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
+            const et = endTime.add(startTime);
+
+            if (et.toMilliseconds() > button.song.duration) {
+                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
+            }
+        }
+
+        return {
+            ...prev, song: {
+                ...prev.song,
+                end_time: endTime.getTime(),
+                end_time_unit: endTime.getTimeUnit(),
+                end_time_type: button.song.end_time_type || 'after'
+            }
+        };
     });
 
     const handleBackgroundColorChange = (color: string) => {
@@ -119,6 +292,18 @@ const ButtonSettingsWin = () => {
     const closeWindow = () => (window as any).electron.close(winId);
 
     const saveButton = () => {
+        if (!button.song) return;
+        if (button.song.start_time === 0) {
+            button.song.start_time = null;
+            button.song.start_time_unit = null;
+        }
+
+        if (button.song.end_time === 0) {
+            button.song.end_time_type = null;
+            button.song.end_time = null;
+            button.song.end_time_unit = null;
+        }
+
         (window as any).electron.saveButton(activeProfile.id, button);
         (window as any).electron.close(winId);
     };
@@ -230,7 +415,7 @@ const ButtonSettingsWin = () => {
                 </div>
                 <div className={"buttons"}>
                     <Button icon={"close"} className={"danger"} onClick={closeWindow}>Discard</Button>
-                    <Button icon={"save"} className={"success"} onClick={saveButton}>Save</Button>
+                    <Button icon={"save"} className={"success"} onClick={saveButton} disabled={!button.song}>Save</Button>
                 </div>
             </Window>
         );

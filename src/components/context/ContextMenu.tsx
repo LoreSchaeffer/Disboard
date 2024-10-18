@@ -6,8 +6,11 @@ import {useData} from "../../ui/windowContext";
 export interface ContextMenuProps {
     x: number;
     y: number;
+    xAnchor?: 'left' | 'right';
+    yAnchor?: 'top' | 'bottom';
     items: MenuItemProps[];
     submenus?: Submenu[];
+    style?: React.CSSProperties;
 }
 
 export interface Submenu {
@@ -15,7 +18,7 @@ export interface Submenu {
     items: MenuItemProps[];
 }
 
-const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
+const ContextMenu = ({x, y, xAnchor = 'left', yAnchor = 'top', items, submenus, style}: ContextMenuProps) => {
     const {setContextMenu} = useData();
     const menuRef = useRef<HTMLDivElement | null>(null);
     const submenuRef = useRef<HTMLDivElement | null>(null);
@@ -43,8 +46,13 @@ const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
                 let newX = x;
                 let newY = y;
 
-                if (x + menuRect.width > windowWidth) newX = x - menuRect.width;
-                if (y + menuRect.height > windowHeight) newY = y - menuRect.height;
+                if (xAnchor === 'right') newX = x - menuRect.width;
+                if (yAnchor === 'bottom') newY = y - menuRect.height;
+
+                if (newX + menuRect.width > windowWidth) newX = windowWidth - menuRect.width;
+                if (newY + menuRect.height > windowHeight) newY = windowHeight - menuRect.height;
+                if (newX < 0) newX = 0;
+                if (newY < 0) newY = 0;
 
                 setPosition({x: newX, y: newY});
                 setVisible(true);
@@ -56,11 +64,19 @@ const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) setContextMenu(null);
-            if (submenuRef.current && !submenuRef.current.contains(e.target as Node)) setActiveSubmenu(null);
+            const clickedOutsideMenu = menuRef.current && !menuRef.current.contains(e.target as Node);
+            const clickedInsideSubmenu = submenuRef.current && submenuRef.current.contains(e.target as Node);
+
+            if (clickedOutsideMenu) {
+                if (submenus.length > 0 && clickedInsideSubmenu) return;
+
+                setContextMenu(null);
+                setActiveSubmenu(null);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
+
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -71,7 +87,12 @@ const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
 
         if (hovering) {
             const rect = e.currentTarget.getBoundingClientRect();
-            setSubmenuPosition({x: rect.right, y: rect.top});
+            let submenuX = rect.right;
+            const submenuY = rect.top;
+
+            if (xAnchor === 'right') submenuX = rect.left - menuRef.current.getBoundingClientRect().width;
+
+            setSubmenuPosition({x: submenuX, y: submenuY});
             setActiveSubmenu(submenuList.find(submenu => submenu.id === submenuId) || null);
         } else {
             submenuTimeoutRef.current = window.setTimeout(() => setActiveSubmenu(null), 100);
@@ -94,6 +115,7 @@ const ContextMenu = ({x, y, items, submenus}: ContextMenuProps) => {
                 ref={menuRef}
                 className="context-menu"
                 style={{
+                    ...style,
                     top: position.y + 'px',
                     left: position.x + 'px',
                     opacity: visible ? 1 : 0

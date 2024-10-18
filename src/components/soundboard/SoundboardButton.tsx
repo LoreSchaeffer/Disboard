@@ -26,11 +26,19 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>(({ ro
     const buttonStyle = {} as any;
     if (btn && btn.style) {
         if (btn.style.background_color) buttonStyle['--button-background'] = btn.style.background_color;
+
         if (btn.style.background_color_hover) buttonStyle['--button-background-hover'] = btn.style.background_color_hover;
+        else if (btn.style.background_color) buttonStyle['--button-background-hover'] = btn.style.background_color;
+
         if (btn.style.text_color) buttonStyle['--button-text'] = btn.style.text_color;
+
         if (btn.style.text_color_hover) buttonStyle['--button-text-hover'] = btn.style.text_color_hover;
+        else if (btn.style.text_color) buttonStyle['--button-text-hover'] = btn.style.text_color;
+
         if (btn.style.border_color) buttonStyle['--button-border'] = btn.style.border_color;
+
         if (btn.style.border_color_hover) buttonStyle['--button-border-hover'] = btn.style.border_color_hover;
+        else if (btn.style.border_color) buttonStyle['--button-border-hover'] = btn.style.border_color;
     }
 
     const handleClick = (e: React.MouseEvent) => {

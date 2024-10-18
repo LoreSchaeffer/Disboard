@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import {contextBridge, ipcRenderer} from "electron";
 import {Settings} from "./utils/store/settings";
 import {Profile, SbButton, Song} from "./utils/store/profiles";
 
@@ -24,9 +24,9 @@ contextBridge.exposeInMainWorld('electron', {
 
     /* === TO MAIN PROCESS === */
     // Navbar
-    minimize: (winId : number) => ipcRenderer.send('minimize', winId),
-    maximize: (winId : number) => ipcRenderer.send('maximize', winId),
-    close: (winId : number) => ipcRenderer.send('close', winId),
+    minimize: (winId: number) => ipcRenderer.send('minimize', winId),
+    maximize: (winId: number) => ipcRenderer.send('maximize', winId),
+    close: (winId: number) => ipcRenderer.send('close', winId),
 
     // Store
     saveSettings: (settings: Settings) => ipcRenderer.send('save_settings', settings),
@@ -35,7 +35,6 @@ contextBridge.exposeInMainWorld('electron', {
 
     // Profiles
     createProfile: (name: string, rows: number, cols: number) => ipcRenderer.invoke('create_profile', name, rows, cols),
-    renameProfile: (id: string, name: string) => ipcRenderer.invoke('rename_profile', id, name),
     deleteProfile: (id: string) => ipcRenderer.invoke('delete_profile', id),
     importProfile: () => ipcRenderer.invoke('import_profile'),
     exportProfile: (id: string) => ipcRenderer.send('export_profile', id),
@@ -44,6 +43,7 @@ contextBridge.exposeInMainWorld('electron', {
     // Windows
     openMediaSelectorWin: (row: number, col: number, winId: number) => ipcRenderer.send('open_media_selector_win', row, col, winId),
     openButtonSettingsWin: (row: number, col: number) => ipcRenderer.send('open_button_settings_win', row, col),
+    openNewProfileWin: () => ipcRenderer.send('open_new_profile_win'),
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),
@@ -53,7 +53,10 @@ contextBridge.exposeInMainWorld('electron', {
     search: (query: string) => ipcRenderer.invoke('search', query),
     getVideo: (url: string) => ipcRenderer.invoke('get_video', url),
     getStream: (url: string) => ipcRenderer.invoke('get_stream', url),
-    playNow: (song: string) => ipcRenderer.invoke('play_now', song),
+    playNow: (song: string) => ipcRenderer.send('play_now', song),
     pause: () => ipcRenderer.send('pause'),
     returnSong: (song: Song, winId: number) => ipcRenderer.send('return_song', song, winId),
+
+    // Misc
+    getFileSeparator: () => ipcRenderer.invoke('get_file_separator'),
 });

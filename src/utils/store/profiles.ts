@@ -34,15 +34,17 @@ export interface Song {
     uri: string;
     duration: number;
     thumbnail: string;
-    start_time: number;
-    start_time_unit: string;
-    end_time_type: string;
-    end_time: number;
-    end_time_unit: string;
+    start_time?: number;
+    start_time_unit?: TimeUnit;
+    end_time_type?: string;
+    end_time?: number;
+    end_time_unit?: TimeUnit;
     // TODO Custom volume?
 }
 
-type Source = 'youtube' | 'local' | 'remote';
+export type Source = 'youtube' | 'local' | 'remote';
+
+export type TimeUnit = 'ms' | 's' | 'm';
 
 const defProfile: Profile = {
     id: generateUUID(),

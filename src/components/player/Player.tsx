@@ -4,10 +4,15 @@ import {usePlayer} from "../../ui/playerContext";
 import {useData} from "../../ui/windowContext";
 import PlayerButton from "./PlayerButton";
 import ProgressBar from "../generic/ProgressBar";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {IconType} from "../../ui/icons";
 import {formatTime} from "../../ui/utils";
 import {Song} from "../../utils/store/profiles";
+import {SettingsData} from "../../utils/store/settings";
+import {MenuItemProps} from "../context/MenuItem";
+import {ContextMenuProps} from "../context/ContextMenu";
+import InputField from "../generic/forms/InputField";
+import Spinner from "../generic/forms/Spinner";
 
 function getVolumeIcon(volume: number) {
     if (volume < 15) return 'volume_low';
@@ -16,9 +21,8 @@ function getVolumeIcon(volume: number) {
 }
 
 const Player = () => {
-    const {mainPlayer, previewPlayer, settings, setSettings, winId} = useData();
-    const {setSong, setDuration} = usePlayer();
-
+    const {mainPlayer, settings, setSettings, winId, setContextMenu, activeProfile, profiles} = useData();
+    const {setSong, setDuration, queue, setQueue} = usePlayer();
     const [stopDisabled, setStopDisabled] = useState(true);
     const [previousDisabled, setPreviousDisabled] = useState(true);
     const [skipDisabled, setSkipDisabled] = useState(true);
@@ -26,11 +30,49 @@ const Player = () => {
     const [progressBarStatus, setProgressBarStatus] = useState({disabled: true, currentTime: 0, totalTime: 100, val: 0} as { disabled: boolean, currentTime: number, totalTime: number, val: number });
     const [repeatStatus, setRepeatStatus] = useState({fill: 'var(--text-disabled)', icon: 'repeat'} as { fill: string, icon: IconType });
     const [volumeStatus, setVolumeStatus] = useState({volume: 0, muted: false, icon: 'volume_high'} as { volume: number, muted: boolean, icon: IconType });
+    const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>();
+    const [settingsPosition, setSettingsPosition] = useState({x: window.innerWidth, y: window.innerHeight});
+    const [settingsVisible, setSettingsVisible] = useState(false);
+    const mediaOutputBtnRef = useRef<HTMLSpanElement>(null);
+    const settingsBtnRef = useRef<HTMLSpanElement>(null);
+    const settingsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        (window as any).electron.handlePlayNow('play_now', (song: Song) => {
+            mainPlayer.playNow(song);
+        });
+
+        navigator.mediaDevices.enumerateDevices().then((devices) => {
+            const ad = [] as MediaDeviceInfo[];
+
+            devices.forEach((device) => {
+                if (device.kind !== 'audiooutput' || device.deviceId === 'default' || device.deviceId === 'communications') return;
+                ad.push(device);
+            });
+
+            setAudioDevices(ad);
+        });
+    }, []);
 
     useEffect(() => {
         setVolumeStatus({volume: settings.volume, muted: false, icon: getVolumeIcon(settings.volume)});
         setRepeatStatus({fill: settings.loop === 'none' ? 'var(--text-disabled)' : 'var(--text-primary)', icon: settings.loop === 'one' ? 'repeat_one' : 'repeat'});
     }, [settings]);
+
+    useEffect(() => {
+        if (queue.length === 0) {
+            setPreviousDisabled(true);
+            setSkipDisabled(true);
+        } else {
+            setPreviousDisabled(false);
+            setSkipDisabled(false);
+            if (!mainPlayer.isPlayerPlaying()) {
+                setPlayStatus((prev) => {
+                    return {...prev, disabled: false};
+                });
+            }
+        }
+    }, [queue, setQueue]);
 
     useEffect(() => {
         const handlePlay = (song: Song, songDuration: number) => {
@@ -88,15 +130,34 @@ const Player = () => {
         }
     }, [mainPlayer, setSong, setDuration]);
 
-    const handleVolumeChange = (oldValue: number, newValue: number) => {
-        setSettings((prev) => {
-            return {...prev, volume: newValue};
-        });
+    useEffect(() => {
+        const handleClickOutsideSettings = (e:MouseEvent) => {
+            if (!settingsVisible && settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+                setSettingsVisible(false);
+                setSettingsPosition({x: window.innerWidth, y: window.innerHeight});
+            }
+        }
 
-        setTimeout(() => (window as any).electron.saveSettings(settings), 50);
+        document.addEventListener('mousedown', handleClickOutsideSettings);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideSettings);
+        }
+    }, [setSettingsVisible]);
+
+    const handlePlay = () => {
+        mainPlayer.playPause();
+    }
+
+    const handleVolumeChange = (_oldValue: number, newValue: number) => {
+        setSettings((prev) => {
+            const newSettings = {...prev, volume: newValue} as SettingsData;
+            (window as any).electron.saveSettings(newSettings);
+            return newSettings;
+        });
     };
 
-    const handleShowProgress = (val: number) => {
+    const formatProgressVal = (val: number) => {
         return formatTime(val);
     };
 
@@ -106,13 +167,13 @@ const Player = () => {
         else mainPlayer.loop('none');
 
         setSettings((prev) => {
-            return {...prev, loop: mainPlayer.getLoopMode()};
+            const newSettings = {...prev, loop: mainPlayer.getLoopMode()} as SettingsData;
+            (window as any).electron.saveSettings(newSettings);
+            return newSettings;
         });
-
-        setTimeout(() => (window as any).electron.saveSettings(settings), 100);
     };
 
-    const handleSeek = (oldValue: number, newValue: number) => {
+    const handleSeek = (_oldValue: number, newValue: number) => {
         mainPlayer.seekTo(newValue);
         setProgressBarStatus((prev) => {
             return {...prev, val: newValue};
@@ -123,12 +184,61 @@ const Player = () => {
         (window as any).electron.openMediaSelectorWin(null, null, winId);
     };
 
-    const handleShowQueue = (e: React.MouseEvent) => {
+    const handleShowQueue = () => {
         console.log('Show queue');
     };
 
-    const handleShowMediaOutput = (e: React.MouseEvent) => {
-        console.log('Show media output');
+    const handleShowMediaOutput = () => {
+        const selectDevice = (deviceId: string) => {
+            setSettings((prev) => {
+                const newSettings = {...prev, output_device: deviceId} as SettingsData;
+                (window as any).electron.saveSettings(newSettings);
+                return newSettings;
+            });
+        }
+
+        const testPlayback = () => {
+            mainPlayer.pause();
+            const audio = new Audio();
+            (audio as any).setSinkId(settings.output_device).then(() => {
+                audio.volume = settings.volume / 100;
+                audio.src = '/test.mp3';
+                audio.load();
+                audio.play();
+            }).catch(console.error);
+        }
+
+        const contextMenu = audioDevices.map((device) => {
+            return {
+                text: device.label,
+                onClick: () => selectDevice(device.deviceId),
+                icon: device.deviceId === settings.output_device ? 'radio_button_checked' : 'radio_button',
+                type: device.deviceId === settings.output_device ? 'primary' : 'normal'
+            } as MenuItemProps;
+        });
+
+        contextMenu.push({
+            type: 'separator'
+        });
+
+        contextMenu.push({
+            text: 'Test Playback',
+            icon: 'play',
+            onClick: testPlayback
+        });
+
+        const rect = mediaOutputBtnRef.current.getBoundingClientRect();
+
+        setContextMenu({
+            x: rect.left - 30,
+            y: rect.top - 10,
+            xAnchor: 'right',
+            yAnchor: 'bottom',
+            items: contextMenu,
+            style: {
+                minWidth: '400px'
+            }
+        } as ContextMenuProps);
     };
 
     const handleVolumeClick = () => {
@@ -142,42 +252,90 @@ const Player = () => {
     };
 
     const handleSettings = () => {
-        console.log('Show settings');
+        if (settingsRef.current && settingsBtnRef.current) {
+            const settingsBtnRect = settingsBtnRef.current.getBoundingClientRect();
+            const settingsRect = settingsRef.current.getBoundingClientRect();
+
+            const newX = settingsBtnRect.right - 10 - settingsRect.width;
+            const newY = settingsBtnRect.bottom - 47 - settingsRect.height;
+
+            setSettingsPosition({x: newX, y: newY});
+            setSettingsVisible(true);
+        }
+    }
+
+    const handleProfileRename = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const profile = activeProfile;
+        profile.name = e.target.value;
+        (window as any).electron.saveProfile(profile);
+    }
+
+    const handleRowsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const profile = activeProfile;
+        profile.rows = Number(e.target.value);
+        (window as any).electron.saveProfile(profile);
+    }
+
+    const handleColsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const profile = activeProfile;
+        profile.cols = Number(e.target.value);
+        (window as any).electron.saveProfile(profile);
     }
 
     return (
-        <div className="player">
-            <TrackInfo/>
-            <div className="player-controls">
-                <div className="player-buttons">
-                    <PlayerButton icon="stop" disabled={stopDisabled} onClick={() => mainPlayer.stop()}/>
-                    <PlayerButton icon="previous" disabled={previousDisabled} onClick={() => mainPlayer.previous()}/>
-                    <PlayerButton icon={playStatus.icon} size="44px" disabled={playStatus.disabled} onClick={() => mainPlayer.playPause()}/>
-                    <PlayerButton icon="next" disabled={skipDisabled} onClick={() => mainPlayer.next()}/>
-                    <PlayerButton icon={repeatStatus.icon} onClick={handleRepeatMode} fill={repeatStatus.fill}/>
+        <>
+            <div className="player">
+                <TrackInfo/>
+                <div className="player-controls">
+                    <div className="player-buttons">
+                        <PlayerButton icon="stop" disabled={stopDisabled} onClick={() => mainPlayer.stop()}/>
+                        <PlayerButton icon="previous" disabled={previousDisabled} onClick={() => mainPlayer.previous()}/>
+                        <PlayerButton icon={playStatus.icon} size="44px" disabled={playStatus.disabled} onClick={handlePlay}/>
+                        <PlayerButton icon="next" disabled={skipDisabled} onClick={() => mainPlayer.next()}/>
+                        <PlayerButton icon={repeatStatus.icon} onClick={handleRepeatMode} fill={repeatStatus.fill}/>
+                    </div>
+                    <div className="player-progress-group">
+                        <span className="progress-time current-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.val)}</span>
+                        <ProgressBar
+                            seek={true}
+                            disabled={progressBarStatus.disabled}
+                            max={progressBarStatus.totalTime}
+                            val={progressBarStatus.val}
+                            displayFunction={formatProgressVal}
+                            onChange={handleSeek}
+                        />
+                        <span className="progress-time total-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.totalTime)}</span>
+                    </div>
                 </div>
-                <div className="player-progress-group">
-                    <span className="progress-time current-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.val)}</span>
-                    <ProgressBar
-                        seek={true}
-                        disabled={progressBarStatus.disabled}
-                        max={progressBarStatus.totalTime}
-                        val={progressBarStatus.val}
-                        displayFunction={handleShowProgress}
-                        onChange={handleSeek}
-                    />
-                    <span className="progress-time total-time" style={{display: mainPlayer.isPlayerPlaying() ? 'block' : 'none'}}>{formatTime(progressBarStatus.totalTime)}</span>
+                <div className={"player-secondary-controls"}>
+                    <PlayerButton icon="search" onClick={handleSearch}/>
+                    <PlayerButton icon="queue" onClick={handleShowQueue}/>
+                    <PlayerButton ref={mediaOutputBtnRef} icon="media_output" onClick={handleShowMediaOutput}/>
+                    <PlayerButton icon={volumeStatus.icon} onClick={handleVolumeClick}/>
+                    <ProgressBar className="player-volume" min={0} max={100} val={settings.volume} seek={true} onChange={handleVolumeChange}/>
+                    <PlayerButton ref={settingsBtnRef} icon="settings" onClick={handleSettings}/>
                 </div>
             </div>
-            <div className={"player-secondary-controls"}>
-                <PlayerButton icon="search" onClick={handleSearch}/>
-                <PlayerButton icon="queue" onClick={handleShowQueue}/>
-                <PlayerButton icon="media_output" onClick={handleShowMediaOutput}/>
-                <PlayerButton icon={volumeStatus.icon} onClick={handleVolumeClick}/>
-                <ProgressBar className="player-volume" min={0} max={100} val={settings.volume} seek={true} onChange={handleVolumeChange}/>
-                <PlayerButton icon="settings" onClick={handleSettings}/>
+            <div ref={settingsRef} className={"settings"} style={{
+                top: settingsPosition.y,
+                left: settingsPosition.x,
+                opacity: settingsVisible ? 1 : 0
+            }}>
+                <span className={"title"}>Profile settings</span>
+                <div className={"row"}>
+                    <label>Name</label>
+                    <InputField value={activeProfile.name} onChange={handleProfileRename}/>
+                </div>
+                <div className={"row"}>
+                    <label>Rows</label>
+                    <Spinner min={1} value={activeProfile.rows} onChange={handleRowsChange}/>
+                </div>
+                <div className={"row"}>
+                    <label>Cols</label>
+                    <Spinner min={1} value={activeProfile.cols} onChange={handleColsChange}/>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

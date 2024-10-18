@@ -1,5 +1,5 @@
 import './InputField.css';
-import React, {useEffect} from "react";
+import React, {useEffect, useState} from "react";
 
 type Type = 'text' | 'password' | 'number' | 'url';
 
@@ -46,7 +46,7 @@ const InputField = ({
                         onSubmit,
                         setValue,
                     }: InputFieldProps) => {
-    const [val, setVal] = React.useState<string | number>(value ?? defaultValue ?? '');
+    const [val, setVal] = useState<string | number>(value ?? defaultValue ?? '');
     const isControlled = value !== undefined;
 
     useEffect(() => {

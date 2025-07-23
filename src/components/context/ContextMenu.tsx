@@ -68,7 +68,7 @@ const ContextMenu = ({x, y, xAnchor = 'left', yAnchor = 'top', items, submenus, 
             const clickedInsideSubmenu = submenuRef.current && submenuRef.current.contains(e.target as Node);
 
             if (clickedOutsideMenu) {
-                if (submenus.length > 0 && clickedInsideSubmenu) return;
+                if (submenus && submenus.length > 0 && clickedInsideSubmenu) return;
 
                 setContextMenu(null);
                 setActiveSubmenu(null);

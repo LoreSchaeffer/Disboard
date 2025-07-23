@@ -12,6 +12,7 @@
     "lint": "eslint --ext .ts,.tsx ."
   },
   "devDependencies": {
+    "@discordjs/voice": "^0.17.0",
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
     "@electron-forge/maker-rpm": "^7.5.0",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
+    "discord.js": "^14.16.3",
     "electron": "32.1.2",
     "eslint": "^8.0.1",
     "eslint-plugin-import": "^2.25.0",

@@ -3,7 +3,7 @@ import './Soundboard.css';
 import {useData} from "../../ui/windowContext";
 import {SbButton} from "../../utils/store/profiles";
 import {ContextMenuProps} from "../context/ContextMenu";
-import React from "react";
+import React, {useState} from "react";
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import {MenuItemProps} from "../context/MenuItem";
@@ -11,8 +11,9 @@ import {usePlayer} from "../../ui/playerContext";
 import DraggableButton from "./DraggableButton";
 
 const Soundboard = () => {
-    const {winId, activeProfile, mainPlayer, setContextMenu, copiedButton, setCopiedButton, copiedStyle, setCopiedStyle} = useData();
+    const {winId, activeProfile, mainPlayer, previewPlayer, setContextMenu, copiedButton, setCopiedButton, copiedStyle, setCopiedStyle} = useData();
     const {setQueue} = usePlayer();
+    const [previewPlaying, setPreviewPlaying] = useState(false);
 
     const rows = activeProfile?.rows || 8;
     const cols = activeProfile?.cols || 10;
@@ -29,13 +30,19 @@ const Soundboard = () => {
     const handleContextMenu = (e: React.MouseEvent, btn: SbButton, row: number, col: number) => {
         e.preventDefault();
 
-        const playNow = () => {
+        const preview = () => {
             if (btn == null) return;
             const song = btn.song;
             if (song == null) return;
             song.title = btn.title;
 
-            mainPlayer.playNow(song);
+            previewPlayer.playNow(song);
+            setPreviewPlaying(true);
+        }
+
+        const pausePreview = () => {
+            previewPlayer.stop();
+            setPreviewPlaying(false);
         }
 
         const addToQueue = () => {
@@ -82,9 +89,9 @@ const Soundboard = () => {
 
         const contextMenu = [
             {
-                text: 'Play now',
-                icon: 'play',
-                onClick: () => playNow()
+                text: previewPlaying ? 'Pause Preview' : 'Preview',
+                icon: previewPlaying ? 'pause' : 'play',
+                onClick: () => previewPlaying ? pausePreview() : preview()
             } as MenuItemProps,
             {
                 text: 'Add to queue',

@@ -57,7 +57,7 @@ export const WindowContextProvider: FC<{ children: ReactNode }> = ({children}) =
         mainPlayer.setOutputDevice(settings?.output_device || 'default');
         mainPlayer.loop(settings?.loop || 'none');
         previewPlayer.setVolume(settings?.volume || 50);
-        previewPlayer.setOutputDevice(settings?.output_device || 'default'); // TODO Change with a different setting
+        previewPlayer.setOutputDevice(settings?.preview_output_device || 'default');
     }, [settings]);
 
     useEffect(() => {

@@ -56,12 +56,18 @@ export function getStream(url: string): Promise<string> {
 
 export async function download(title: string, id: string, url: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-        if (url == null || url.trim() === '') reject('invalid_url');
+        if (url == null || url.trim() === '') {
+            reject('invalid_url');
+            return;
+        }
 
         const stream = ytdl(url, {filter: 'audioonly', quality: 'highestaudio'});
         const filePath = path.join(app.getPath('userData'), 'media', `${id}.mp3`);
 
-        if (fs.existsSync(filePath)) resolve(filePath);
+        if (fs.existsSync(filePath)) {
+            resolve(filePath);
+            return;
+        }
 
         ffmpeg(stream)
             .audioCodec('libmp3lame')

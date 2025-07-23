@@ -10,33 +10,26 @@ import Separator from "../generic/Separator";
 import {formatTime, getBiggestThumbnail, isRemoteUrl, isYouTubeUrl} from "../../ui/utils";
 import SvgIcon from "../generic/SvgIcon";
 import {YouTubeVideo} from "play-dl";
-import {Player} from "../../ui/player";
 import OpenDialogReturnValue = Electron.OpenDialogReturnValue;
 
 const ButtonSettingsWin = () => {
-        const {settings, winId, winParent} = useData();
+        const {settings, winId, winParent, previewPlayer} = useData();
         const {button, hasButton} = useButton();
         const [uriField, setUriField] = useState('');
         const [searchField, setSearchField] = useState('');
         const [searchResults, setSearchResults] = useState<YouTubeVideo[]>(undefined);
         const [selectedResult, setSelectedResult] = useState<YouTubeVideo | null>(null);
         const [playing, setPlaying] = useState<YouTubeVideo | null>(null);
-        const [player] = useState<Player>(new Player());
 
         useEffect(() => {
-            if (settings) {
-                player.setVolume(settings.volume);
-                player.setOutputDevice(settings.output_device);
-            }
-
             const handleStop = () => setPlaying(null);
 
-            player.addEventListener('stop', handleStop);
+            previewPlayer.addEventListener('stop', handleStop);
 
             return () => {
-                player.removeEventListener('stop', handleStop);
+                previewPlayer.removeEventListener('stop', handleStop);
             }
-        }, [player, settings]);
+        }, [previewPlayer]);
 
         useEffect(() => {
             if (button) {
@@ -78,19 +71,15 @@ const ButtonSettingsWin = () => {
             e.stopPropagation();
 
             if (playing) {
-                player.stop();
+                previewPlayer.stop();
                 return;
             }
-
-            console.log(result.url);
 
             const url = await (window as any).electron.getStream(result.url);
             if (!url) return;
 
-            console.log(url);
-
             (window as any).electron.pause();
-            player.playNow({
+            previewPlayer.playNow({
                 title: result.title,
                 uri: url
             } as Song);

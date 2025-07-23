@@ -7,11 +7,13 @@ export interface SettingsData {
     height: number;
     volume: number;
     output_device: string;
+    preview_output_device: string;
     loop: RepeatMode;
     font_size: number;
     active_profile?: string;
     show_images: boolean;
     youtube_cookie?: string;
+    bot_token?: string;
 }
 
 const defSettings: SettingsData = {
@@ -19,11 +21,10 @@ const defSettings: SettingsData = {
     height: 768,
     volume: 50,
     output_device: 'default',
+    preview_output_device: 'default',
     loop: 'none',
     font_size: 11,
-    active_profile: null,
     show_images: true,
-    youtube_cookie: null
 };
 
 export class Settings {

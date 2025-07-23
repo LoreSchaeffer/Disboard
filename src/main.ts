@@ -7,6 +7,7 @@ import {download, getInfo, getStream, initYouTube, search} from './utils/youtube
 import {parseFile} from "music-metadata";
 import {generateUUID} from "./utils/utils";
 import fs from "fs";
+import {Bot} from "./utils/discord";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -14,6 +15,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 let mainWindow: BrowserWindow | undefined;
 let settingsStore: Settings;
 let profilesStore: Profiles;
+let discordBot: Bot;
 
 // High priority
 // TODO App settings
@@ -23,6 +25,7 @@ let profilesStore: Profiles;
 // TODO Add different preview output device
 // TODO Register media buttons hook
 // TODO Queues
+// TODO Process priority
 
 // Low priority
 // TODO Redownload media when importing profiles
@@ -44,8 +47,6 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const start = () => {
-    app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-
     settingsStore = new Settings(() => mainWindow.webContents.send('settings', settingsStore.get()));
     profilesStore = new Profiles(() => mainWindow.webContents.send('profiles', profilesStore.get()));
 
@@ -62,6 +63,8 @@ const start = () => {
     }
 
     initYouTube(settings.youtube_cookie);
+
+    //downloadMissingFiles();
 
     createMainWindow();
 };
@@ -253,10 +256,35 @@ function saveButton(profile: string, button: SbButton): Profile[] {
 function downloadAndUpdateSoundboard(profile: string, button: SbButton) {
     download(button.song.title, button.song.id, button.song.original_url).then((filePath) => {
         button.song.uri = filePath;
+        saveButton(profile, button);
         mainWindow.webContents.send('profiles', saveButton(profile, button));
     }).catch((e) => {
         console.error(e);
     });
+}
+
+function downloadMissingFiles() {
+    const songs: Song[] = [];
+
+    const profiles: Profile[] = profilesStore.get();
+    profiles.forEach((profile) => {
+        profile.buttons.forEach((button) => {
+            if (button.song.source !== 'youtube') return;
+            songs.push(button.song);
+        });
+    });
+
+    const downloadMissing = async (index: number) => {
+        const song = songs[index];
+        if (!song) return;
+        
+        await download(song.title, song.id, song.original_url)
+            .then(async () => {
+                await downloadMissing(index + 1);
+            });
+    }
+
+    downloadMissing(0);
 }
 
 // Navbar

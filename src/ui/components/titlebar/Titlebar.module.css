@@ -1,0 +1,33 @@
+.titlebar {
+    height: var(--titlebar-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--background-tertiary);
+    user-select: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    -webkit-app-region: drag;
+    z-index: 1000;
+}
+
+.leftData {
+    height: var(--titlebar-height);
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    justify-self: flex-start;
+    margin-right: auto;
+    padding-left: 6px;
+    gap: 15px;
+    -webkit-app-region: no-drag;
+}
+
+.windowTitle {
+    font-weight: 900;
+    font-size: 9pt;
+    line-height: 9pt;
+    color: var(--text-disabled);
+}

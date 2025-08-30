@@ -1,0 +1,19 @@
+.titlebarButton {
+    padding: 0 2px;
+    height: var(--titlebar-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    -webkit-app-region: no-drag;
+}
+
+.titlebarButton svg {
+    height: calc(var(--titlebar-height) - 8px);
+    fill: var(--text-disabled);
+    margin: 0;
+    cursor: pointer;
+}
+
+.titlebarButton:hover svg {
+    fill: var(--gray-100);
+}

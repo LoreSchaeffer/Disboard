@@ -6,11 +6,11 @@ export default defineConfig({
     build: {
         rollupOptions: {
             input: {
-                main_window: resolve(__dirname, 'index.html'),
-                button_settings: resolve(__dirname, 'button_settings.html'),
-                media_selector: resolve(__dirname, 'media_selector.html'),
-                settings: resolve(__dirname, 'settings.html'),
-                new_profile: resolve(__dirname, 'new_profile.html'),
+                main_window: resolve(__dirname, 'pages/index.html'),
+                button_settings: resolve(__dirname, 'pages/button_settings.html'),
+                media_selector: resolve(__dirname, 'pages/media_selector.html'),
+                settings: resolve(__dirname, 'pages/settings.html'),
+                new_profile: resolve(__dirname, 'pages/new_profile.html'),
             }
         }
     }

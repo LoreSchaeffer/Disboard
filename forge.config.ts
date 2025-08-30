@@ -20,6 +20,9 @@ const config: ForgeConfig = {
             '.gitignore',
         ],
         prune: true,
+        extraResource: [
+            './resources/epidemiology.jar',
+        ]
     },
     rebuildConfig: {},
     makers: [

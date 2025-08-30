@@ -3,10 +3,9 @@ import ytdl from "@distube/ytdl-core";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import path from "path";
-import {app} from "electron";
+import {media} from "../main";
 
-export function initYouTube(cookie: string) {
-    const media = path.join(app.getPath('userData'), 'media');
+export const initYouTube = (cookie: string) => {
     if (!fs.existsSync(media)) fs.mkdirSync(media);
 
     if (cookie != null && cookie.trim()) {
@@ -14,65 +13,54 @@ export function initYouTube(cookie: string) {
     }
 }
 
-export function search(query: string): Promise<YouTubeVideo[]> {
-    return new Promise<YouTubeVideo[]>((resolve) => {
-        if (query == null || query.trim() === '') resolve([]);
-        try {
-            play.search(query, {limit: 20}).then((results) => {
-                resolve(results);
-            });
-        } catch (e) {
-            console.error(e.message);
-            resolve([]);
-        }
-    });
+export const search = async (query: string): Promise<YouTubeVideo[]> => {
+    if (query == null || query.trim() === '') return [];
+
+    try {
+        // eslint-disable-next-line import/no-named-as-default-member
+        return await play.search(query, {limit: 20});
+    } catch (e) {
+        console.error(e.message);
+        return [];
+    }
 }
 
-export function getInfo(url: string): Promise<YouTubeVideo> {
-    return new Promise<YouTubeVideo>((resolve) => {
-        try {
-            video_info(url).then((info) => resolve(info.video_details));
-        } catch (e) {
-            console.error(e.message);
-            resolve(null);
-        }
-    });
+export const getInfo = async (url: string): Promise<YouTubeVideo | null> => {
+    if (url == null || url.trim() === '') return null;
+
+    try {
+        return (await video_info(url)).video_details;
+    } catch (e) {
+        console.error(e.message);
+        return null;
+    }
 }
 
-export function getStream(url: string): Promise<string> {
-    if (url == null || url.trim() === '') return Promise.resolve(null);
+export const getStream = async (url: string): Promise<string | null> => {
+    if (url == null || url.trim() === '') return null;
 
-    return new Promise<string>((resolve) => {
-        stream(url, {
-            discordPlayerCompatibility: true
-        })
-            .then((stream) => resolve((stream as any).url))
-            .catch((e) => {
-                console.error(e.message);
-                resolve(null);
-            });
-    });
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (await stream(url, {discordPlayerCompatibility: true}) as any).url
+    } catch (e) {
+        console.error(e.message);
+        return null;
+    }
 }
 
-export async function download(title: string, id: string, url: string): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-        if (url == null || url.trim() === '') {
-            reject('invalid_url');
-            return;
-        }
+export const download = async (title: string, id: string, url: string): Promise<string> => {
+    if (url == null || url.trim() === '') throw new Error("invalid_url");
 
-        const stream = ytdl(url, {filter: 'audioonly', quality: 'highestaudio'});
-        const filePath = path.join(app.getPath('userData'), 'media', `${id}.mp3`);
+    const stream = ytdl(url, {filter: 'audioonly', quality: 'highestaudio'});
+    const filePath = path.join(media, `${id} - ${title}.mp3`);
 
-        if (fs.existsSync(filePath)) {
-            resolve(filePath);
-            return;
-        }
+    if (fs.existsSync(filePath)) return filePath;
 
+    return new Promise((resolve, reject) => {
         ffmpeg(stream)
             .audioCodec('libmp3lame')
             .toFormat('mp3')
-            .on('progress', (progress: any) => {
+            .on('progress', (progress: { percent?: number }) => {
                 if (progress.percent !== undefined) {
                     const percent = progress.percent.toFixed(2);
                     console.log(`Downloading '${title}': ${percent}%`);
@@ -82,9 +70,9 @@ export async function download(title: string, id: string, url: string): Promise<
                 console.log(`Downloaded '${title}'`);
                 resolve(filePath);
             })
-            .on('error', (e: any) => {
+            .on('error', (e: Error) => {
                 console.error(`Error downloading '${title}': ${e.message}`);
-                reject(e.message);
+                reject(new Error(e.message));
             })
             .save(filePath);
     });

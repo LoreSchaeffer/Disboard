@@ -14,7 +14,7 @@ type WindowContextType = {
     setProfiles: (profiles: Profile[]) => void;
     activeProfile: Profile;
     contextMenu: ContextMenuProps | null;
-    setContextMenu: Dispatch<SetStateAction<ContextMenuProps | null>>;
+    setContextMenu: (menu: ContextMenuProps | null) => void;
     titlebar: TitlebarRef | null;
     setTitlebar: Dispatch<SetStateAction<TitlebarRef | null>>;
 }
@@ -63,6 +63,13 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
         setProfiles(profiles);
     }
 
+    const updateContextMenu = (menu: ContextMenuProps | null) => {
+        setContextMenu(() => {
+            if (menu) menu.show = true;
+            return menu;
+        });
+    }
+
     return (
         <WindowContext.Provider value={{
             ready,
@@ -75,7 +82,7 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
             setProfiles: updateProfiles,
             activeProfile,
             contextMenu,
-            setContextMenu,
+            setContextMenu: updateContextMenu,
             titlebar,
             setTitlebar
         }}>

@@ -9,7 +9,7 @@ import {IconType} from "../../utils/icons";
 import {formatTime} from "../../utils/utils";
 import {Song} from "../../utils/store/profiles";
 import {SettingsData} from "../../utils/store/settings";
-import {MenuItemProps} from "../menu/MenuItem";
+import {MenuItemProps} from "../menu/ContextMenuItem";
 import {ContextMenuProps} from "../menu/ContextMenu";
 import InputField from "../generic/forms/InputField";
 import Spinner from "../generic/forms/Spinner";

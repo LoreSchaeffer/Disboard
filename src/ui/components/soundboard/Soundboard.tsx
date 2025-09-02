@@ -3,7 +3,7 @@ import {ContextMenuProps} from "../menu/ContextMenu";
 import React, {useState} from "react";
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
-import {MenuItemProps} from "../menu/MenuItem";
+import {MenuItemProps} from "../menu/ContextMenuItem";
 import {usePlayer} from "../../utils/playerContext";
 import DraggableButton from "./DraggableButton";
 import {SbButton} from "../../../types/storage";

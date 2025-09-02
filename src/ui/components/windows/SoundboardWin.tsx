@@ -1,9 +1,9 @@
 import styles from './SoundboardWin.module.css';
 import PlayerContextProvider from "../../context/PlayerContext";
 import {useWindowContext} from "../../context/WindowContext";
-import {useEffect, useRef, WheelEvent} from "react";
+import {useEffect, useRef} from "react";
 import SvgIcon from "../SvgIcon";
-import {MenuItemProps} from "../menu/MenuItem";
+import {MenuItemProps} from "../menu/ContextMenuItem";
 
 const defProfileSelectorItems: MenuItemProps[] = [
     {
@@ -58,9 +58,9 @@ const SoundboardWin = () => {
 
     useEffect(() => {
         titlebar?.setChildren(
-                 <span ref={profileSelectorRef} className={styles.profileSelector} onClick={handleProfileSelectorClick}>
+            <span ref={profileSelectorRef} className={styles.profileSelector} onClick={handleProfileSelectorClick}>
                      {activeProfile?.name}
-                     <SvgIcon icon={"chevron_down"} size={"15px"} color={"var(--text-disabled)"}/>
+                <SvgIcon icon={"chevron_down"} size={"15px"} color={"var(--text-disabled)"}/>
                  </span>
         );
     }, [profiles, activeProfile, titlebar]);
@@ -72,35 +72,31 @@ const SoundboardWin = () => {
             text: p.name,
             type: activeProfile.id === p.id ? 'primary' : 'normal',
             icon: activeProfile.id === p.id ? 'radio_button_checked' : 'radio_button',
-            submenus: p.id,
+            submenu: {
+                items: [
+                    {
+                        text: 'Export',
+                        icon: 'output',
+                        onClick: () => window.electron.exportProfile(p.id),
+                    },
+                    {
+                        text: 'Delete',
+                        icon: 'delete',
+                        type: 'danger',
+                        onClick: () => window.electron.deleteProfile(p.id),
+                    }
+                ]
+            },
             onClick: () => {
                 setSettings({...settings, active_profile: p.id});
             }
         }));
 
-        const submenus = profiles.map(p => ({
-            id: p.id,
-            items: [
-                {
-                    text: 'Export',
-                    icon: 'output',
-                    onClick: () => window.electron.exportProfile(p.id),
-                },
-                {
-                    text: 'Delete',
-                    icon: 'delete',
-                    type: 'danger',
-                    onClick: () => window.electron.deleteProfile(p.id),
-                }
-            ]
-        }));
-
         const rect = profileSelectorRef.current.getBoundingClientRect();
         setContextMenu({
             x: rect.left,
-            y: rect.bottom,
-            items: [...items, ...defProfileSelectorItems],
-            submenus: submenus
+            y: rect.bottom + 3,
+            items: [...items, ...defProfileSelectorItems] as MenuItemProps[],
         });
     }
 

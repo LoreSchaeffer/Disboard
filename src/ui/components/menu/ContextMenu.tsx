@@ -1,154 +1,256 @@
 import styles from "./ContextMenu.module.css";
-import MenuItem, {MenuItemProps} from "./MenuItem";
-import React, {useEffect, useRef, useState} from "react";
+import ContextMenuItem, {MenuItemProps} from "./ContextMenuItem";
+import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {useWindowContext} from "../../context/WindowContext";
 
 export type ContextMenuProps = {
-    x: number;
-    y: number;
-    xAnchor?: 'left' | 'right';
-    yAnchor?: 'top' | 'bottom';
+    x?: number;
+    y?: number;
+    xAnchor?: "left" | "right";
+    yAnchor?: "top" | "bottom";
+    show?: boolean;
     items: MenuItemProps[];
-    submenus?: Submenu[];
     style?: React.CSSProperties;
-}
+    parent?: number;
+    onChildHover?: () => void;
+    onChildLeave?: () => void;
+};
 
-export type Submenu = {
-    id: string;
-    items: MenuItemProps[];
-}
+export type ContextMenuRef = {
+    element: HTMLDivElement | null;
+    showMenu: (x: number, y: number) => void;
+    hideMenu: () => void;
+    didClickInside: (e: MouseEvent) => boolean;
+};
 
-const ContextMenu = ({x, y, xAnchor = 'left', yAnchor = 'top', items, submenus, style}: ContextMenuProps) => {
-    const {setContextMenu} = useWindowContext();
-    const menuRef = useRef<HTMLDivElement | null>(null);
-    const submenuRef = useRef<HTMLDivElement | null>(null);
-    const submenuTimeoutRef = useRef<number | null>(null);
+const HIDE_TIMEOUT = 100;
 
-    const [position, setPosition] = useState({x, y});
-    const [visible, setVisible] = useState(false);
-    const [submenuList, setSubmenuList] = useState<Submenu[]>([]);
-    const [activeSubmenu, setActiveSubmenu] = useState<Submenu | null>(null);
-    const [submenuPosition, setSubmenuPosition] = useState({x: 0, y: 0});
+const ContextMenu = forwardRef<ContextMenuRef, ContextMenuProps>((
+        {
+            x = 0,
+            y = 0,
+            xAnchor = "left",
+            yAnchor = "top",
+            show = false,
+            items,
+            style,
+            parent,
+            onChildHover,
+            onChildLeave
+        }: ContextMenuProps,
+        ref
+    ) => {
+        const {setContextMenu} = useWindowContext();
 
-    useEffect(() => {
-        if (submenus) {
-            setSubmenuList(submenus);
-        }
-    }, [submenus]);
+        const [position, setPosition] = useState<{ x: number; y: number }>({x: x ?? 0, y: y ?? 0});
+        const [visible, setVisible] = useState<boolean>(false);
 
-    useEffect(() => {
-        const updatePosition = () => {
-            if (menuRef.current) {
-                const menuRect = menuRef.current.getBoundingClientRect();
-                const windowWidth = window.innerWidth;
-                const windowHeight = window.innerHeight;
+        const menuRef = useRef<HTMLDivElement | null>(null);
+        const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+        const submenusRef = useRef<Record<number, ContextMenuRef | null>>({});
 
-                let newX = x;
-                let newY = y;
+        useEffect(() => {
+            const onClickOutside = (e: MouseEvent) => {
+                if (didClickInside(e)) return;
 
-                if (xAnchor === 'right') newX = x - menuRect.width;
-                if (yAnchor === 'bottom') newY = y - menuRect.height;
+                hideMenu();
+            };
 
-                if (newX + menuRect.width > windowWidth) newX = windowWidth - menuRect.width;
-                if (newY + menuRect.height > windowHeight) newY = windowHeight - menuRect.height;
-                if (newX < 0) newX = 0;
-                if (newY < 0) newY = 0;
+            document.addEventListener("mousedown", onClickOutside);
 
-                setPosition({x: newX, y: newY});
-                setVisible(true);
+            return () => {
+                document.removeEventListener("mousedown", onClickOutside);
+
+                if (hideTimeoutRef.current) {
+                    clearTimeout(hideTimeoutRef.current);
+                    hideTimeoutRef.current = null;
+                }
             }
+        }, []);
+
+        useEffect(() => {
+            if (!menuRef.current || parent != null) {
+                setPosition({x, y});
+                return;
+            }
+
+            const menuRect = menuRef.current.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let finalX = x ?? 0;
+            let finalY = y ?? 0;
+
+            if (xAnchor === "right") finalX = (x ?? 0) - menuRect.width;
+            if (yAnchor === "bottom") finalY = (y ?? 0) - menuRect.height;
+
+            if (finalX + menuRect.width > windowWidth) finalX = Math.max(0, windowWidth - menuRect.width);
+            if (finalY + menuRect.height > windowHeight) finalY = Math.max(0, windowHeight - menuRect.height);
+            if (finalX < 0) finalX = 0;
+            if (finalY < 0) finalY = 0;
+
+            setPosition({x: finalX, y: finalY});
+            if (show) setVisible(true);
+        }, [x, y, xAnchor, yAnchor, items]);
+
+        const showSubmenu = (e: HTMLElement, index: number) => {
+            const submenu = submenusRef.current[index];
+            if (!submenu) return;
+
+            const position = getSubmenuPosition(e, submenu);
+            submenu.showMenu(position.x, position.y);
         }
 
-        updatePosition();
-    }, [x, y]);
+        const hideSubmenu = (index: number) => {
+            submenusRef.current[index]?.hideMenu();
+        }
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            const clickedOutsideMenu = menuRef.current && !menuRef.current.contains(e.target as Node);
-            const clickedInsideSubmenu = submenuRef.current && submenuRef.current.contains(e.target as Node);
+        const showMenu = (x: number, y: number) => {
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
 
-            if (clickedOutsideMenu) {
-                if (submenus && submenus.length > 0 && clickedInsideSubmenu) return;
+            if (x && y) setPosition({x, y});
+            setVisible(true);
+        }
 
+        const hideMenu = () => {
+            if (parent != null) {
+                hideTimeoutRef.current = setTimeout(() => setVisible(false), HIDE_TIMEOUT);
+            } else {
+                setVisible(false);
                 setContextMenu(null);
-                setActiveSubmenu(null);
             }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [setContextMenu]);
-
-    const showSubmenu = (e: React.MouseEvent, submenuId: string, hovering: boolean) => {
-        if (submenuTimeoutRef.current) clearTimeout(submenuTimeoutRef.current);
-
-        if (hovering) {
-            const rect = e.currentTarget.getBoundingClientRect();
-            let submenuX = rect.right;
-            const submenuY = rect.top;
-
-            if (xAnchor === 'right') submenuX = rect.left - menuRef.current.getBoundingClientRect().width;
-
-            setSubmenuPosition({x: submenuX, y: submenuY});
-            setActiveSubmenu(submenuList.find(submenu => submenu.id === submenuId) || null);
-        } else {
-            submenuTimeoutRef.current = window.setTimeout(() => setActiveSubmenu(null), 100);
         }
-    };
 
-    const keepShowingSubmenu = (e: React.MouseEvent, submenuId: string, hovering: boolean) => {
-        if (submenuTimeoutRef.current) clearTimeout(submenuTimeoutRef.current);
+        const getSubmenuPosition = (e: HTMLElement, submenu: ContextMenuRef) => {
+            if (!menuRef.current) return {x: 0, y: 0};
 
-        if (hovering) {
-            setActiveSubmenu(submenuList.find(submenu => submenu.id === submenuId) || null);
-        } else {
-            submenuTimeoutRef.current = window.setTimeout(() => setActiveSubmenu(null), 100);
+            const itemRect = e.getBoundingClientRect();
+            const containerRect = menuRef.current.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let finalX = containerRect.right + 2;
+            let finalY = itemRect.top;
+
+            const submenuRect = submenu.element.getBoundingClientRect();
+
+            if (finalX + submenuRect.width > windowWidth) finalX = containerRect.left - submenuRect.width - 2;
+            if (finalY + submenuRect.height > windowHeight) finalY = Math.max(0, windowHeight - submenuRect.height);
+
+            if (finalX < 0) finalX = 0;
+            if (finalY < 0) finalY = 0;
+
+            return {x: finalX, y: finalY};
         }
-    }
 
-    return (
-        <>
-            <div
-                ref={menuRef}
-                className={styles.contextMenu}
-                style={{
-                    ...style,
-                    top: position.y + 'px',
-                    left: position.x + 'px',
-                    opacity: visible ? 1 : 0
-                }}
-            >
-                <ul>
-                    {items.map((item, index) => (
-                        <MenuItem key={index} {...item} onHover={showSubmenu} />
-                    ))}
-                </ul>
-            </div>
-            {activeSubmenu && (
+        const onHover = () => {
+            if (parent != null) onChildHover?.();
+
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
+        }
+
+        const onLeave = () => {
+            if (parent != null) {
+                onChildLeave?.();
+                hideTimeoutRef.current = setTimeout(() => setVisible(false), HIDE_TIMEOUT);
+            }
+        }
+
+        const handleChildHover = () => {
+            if (parent == null) return;
+
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
+        }
+
+        const handleChildLeave = () => {
+            if (parent == null) return;
+
+            hideTimeoutRef.current = setTimeout(() => setVisible(false), HIDE_TIMEOUT);
+        }
+
+        const didClickInside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (menuRef.current && menuRef.current.contains(target)) return true;
+
+            for (const submenu of Object.values(submenusRef.current)) {
+                if (submenu && submenu.didClickInside(e)) return true;
+            }
+
+            return false;
+        }
+
+        useImperativeHandle(ref, () => ({
+            element: menuRef.current,
+            showMenu: showMenu,
+            hideMenu: hideMenu,
+            didClickInside: didClickInside
+        }));
+
+        return (
+            <>
                 <div
-                    ref={submenuRef}
+                    ref={(e) => {
+                        menuRef.current = e;
+                        if (typeof ref === "function") ref({element: e, showMenu, hideMenu, didClickInside});
+                        else if (ref && typeof ref === "object") ref.current = {element: e, showMenu, hideMenu, didClickInside};
+                    }}
                     className={styles.contextMenu}
                     style={{
-                        top: submenuPosition.y + 'px',
-                        left: submenuPosition.x + 'px',
-                        opacity: 1
+                        ...style,
+                        position: "fixed",
+                        top: `${position.y}px`,
+                        left: `${position.x}px`,
+                        opacity: visible ? 1 : 0,
+                        pointerEvents: visible ? "auto" : "none",
                     }}
-                    onMouseEnter={(e) => keepShowingSubmenu(e, activeSubmenu.id, true)}
-                    onMouseLeave={(e) => keepShowingSubmenu(e, activeSubmenu.id, false)}
+
+                    onMouseEnter={onHover}
+                    onMouseLeave={onLeave}
                 >
                     <ul>
-                        {activeSubmenu.items.map((item, index) => (
-                            <MenuItem key={index} {...item} />
+                        {items.map((item, index) => (
+                            <ContextMenuItem
+                                key={index}
+                                {...item}
+                                showSubmenu={(e) => showSubmenu(e, index)}
+                                hideSubmenu={() => hideSubmenu(index)}
+                            />
                         ))}
                     </ul>
                 </div>
-            )}
-        </>
-    )
-        ;
-}
+
+                {items.filter(item => item.submenu).map((item, index) => {
+                    return (
+                        <ContextMenu
+                            ref={(e) => {
+                                submenusRef.current[index] = e;
+                            }}
+                            key={index}
+                            x={0}
+                            y={0}
+                            xAnchor={xAnchor}
+                            yAnchor={yAnchor}
+                            items={item.submenu.items}
+                            style={item.submenu.style}
+                            show={false}
+                            parent={index}
+                            onChildHover={handleChildHover}
+                            onChildLeave={handleChildLeave}
+                        />
+                    )
+                })}
+            </>
+        );
+    }
+);
 
 export default ContextMenu;

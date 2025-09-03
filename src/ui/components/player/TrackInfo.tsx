@@ -1,13 +1,15 @@
 import './TrackInfo.css';
-import {usePlayer} from "../../utils/playerContext";
+import {usePlayer} from "../../context/PlayerContext";
 
 const TrackInfo = () => {
-    const {song} = usePlayer();
+    const {player} = usePlayer();
 
-    const display = song ? 'flex' : 'none';
-    const thumbnail = song ? `url(${song.thumbnail || 'url("/images/track.png")'})` : 'url("/images/track.png")';
-    const title = song ? song.title : '';
-    const src = song ? (song.original_url ? song.original_url : song.uri) : '';
+    const track = player?.getCurrentTrack();
+
+    const display = track ? 'flex' : 'none';
+    const thumbnail = track ? `url(${track.thumbnail || 'url("/images/track.png")'})` : 'url("/images/track.png")';
+    const title = track ? track.title : '';
+    const src = track ? (track.original_url ? track.original_url : track.uri) : '';
 
     return (
         <div className="track-info" style={{display: display}}>

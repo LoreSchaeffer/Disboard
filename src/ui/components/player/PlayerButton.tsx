@@ -1,7 +1,6 @@
-import './PlayerButton.css';
-import {IconType} from "../../utils/icons";
-import SvgIcon from "../generic/SvgIcon";
+import styles from './PlayerButton.module.css';
 import {forwardRef, MouseEvent} from "react";
+import SvgIcon, {IconType} from "../SvgIcon";
 
 interface PlayerButtonProps {
     icon: IconType;
@@ -11,9 +10,21 @@ interface PlayerButtonProps {
     fill?: string;
 }
 
-const PlayerButton = forwardRef<HTMLSpanElement, PlayerButtonProps>(({icon, size = '26px', disabled = false, onClick, fill = 'var(--text-primary)'}: PlayerButtonProps, ref) => {
+const PlayerButton = forwardRef<HTMLSpanElement, PlayerButtonProps>((
+    {
+        icon,
+        size = '26px',
+        disabled = false,
+        onClick,
+        fill = 'var(--text-primary)'
+    }: PlayerButtonProps, ref) => {
     return (
-        <span ref={ref} className={`player-button${disabled ? ' disabled' : ''}`} onClick={disabled ? undefined : onClick} style={{width: size, height: size}}>
+        <span
+            ref={ref}
+            className={`${styles.playerButton} ${disabled ? styles.disabled : ''}`}
+            onClick={disabled ? undefined : onClick}
+            style={{width: size, height: size}}
+        >
             <SvgIcon icon={icon} size={size} color={fill}/>
         </span>
     );

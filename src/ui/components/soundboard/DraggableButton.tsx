@@ -1,5 +1,7 @@
-import React from "react";
+import React, {useRef} from "react";
 import {useDrag, useDrop} from 'react-dnd';
+import SoundboardButton from "./SoundboardButton";
+import {SbButton} from "../../../types/storage";
 
 type DraggableButtonProps = {
     row: number;
@@ -15,6 +17,8 @@ const ItemTypes = {
 };
 
 const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons}: DraggableButtonProps) => {
+    const ref = useRef<HTMLDivElement>(null);
+
     const [, drag] = useDrag({
         type: ItemTypes.BUTTON,
         item: {row, col},
@@ -22,14 +26,16 @@ const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons}
 
     const [, drop] = useDrop({
         accept: ItemTypes.BUTTON,
-        drop: (item: { row: number, col: number }) => {
+        drop: (item: { row: number; col: number }) => {
             swapButtons(item.row, item.col, row, col);
         },
     });
 
+    drag(drop(ref));
+
     return (
         <SoundboardButton
-            ref={(node) => drag(drop(node))}
+            ref={ref}
             row={row}
             col={col}
             button={button}

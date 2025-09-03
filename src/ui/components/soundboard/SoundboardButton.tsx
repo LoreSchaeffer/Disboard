@@ -1,8 +1,7 @@
 import styles from "./SoundboardButton.module.css";
-import React, {forwardRef} from "react";
-import {getButton} from "../../utils/utils";
-import {SbButton} from "../../../types/storage";
+import React, {forwardRef, MouseEvent, useEffect, useState} from "react";
 import {useWindowContext} from "../../context/WindowContext";
+import {SbButton} from "../../../types/storage";
 
 type SoundboardButtonProps = {
     row: number;
@@ -12,56 +11,83 @@ type SoundboardButtonProps = {
     onContextMenu?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
 };
 
-export const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>(
-    ({row, col, button, onClick, onContextMenu}, ref) => {
-        const {settings, activeProfile} = useWindowContext();
+const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
+        {
+            row,
+            col,
+            button,
+            onClick,
+            onContextMenu
+        }, ref) => {
+        const {settings} = useWindowContext();
+        const [defaultStyle, setDefaultStyle] = useState<React.CSSProperties>({});
+        const [hoverStyle, setHoverStyle] = useState<React.CSSProperties>({});
+        const [style, setStyle] = useState<React.CSSProperties>({});
+        
+        const btn = button || {row, col, title: `Button ${row}-${col}`, track: null};
 
-        const btn = button ? button : getButton(activeProfile, row, col);
+        useEffect(() => {
+            const newDefaultStyle = {
+                backgroundColor: btn.style?.background_color || 'var(--btn-background)',
+                color: btn.style?.text_color || 'var(--btn-text)',
+                borderColor: btn.style?.border_color || 'var(--btn-border)',
+            };
 
-        let thumbnail = 'url(/images/track.png)';
-        if (btn && btn.song?.thumbnail) thumbnail = `url(${btn.song.thumbnail})`;
+            const newHoverStyle = {
+                backgroundColor: btn.style?.background_color_hover || btn.style?.background_color || 'var(--btn-background-hover)',
+                color: btn.style?.text_color_hover || btn.style?.text_color || 'var(--btn-text-hover)',
+                borderColor: btn.style?.border_color_hover || btn.style?.border_color || 'var(--btn-border-hover)',
+            };
 
-        let image = null;
-        if (settings.show_images) image = <div className={"sb-btn-img"} style={{backgroundImage: thumbnail}}></div>;
+            setDefaultStyle(newDefaultStyle);
+            setHoverStyle(newHoverStyle);
+            setStyle(newDefaultStyle);
+        }, []);
 
-        const buttonStyle = {} as any;
-        if (btn && btn.style) {
-            if (btn.style.background_color) buttonStyle['--button-background'] = btn.style.background_color;
 
-            if (btn.style.background_color_hover) buttonStyle['--button-background-hover'] = btn.style.background_color_hover;
-            else if (btn.style.background_color) buttonStyle['--button-background-hover'] = btn.style.background_color;
+        const getImage = () => {
+            let image = 'url(/images/track.png)';
+            if (btn.track?.thumbnail) image = `url(${btn.track.thumbnail})`;
 
-            if (btn.style.text_color) buttonStyle['--button-text'] = btn.style.text_color;
-
-            if (btn.style.text_color_hover) buttonStyle['--button-text-hover'] = btn.style.text_color_hover;
-            else if (btn.style.text_color) buttonStyle['--button-text-hover'] = btn.style.text_color;
-
-            if (btn.style.border_color) buttonStyle['--button-border'] = btn.style.border_color;
-
-            if (btn.style.border_color_hover) buttonStyle['--button-border-hover'] = btn.style.border_color_hover;
-            else if (btn.style.border_color) buttonStyle['--button-border-hover'] = btn.style.border_color;
+            return <div className={styles.sbBtnImage} style={{backgroundImage: image}}/>;
         }
 
-        const handleClick = (e: React.MouseEvent) => {
-            if (onClick) onClick(e, btn, row, col);
+        const handleClick = (e: MouseEvent) => {
+            onClick?.(e, btn, row, col);
         }
 
-        const handleContextMenu = (e: React.MouseEvent) => {
-            if (onContextMenu) onContextMenu(e, btn, row, col);
+        const handleContextMenu = (e: MouseEvent) => {
+            onContextMenu?.(e, btn, row, col);
+        }
+
+        const onMouseEnter = (e: MouseEvent) => {
+            const target = e.currentTarget as HTMLElement;
+            if (target.classList.contains('dropping')) return;
+            setStyle(hoverStyle);
         }
 
         return (
             <div
                 ref={ref}
-                className={"sb-btn"}
-                style={{justifyContent: image == null ? 'center' : 'flex-start', ...buttonStyle}}
+                className={styles.sbBtn}
+                style={{justifyContent: settings.show_images ? 'flex-start' : 'center', ...style}}
                 onClick={(e: React.MouseEvent) => handleClick(e)}
                 onContextMenu={(e: React.MouseEvent) => handleContextMenu(e)}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={() => setStyle(defaultStyle)}
             >
-                {settings.show_images && image}
-                <span className={"sb-btn-title"}
-                      style={{fontSize: settings.font_size + "pt"}}>{btn ? btn.title : `Button ${row}.${col}`}</span>
+                {settings.show_images && getImage()}
+                <span
+                    className={styles.sbBtnText}
+                    style={{
+                        fontSize: settings.font_size + "pt",
+                        lineHeight: settings.font_size * 1.2 + "pt",
+                }}
+                >{btn.title}
+                </span>
             </div>
         );
     }
 );
+
+export default SoundboardButton;

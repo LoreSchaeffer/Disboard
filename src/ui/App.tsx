@@ -1,7 +1,7 @@
 import './App.css';
 import {ReactElement, useEffect, useRef} from "react";
 import SoundboardWin from "./components/windows/SoundboardWin";
-import {Titlebar, TitlebarRef} from "./components/titlebar/Titlebar";
+import Titlebar, {TitlebarRef} from "./components/titlebar/Titlebar";
 import ContextMenu from "./components/menu/ContextMenu";
 import {useWindowContext} from "./context/WindowContext";
 

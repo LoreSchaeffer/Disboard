@@ -12,7 +12,7 @@ export type TitlebarRef = {
     setChildren: (children: ReactNode | ReactNode[]) => void;
 };
 
-export const Titlebar = forwardRef<TitlebarRef, TitlebarProps>(
+const Titlebar = forwardRef<TitlebarRef, TitlebarProps>(
     (props, ref) => {
         const {
             title = 'Disboard',
@@ -43,3 +43,5 @@ export const Titlebar = forwardRef<TitlebarRef, TitlebarProps>(
         );
     }
 );
+
+export default Titlebar;

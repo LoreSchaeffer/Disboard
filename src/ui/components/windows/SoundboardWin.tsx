@@ -4,6 +4,7 @@ import {useWindowContext} from "../../context/WindowContext";
 import {useEffect, useRef} from "react";
 import SvgIcon from "../SvgIcon";
 import {MenuItemProps} from "../menu/ContextMenuItem";
+import Soundboard from "../soundboard/Soundboard";
 
 const defProfileSelectorItems: MenuItemProps[] = [
     {
@@ -109,7 +110,7 @@ const SoundboardWin = () => {
 
     return (
         <PlayerContextProvider>
-
+            <Soundboard/>
         </PlayerContextProvider>
     )
 }

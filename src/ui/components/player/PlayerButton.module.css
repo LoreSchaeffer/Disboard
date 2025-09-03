@@ -1,4 +1,4 @@
-.player-button {
+.playerButton {
     display: block;
     cursor: pointer;
     border-radius: 50%;
@@ -8,6 +8,6 @@
     cursor: default;
 }
 
-.player-button.disabled svg {
+.playerButton.disabled svg {
     fill: var(--text-disabled);
 }

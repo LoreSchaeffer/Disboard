@@ -93,7 +93,7 @@ export class Player {
                 let duration: Time = new Time(this.currentTrack.duration, 'ms');
                 if (this.endTime != null) duration = this.endTime.copy().convertToMs();
                 if (this.startTime != null) duration.subtract(this.startTime);
-                this.eventHandlers['play']?.();
+                this.eventHandlers['play']?.(duration);
             }
         });
 
@@ -238,13 +238,17 @@ export class Player {
         return {...this.status};
     }
 
+    public getCurrentTrack(): Track | null {
+        return this.currentTrack;
+    }
+
     private _play() {
         if (!this.currentTrack) return;
 
-        if (isRemoteUrl(this.currentTrack.uri)) this.audio.src = this.currentSong.uri;
+        if (isRemoteUrl(this.currentTrack.uri)) this.audio.src = this.currentTrack.uri;
         else this.audio.src = `dftp://file/${encodeURIComponent(this.currentTrack.uri)}`;
 
-        if (this.currentTrack.start_time && this.currentTrack.start_time_unit && this.currentSong.start_time !== 0) {
+        if (this.currentTrack.start_time && this.currentTrack.start_time_unit && this.currentTrack.start_time !== 0) {
             this.startTime = new Time(this.currentTrack.start_time, this.currentTrack.start_time_unit);
         }
 

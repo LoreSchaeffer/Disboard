@@ -91,7 +91,7 @@ const ProgressBar = ({
 
     return (
         <div
-            className={`${className ? className : ''} progress-bar${disabled ? ' disabled' : ''}`}
+            className={`${className ? className : ''} progress-bar${disabled ? ' disabled' : ''}`} //TODO Leave .progress-bar and add styles.progressBar
             style={style}
             onMouseDown={handleMouseDown}
             ref={progressBarRef}

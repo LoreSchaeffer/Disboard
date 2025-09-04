@@ -1,7 +1,7 @@
 import './Spinner.css';
 import React, {useEffect, useState} from "react";
-import SvgIcon from "../SvgIcon";
 import InputField from "./InputField";
+import SvgIcon from "../../SvgIcon";
 
 type SpinnerProps = {
     autoFocus?: boolean;

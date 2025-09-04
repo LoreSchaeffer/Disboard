@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('electron', {
     onProfiles: (func: (profiles: Profile[]) => void) => ipcRenderer.on('profiles', (_, profiles: Profile[]) => func(profiles)),
 
     // SoundboardWin
-    handlePlayNow: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
+    onPlayNow: (func: (track: Track) => void) => ipcRenderer.on('play_now', (_, track: Track) => func(track)),
     handlePause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
     handlePlay: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
     handleMediaPlayPause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electron', {
     saveSettings: (settings: Settings) => ipcRenderer.send('save_settings', settings),
     saveProfile: (profile: Profile) => ipcRenderer.send('save_profile', profile),
     saveButton: (profile: string, button: SbButton) => ipcRenderer.send('save_button', profile, button),
+    deleteButton: (profile: string, row: number, col: number) => ipcRenderer.send('delete_button', profile, row, col),
 
     // Profiles
     getProfiles: () => ipcRenderer.invoke('get_profiles'),

@@ -1,7 +1,7 @@
 import styles from "./ContextMenu.module.css";
-import ContextMenuItem, {MenuItemProps} from "./ContextMenuItem";
+import ContextMenuItem, {ContextMenuItemProps} from "./ContextMenuItem";
 import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
-import {useWindowContext} from "../../context/WindowContext";
+import {useWindow} from "../../context/WindowContext";
 
 export type ContextMenuProps = {
     x?: number;
@@ -9,7 +9,7 @@ export type ContextMenuProps = {
     xAnchor?: "left" | "right";
     yAnchor?: "top" | "bottom";
     show?: boolean;
-    items: MenuItemProps[];
+    items: ContextMenuItemProps[];
     style?: React.CSSProperties;
     parent?: number;
     onChildHover?: () => void;
@@ -40,7 +40,7 @@ const ContextMenu = forwardRef<ContextMenuRef, ContextMenuProps>((
         }: ContextMenuProps,
         ref
     ) => {
-        const {setContextMenu} = useWindowContext();
+        const {setContextMenu} = useWindow();
 
         const [position, setPosition] = useState<{ x: number; y: number }>({x: x ?? 0, y: y ?? 0});
         const [visible, setVisible] = useState<boolean>(false);

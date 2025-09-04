@@ -3,7 +3,7 @@ import {Time} from "./time";
 import {RepeatMode} from "../../types/types";
 import {clamp, isRemoteUrl} from "../../utils/utils";
 
-type PlayerStatus = {
+export type PlayerStatus = {
     playing: boolean;
     paused: boolean;
     seeking: boolean;
@@ -18,6 +18,9 @@ type EventHandlerMap = {
     play?: (duration: Time) => void;
     seeked?: () => void;
     timeupdate?: (currentTime: number) => void;
+    repeatupdate?: (mode: RepeatMode) => void;
+    queueupdate?: (queue: Track[]) => void;
+    reset?: () => void;
 };
 
 export class Player {
@@ -39,6 +42,8 @@ export class Player {
         };
 
         this.audio.addEventListener('abort', () => {
+            this._resetPlayer()
+
             this.eventHandlers['abort']?.();
             console.log('Media playback aborted');
         });
@@ -72,6 +77,8 @@ export class Player {
         });
 
         this.audio.addEventListener('error', () => {
+            this._resetPlayer()
+
             this.eventHandlers['error']?.();
             console.error('Media playback error');
         });
@@ -123,10 +130,12 @@ export class Player {
     public setQueue(queue: Track[]) {
         this.queue = queue;
         this.index = 0;
+        this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
     public addToQueue(track: Track) {
         this.queue.push(track);
+        this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
     public removeFromQueue(index: number) {
@@ -134,11 +143,13 @@ export class Player {
         this.queue.splice(index, 1);
         if (this.index > index) this.index--;
         if (this.index >= this.queue.length) this.index = this.queue.length - 1;
+        this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
     public clearQueue() {
         this.queue = [];
         this.index = 0;
+        this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
     public play() {
@@ -217,6 +228,7 @@ export class Player {
 
     public setRepeatMode(mode: RepeatMode) {
         this.repeat = mode;
+        this.eventHandlers['repeatupdate']?.(mode);
     }
 
     public seek(time: number) {
@@ -240,6 +252,14 @@ export class Player {
 
     public getCurrentTrack(): Track | null {
         return this.currentTrack;
+    }
+
+    public getQueue(): Track[] {
+        return [...this.queue];
+    }
+
+    public getIndex(): number {
+        return this.index;
     }
 
     private _play() {
@@ -286,5 +306,7 @@ export class Player {
         this.currentTrack = null;
         this.startTime = null;
         this.endTime = null;
+
+        this.eventHandlers['reset']?.();
     }
 }

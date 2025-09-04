@@ -8,7 +8,7 @@ export type Settings = {
     preview_volume: number;
     output_device: string;
     preview_output_device: string;
-    loop: RepeatMode;
+    repeat: RepeatMode;
     active_profile?: string;
     soundboard_mode: SoundboardMode;
     font_size: number;

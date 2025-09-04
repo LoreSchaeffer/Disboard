@@ -1,6 +1,6 @@
 import styles from "./SoundboardButton.module.css";
 import React, {forwardRef, MouseEvent, useEffect, useState} from "react";
-import {useWindowContext} from "../../context/WindowContext";
+import {useWindow} from "../../context/WindowContext";
 import {SbButton} from "../../../types/storage";
 
 type SoundboardButtonProps = {
@@ -19,7 +19,7 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             onClick,
             onContextMenu
         }, ref) => {
-        const {settings} = useWindowContext();
+        const {settings} = useWindow();
         const [defaultStyle, setDefaultStyle] = useState<React.CSSProperties>({});
         const [hoverStyle, setHoverStyle] = useState<React.CSSProperties>({});
         const [style, setStyle] = useState<React.CSSProperties>({});

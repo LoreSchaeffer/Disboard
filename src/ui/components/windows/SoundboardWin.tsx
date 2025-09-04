@@ -1,12 +1,13 @@
 import styles from './SoundboardWin.module.css';
 import PlayerContextProvider from "../../context/PlayerContext";
-import {useWindowContext} from "../../context/WindowContext";
+import {useWindow} from "../../context/WindowContext";
 import {useEffect, useRef} from "react";
 import SvgIcon from "../SvgIcon";
-import {MenuItemProps} from "../menu/ContextMenuItem";
+import {ContextMenuItemProps} from "../menu/ContextMenuItem";
 import Soundboard from "../soundboard/Soundboard";
+import Player from "../player/Player";
 
-const defProfileSelectorItems: MenuItemProps[] = [
+const defProfileSelectorItems: ContextMenuItemProps[] = [
     {
         type: 'separator'
     },
@@ -31,7 +32,7 @@ const defProfileSelectorItems: MenuItemProps[] = [
 ];
 
 const SoundboardWin = () => {
-    const {settings, setSettings, profiles, activeProfile, titlebar, setContextMenu} = useWindowContext();
+    const {settings, setSettings, profiles, activeProfile, titlebar, setContextMenu} = useWindow();
 
     const profileSelectorRef = useRef<HTMLSpanElement>(null);
 
@@ -97,20 +98,14 @@ const SoundboardWin = () => {
         setContextMenu({
             x: rect.left,
             y: rect.bottom + 3,
-            items: [...items, ...defProfileSelectorItems] as MenuItemProps[],
+            items: [...items, ...defProfileSelectorItems] as ContextMenuItemProps[],
         });
     }
-
-    // return (
-    //     <PlayerContextProvider>
-    //         <Soundboard/>
-    //         <Player/>
-    //     </PlayerContextProvider>
-    // );
 
     return (
         <PlayerContextProvider>
             <Soundboard/>
+            <Player/>
         </PlayerContextProvider>
     )
 }

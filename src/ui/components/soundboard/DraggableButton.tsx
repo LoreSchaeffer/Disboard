@@ -7,7 +7,7 @@ type DraggableButtonProps = {
     row: number;
     col: number;
     button?: SbButton;
-    onClick: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
+    onClick: (e: React.MouseEvent, button: SbButton, row: number, col: number) => void;
     onContextMenu: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
     swapButtons: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
 };

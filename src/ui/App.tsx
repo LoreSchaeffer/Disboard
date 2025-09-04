@@ -3,7 +3,7 @@ import {ReactElement, useEffect, useRef} from "react";
 import SoundboardWin from "./components/windows/SoundboardWin";
 import Titlebar, {TitlebarRef} from "./components/titlebar/Titlebar";
 import ContextMenu from "./components/menu/ContextMenu";
-import {useWindowContext} from "./context/WindowContext";
+import {useWindow} from "./context/WindowContext";
 
 const PAGES: Record<string, ReactElement> = {
     main: <SoundboardWin/>,
@@ -14,7 +14,7 @@ const PAGES: Record<string, ReactElement> = {
 }
 
 export const App = () => {
-    const {ready, page, contextMenu, setTitlebar} = useWindowContext();
+    const {ready, page, contextMenu, setTitlebar} = useWindow();
     const titlebarRef = useRef<TitlebarRef | null>(null);
 
     useEffect(() => {

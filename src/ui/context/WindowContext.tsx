@@ -54,6 +54,18 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
         if (settings && profiles && activeProfile && page) setReady(true);
     }, [settings, profiles, activeProfile, page]);
 
+    useEffect(() => {
+        const onResize = () => {
+            setContextMenu(null);
+        }
+
+        window.addEventListener('resize', onResize);
+
+        return () => {
+            window.removeEventListener('resize', onResize);
+        }
+    }, [contextMenu]);
+
     const updateSettings = (settings: Settings) => {
         setSettings(settings);
         window.electron.saveSettings(settings);
@@ -91,7 +103,7 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
     )
 }
 
-export function useWindowContext() {
+export function useWindow() {
     const context = useContext(WindowContext);
     if (context === undefined) throw new Error('useWindowContext must be used within a WindowContextProvider');
     return context;

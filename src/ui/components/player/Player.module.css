@@ -13,12 +13,12 @@
     z-index: 10;
 }
 
-.track-info {
+.trackInfo {
     justify-self: flex-start;
     margin-right: auto;
 }
 
-.player-controls {
+.playerControls {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -27,7 +27,7 @@
     background-color: var(--background-secondary);
 }
 
-.player-buttons {
+.playerButtons {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -35,7 +35,7 @@
     gap: 16px;
 }
 
-.player-progress-group {
+.progressGroup {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -45,21 +45,20 @@
     min-height: 15px;
 }
 
-.player-progress-group .progress-bar {
+.progressBar  {
     min-width: 500px;
     height: 5px;
     transition: width 500ms ease;
 }
 
-.progress-time {
-    display: none;
+.progressTime {
     font-size: 0.8rem;
     line-height: 0.8rem;
     color: var(--text-secondary);
     user-select: none;
 }
 
-.player-secondary-controls {
+.rightControls {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -69,12 +68,12 @@
     margin-right: 10px;
 }
 
-.player-secondary-controls .player-volume {
+.rightControls .volume {
     width: 150px;
     height: 5px;
 }
 
-.settings {
+.profileSettings {
     position: absolute;
     display: flex;
     flex-direction: column;
@@ -88,21 +87,21 @@
     transition: opacity 200ms ease;
 }
 
-.settings .title {
+.profileSettings .title {
     font-weight: 500;
     font-size: 0.9rem;
 }
 
-.settings .row {
+.profileSettings .row {
     align-items: center;
 }
 
-.settings label {
+.profileSettings label {
     font-size: 0.85rem;
     line-height: 0.85rem;
 }
 
-.settings .input {
+.profileSettings .input {
     justify-self: flex-end;
     margin-left: auto;
 }

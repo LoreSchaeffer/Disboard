@@ -1,10 +1,10 @@
 import styles from "./ContextMenuItem.module.css";
 import SvgIcon, {IconType} from "../SvgIcon";
 import React, {MouseEvent} from "react";
-import {useWindowContext} from "../../context/WindowContext";
+import {useWindow} from "../../context/WindowContext";
 import {ContextMenuProps} from "./ContextMenu";
 
-export type MenuItemProps = {
+export type ContextMenuItemProps = {
     type?: "normal" | "separator" | "primary" | "danger";
     text?: string;
     icon?: IconType;
@@ -16,7 +16,7 @@ export type MenuItemProps = {
     disabled?: boolean;
 };
 
-const ContextMenuItem: React.FC<MenuItemProps> = (
+const ContextMenuItem: React.FC<ContextMenuItemProps> = (
     {
         className,
         type = "normal",
@@ -28,7 +28,7 @@ const ContextMenuItem: React.FC<MenuItemProps> = (
         hideSubmenu,
         disabled = false,
     }) => {
-    const {setContextMenu} = useWindowContext();
+    const {setContextMenu} = useWindow();
 
     if (type === "separator") {
         return <li className={`${styles.contextMenuItem} ${styles.separator} ${className || ""}`}/>;

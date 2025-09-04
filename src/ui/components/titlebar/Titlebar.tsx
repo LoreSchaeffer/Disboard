@@ -1,7 +1,7 @@
 import styles from "./Titlebar.module.css";
 import TitlebarButton from "./TitlebarButton";
 import {forwardRef, PropsWithChildren, ReactNode, useImperativeHandle, useState} from "react";
-import {useWindowContext} from "../../context/WindowContext";
+import {useWindow} from "../../context/WindowContext";
 
 export type TitlebarProps = PropsWithChildren & {
     title?: string;
@@ -19,7 +19,7 @@ const Titlebar = forwardRef<TitlebarRef, TitlebarProps>(
             children
         } = props;
 
-        const {resizable} = useWindowContext();
+        const {resizable} = useWindow();
 
         const [t, setT] = useState<string>(title);
         const [c, setC] = useState<ReactNode | ReactNode[]>(children || []);

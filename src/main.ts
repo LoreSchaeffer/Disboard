@@ -30,6 +30,7 @@ let profiles: Store<Profile[]>;
 let epidemiology: ChildProcessWithoutNullStreams;
 
 // High priority
+// TODO Remove :root from css modules and move them like in TrackInfo.module.css
 // TODO Add localization
 // TODO Many handle in main.ts do not have a return
 // TODO Ask for YouTube cookie on first run
@@ -76,7 +77,7 @@ const start = () => {
             preview_volume: 50,
             output_device: 'default',
             preview_output_device: 'default',
-            loop: 'none',
+            repeat: 'none',
             soundboard_mode: 'normal',
             font_size: 11,
             show_images: true,
@@ -269,6 +270,19 @@ function saveButton(profile: string, button: SbButton) {
     profiles.notifyChange();
 }
 
+function deleteButton(profile: string, row: number, col: number) {
+    const activeProfile = profiles.get().find(p => p.id === profile);
+    if (!activeProfile) return;
+
+    const index = activeProfile.buttons.findIndex(b => b.row === row && b.col === col);
+    if (index === -1) return;
+
+    activeProfile.buttons.splice(index, 1);
+
+    profiles.save();
+    profiles.notifyChange();
+}
+
 /* ======== Epidemiology ======== */
 
 const runEpidemiology = () => {
@@ -394,6 +408,10 @@ ipcMain.on('save_button', async (_, profile: string, button: SbButton) => {
 
     button.track = track;
     saveButton(profile, button);
+});
+
+ipcMain.on('delete_button', (_, profile: string, row: number, col: number) => {
+    deleteButton(profile, row, col);
 });
 
 // Profiles

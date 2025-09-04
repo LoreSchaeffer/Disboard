@@ -260,13 +260,6 @@ body {
     color: var(--text-disabled);
 }
 
-.row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-}
-
 .col {
     display: flex;
     flex-direction: column;

@@ -11,6 +11,7 @@ import {usePlayer} from "../../context/PlayerContext";
 import {IconType} from "../SvgIcon";
 import {formatTime} from "../../utils/utils";
 import {Track} from "../../../types/track";
+import Row from "../Row";
 
 
 const getVolumeIcon = (volume: number) => {
@@ -61,7 +62,7 @@ const Player = () => {
         const onClickOutsideProfileSettings = (e: MouseEvent) => {
             if (!profileSettingsRef.current || !profileSettingsStatus.visible) return;
 
-            if (!profileSettingsRef.current.contains(e.target)) {
+            if (!profileSettingsRef.current.contains(e.target as Node)) {
                 setProfileSettingsStatus((prev) => ({...prev, visible: false}));
             }
         }
@@ -170,7 +171,7 @@ const Player = () => {
         }
     };
 
-    const showProfileSettings = (e: MousEvent) => {
+    const showProfileSettings = (e: React.MouseEvent) => {
         if (!profileSettingsRef.current) return;
 
         setProfileSettingsPosition((e.target as HTMLElement).getBoundingClientRect(), profileSettingsRef.current.getBoundingClientRect());
@@ -251,19 +252,19 @@ const Player = () => {
                      pointerEvents: profileSettingsStatus.visible ? 'auto' : 'none'
                  }}
             >
-                <span className={"title"}>Profile settings</span>
-                <div className={"row"}>
+                <span className={styles.title}>Profile settings</span>
+                <Row justify="space-between">
                     <label>Name</label>
                     <InputField value={activeProfile.name} onChange={renameProfile}/>
-                </div>
-                <div className={"row"}>
+                </Row>
+                <Row justify="space-between">
                     <label>Rows</label>
                     <Spinner min={1} value={activeProfile.rows} onChange={changeRowNum}/>
-                </div>
-                <div className={"row"}>
+                </Row>
+                <Row justify="space-between">
                     <label>Cols</label>
                     <Spinner min={1} value={activeProfile.cols} onChange={changeColNum}/>
-                </div>
+                </Row>
             </div>
         </>
     );

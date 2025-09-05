@@ -33,7 +33,7 @@
     fill: var(--text-disabled);
 }
 
-.select-dropdown {
+.selectDropdown {
     position: absolute;
     display: none;
     flex-direction: column;
@@ -43,7 +43,7 @@
     font-size: 9pt;
 }
 
-.select-option {
+.selectOption {
     border-radius: 6px;
     color: var(--text-primary);
     font-size: 9pt;
@@ -52,14 +52,14 @@
     transition: background-color 200ms ease;
 }
 
-.select-option:hover {
+.selectOption:hover {
     background-color: var(--primary-500);
 }
 
-.select-option.selected {
+.selectOption.selected {
     background-color: var(--primary-500);
 }
 
-.select-option.selected:hover {
+.selectOption.selected:hover {
     background-color: var(--primary-530);
 }

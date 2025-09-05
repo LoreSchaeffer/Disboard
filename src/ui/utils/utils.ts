@@ -12,3 +12,7 @@ export const formatTime = (time: number): string => {
 
     return formatted;
 }
+
+export const validateHexColor = (color: string): boolean => {
+    return /^#[0-9A-F]{6}$/i.test(color) || /^#[0-9A-F]{3}$/i.test(color);
+}

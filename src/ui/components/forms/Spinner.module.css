@@ -3,12 +3,12 @@
     position: relative;
 }
 
-.spinner .input {
+.spinnerInput {
     margin: 0;
     text-align: center;
 }
 
-.spinner-icon {
+.spinnerIcon {
     position: absolute;
     fill: var(--text-secondary);
     cursor: pointer;
@@ -16,17 +16,17 @@
     transition: fill 200ms ease;
 }
 
-.spinner-icon:hover {
+.spinnerIcon:hover {
     fill: var(--text-primary);
 }
 
-.spinner-subtract {
+.subtract {
     top: 50%;
     left: 5px;
     transform: translateY(-50%);
 }
 
-.spinner-add {
+.add {
     top: 50%;
     right: 5px;
     transform: translateY(-50%);

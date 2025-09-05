@@ -1,7 +1,6 @@
-import './Select.css';
+import styles from './Select.module.css';
 import {useEffect, useRef, useState} from "react";
-import SvgIcon from "../SvgIcon";
-import {IconType} from "../../../utils/icons";
+import SvgIcon, {IconType} from "../SvgIcon";
 
 type SelectOption = {
     value: string;
@@ -17,13 +16,13 @@ type SelectProps = {
 };
 
 const Select = ({className, options, disabled, onChange}: SelectProps) => {
-    const selectRef = useRef<HTMLDivElement>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
     const [selected, setSelected] = useState<SelectOption | null>(null);
     const [chevron, setChevron] = useState<IconType>('chevron_down');
     const [position, setPosition] = useState({x: 0, y: 0, min_width: 0});
     const [visible, setVisible] = useState(false);
+
+    const selectRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (options && options.length > 0) {
@@ -40,6 +39,7 @@ const Select = ({className, options, disabled, onChange}: SelectProps) => {
         };
 
         document.addEventListener('mousedown', handleClickOutside);
+
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -87,14 +87,34 @@ const Select = ({className, options, disabled, onChange}: SelectProps) => {
 
     return (
         <>
-            <div ref={selectRef} className={`select${className ? ' ' + className : ''}${disabled ? ' disabled' : ''}`} onClick={onDropdown}>
-                <span className={'selected-option'}>{selected ? selected.label : 'Select an option'}</span>
+            <div
+                ref={selectRef}
+                className={`${styles.select} ${className || ''} ${disabled ? 'disabled' : ''}`}
+                onClick={onDropdown}
+            >
+                <span className={styles.selectedOption}>
+                    {selected ? selected.label : 'Select an option'}
+                </span>
                 <SvgIcon icon={chevron} size={'9pt'}/>
             </div>
+
             {options && (
-                <div ref={dropdownRef} className={'select-dropdown'} style={{display: visible ? 'flex' : 'none', top: position.y, left: position.x, minWidth: position.min_width}}>
+                <div
+                    ref={dropdownRef}
+                    className={styles.selectDropdown}
+                    style={{
+                        display: visible ? 'flex' : 'none',
+                        top: position.y,
+                        left: position.x,
+                        minWidth: position.min_width
+                }}
+                >
                     {options.map((option, index) => (
-                        <div key={index} className={`select-option${selected === option ? ' selected' : ''}`} onClick={() => select(option.value)}>
+                        <div
+                            key={index}
+                            className={`${styles.selectOption} ${selected === option ? 'selected' : ''}`}
+                            onClick={() => select(option.value)}
+                        >
                             {option.label}
                         </div>
                     ))}

@@ -1,4 +1,4 @@
-import './InputField.css';
+import styles from './InputField.module.css';
 import React, {useEffect, useState} from "react";
 
 type Type = 'text' | 'password' | 'number' | 'url';
@@ -68,7 +68,7 @@ const InputField = ({
 
     return (
         <input
-            className={`input input-field${className ? ' ' + className : ''}`}
+            className={`${styles.input} ${className || ''}`}
             autoComplete={autoComplete}
             autoFocus={autoFocus}
             disabled={disabled}

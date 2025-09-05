@@ -1,9 +1,6 @@
-:root {
+.progressBar {
     --height: 8px;
     --progress-size: 26px;
-}
-
-.progress-bar {
     position: relative;
     width: 100%;
     height: var(--height);
@@ -12,7 +9,7 @@
     user-select: none;
 }
 
-.progress-bar:hover .progress {
+.progressBar:hover .progress {
     background-color: var(--primary-530);
 }
 
@@ -33,7 +30,7 @@
     background-color: var(--text-primary);
 }
 
-.cursor-progress {
+.cursorProgress {
     position: absolute;
     width: var(--progress-size);
     height: var(--progress-size);
@@ -47,7 +44,7 @@
     transition: opacity 100ms ease;
 }
 
-.cursor-progress::before {
+.cursorProgress::before {
     content: '';
     display: block;
     position: absolute;
@@ -63,10 +60,10 @@
     z-index: -1;
 }
 
-.progress-bar.disabled .progress {
+.progressBar.disabled .progress {
     background-color: var(--gray-400);
 }
 
-.progress-bar.disabled .cursor {
+.progressBar.disabled .cursor {
     background-color: var(--gray-300);
 }

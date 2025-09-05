@@ -32,6 +32,7 @@ let epidemiology: ChildProcessWithoutNullStreams;
 // High priority
 // TODO Remove :root from css modules and move them like in TrackInfo.module.css
 // TODO Add localization
+// TODO Add optional validation in input fields
 // TODO Many handle in main.ts do not have a return
 // TODO Ask for YouTube cookie on first run
 // TODO Move createNewProfile and settings to the mainWindow

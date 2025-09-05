@@ -1,7 +1,7 @@
-import './Spinner.css';
+import styles from './Spinner.module.css';
 import React, {useEffect, useState} from "react";
 import InputField from "./InputField";
-import SvgIcon from "../../SvgIcon";
+import SvgIcon from "../SvgIcon";
 
 type SpinnerProps = {
     autoFocus?: boolean;
@@ -33,6 +33,7 @@ const Spinner = ({
                      setValue,
                  }: SpinnerProps) => {
     const [val, setVal] = useState<number>(value ?? defaultValue ?? 0);
+
     const isControlled = value !== undefined;
 
     useEffect(() => {
@@ -90,9 +91,10 @@ const Spinner = ({
 
 
     return (
-        <div className={"input spinner"}>
-            <SvgIcon className={"spinner-icon spinner-subtract"} icon={"subtract"} size={"18px"} onClick={decrement}/>
+        <div className={styles.spinner}>
+            <SvgIcon className={`${styles.spinnerIcon} ${styles.subtract}`} icon={"subtract"} size={"18px"} onClick={decrement}/>
             <InputField
+                className={styles.spinnerInput}
                 autoComplete={'off'}
                 autoFocus={autoFocus}
                 disabled={disabled}
@@ -105,7 +107,7 @@ const Spinner = ({
                 type={'number'}
                 value={isControlled ? value : val}
                 onChange={handleChange}/>
-            <SvgIcon className={"spinner-icon spinner-add"} icon={"add"} size={"18px"} onClick={increment}/>
+            <SvgIcon className={`${styles.spinnerIcon} ${styles.add}`} icon={"add"} size={"18px"} onClick={increment}/>
         </div>
     );
 };

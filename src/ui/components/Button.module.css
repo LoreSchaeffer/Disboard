@@ -28,51 +28,51 @@
     cursor: default;
 }
 
-.btn-primary {
+.primary {
     background-color: var(--primary-500);
 }
 
-.btn-primary:hover {
+.primary:hover {
     background-color: var(--primary-530);
 }
 
-.btn-primary:active {
+.primary:active {
     background-color: var(--primary-560);
 }
 
-.btn-primary.disabled {
+.primary.disabled {
     background-color: var(--primary-500);
 }
 
-.btn-danger {
+.danger {
     background-color: var(--red-430);
 }
 
-.btn-danger:hover {
+.danger:hover {
     background-color: var(--red-460);
 }
 
-.btn-danger:active {
+.danger:active {
     background-color: var(--red-500);
 }
 
-.btn-danger.disabled {
+.danger.disabled {
     background-color: var(--red-430);
 }
 
-.btn-success {
+.success {
     background-color: var(--green-430);
 }
 
-.btn-success:hover {
+.success:hover {
     background-color: var(--green-460);
 }
 
-.btn-success:active {
+.success:active {
     background-color: var(--green-500);
 }
 
-.btn-success.disabled {
+.success.disabled {
     background-color: var(--green-430);
 }
 

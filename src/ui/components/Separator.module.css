@@ -6,7 +6,7 @@
     justify-content: center;
 }
 
-.separator .line {
+.line {
     width: 98%;
     height: 2px;
     background-color: var(--background-secondary-alt);

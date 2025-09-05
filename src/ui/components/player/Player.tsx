@@ -1,11 +1,11 @@
 import styles from './Player.module.css';
 import TrackInfo from "./TrackInfo";
 import PlayerButton from "./PlayerButton";
-import ProgressBar from "../generic/ProgressBar";
+import ProgressBar from "../ProgressBar";
 import React, {ChangeEvent, useEffect, useRef, useState} from "react";
 import {ContextMenuItemProps} from "../menu/ContextMenuItem";
-import InputField from "../generic/forms/InputField";
-import Spinner from "../generic/forms/Spinner";
+import InputField from "../forms/InputField";
+import Spinner from "../forms/Spinner";
 import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
 import {IconType} from "../SvgIcon";

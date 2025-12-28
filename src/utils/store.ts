@@ -1,97 +1,45 @@
-import * as fs from "node:fs";
-import path from "path";
-import {root} from "../main";
+import Store from 'electron-store';
+import {generateUUID} from "./utils";
+import {Settings} from "../types/settings";
+import {Profiles} from "../types/profiles";
 
-export type StoreOptions<T> = {
-    defValue?: T;
-    onChange?: (store: T, fromFileChange: boolean) => void;
-}
+const settingsStore = new Store<Settings>({
+    name: 'settings',
+    watch: true,
+    defaults: {
+        width: 1366,
+        height: 768,
+        volume: 50,
+        previewVolume: 50,
+        outputDevice: 'default',
+        previewOutputDevice: 'default',
+        repeat: 'none',
+        zoom: 1,
+        showImages: true,
+        activeProfile: null,
+        debug: false
+    },
+    // migrations: {
+    //     '1.0.1': store => {
+    //         store.set('debug', false);
+    //     }
+    // }
+});
 
-export class Store<T> {
-    private readonly filePath: string;
-    private readonly options?: StoreOptions<T>;
-    private store: T;
-    private watch: fs.FSWatcher;
-
-    constructor(storeName: string, options: StoreOptions<T>) {
-        this.filePath = path.join(root, storeName + '.json');
-        this.options = options;
-
-        if (!fs.existsSync(this.filePath)) {
-            this.store = this.options.defValue ?? null;
-            this.save();
-        } else {
-            this.load();
-        }
-
-        this.startWatching();
-    }
-
-    get(): T {
-        return this.store;
-    }
-
-    set(store: T) {
-        this.store = store;
-        if (this.options?.onChange) this.options.onChange(this.store, false);
-    }
-
-    load(): Error | null {
-        try {
-            this.store = JSON.parse(fs.readFileSync(this.filePath, 'utf-8')) as T;
-            this.fillMissingValues();
-            if (this.options?.onChange) this.options.onChange(this.store, false);
-        } catch (e) {
-            return e;
-        }
-    }
-
-    save(): Error | null {
-        if (!this.store) return new Error('Store is empty');
-
-        try {
-            this.stopWatching();
-            fs.writeFileSync(this.filePath, JSON.stringify(this.store, null, 2));
-            this.startWatching();
-            return null;
-        } catch (e) {
-            return e;
-        }
-    }
-
-    notifyChange() {
-        if (this.options?.onChange) this.options.onChange(this.store, false);
-    }
-
-    fillMissingValues() {
-        if (!this.options?.defValue) return;
-
-        let save = false;
-
-        for (const key in this.options?.defValue) {
-            if (!Object.prototype.hasOwnProperty.call(this.store, key)) {
-                this.store[key] = this.options.defValue[key];
-                save = true;
+const profilesStore = new Store<Profiles>({
+    name: 'profiles',
+    watch: true,
+    defaults: {
+        profiles: [
+            {
+                id: generateUUID(),
+                name: 'Default',
+                rows: 8,
+                cols: 10,
+                buttons: []
             }
-        }
-
-        if (save) this.save();
+        ]
     }
+});
 
-    private startWatching() {
-        this.watch = fs.watch(this.filePath, event => {
-            if (event === 'change') {
-                console.log(`File ${this.filePath} changed. Reloading...`);
-                this.load();
-                if (this.options?.onChange) this.options.onChange(this.store, true);
-            }
-        });
-    }
-
-    private stopWatching() {
-        if (this.watch) {
-            this.watch.close();
-            this.watch = null;
-        }
-    }
-}
+export {settingsStore, profilesStore};

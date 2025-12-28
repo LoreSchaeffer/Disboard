@@ -1,85 +1,80 @@
-import {Profile, Settings} from "../../types/storage";
-import {createContext, Dispatch, PropsWithChildren, SetStateAction, useContext, useEffect, useState} from "react";
-import {ContextMenuProps} from "../components/menu/ContextMenu";
-import {TitlebarRef} from "../components/titlebar/Titlebar";
+import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
+import {Settings} from "../../types/settings";
+import {Profile} from "../../types/profiles";
 
 type WindowContextType = {
     ready: boolean;
     parent: number | null;
     resizable: boolean;
     page: string | null;
-    settings: Settings;
-    setSettings: (settings: Settings) => void;
-    profiles: Profile[];
-    setProfiles: (profiles: Profile[]) => void;
-    activeProfile: Profile;
-    contextMenu: ContextMenuProps | null;
-    setContextMenu: (menu: ContextMenuProps | null) => void;
-    titlebar: TitlebarRef | null;
-    setTitlebar: Dispatch<SetStateAction<TitlebarRef | null>>;
+    settings: Settings | null;
+    updateSettings?: (settings: Partial<Settings>) => void;
+    profiles: Profile[] | null;
+    activeProfile: Profile | null;
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined);
 
-export default function WindowContextProvider({children}: PropsWithChildren) {
+export default function WindowProvider({children}: PropsWithChildren) {
     const [ready, setReady] = useState<boolean>(false);
     const [parent, setParent] = useState<number | null>(null);
     const [resizable, setResizable] = useState<boolean>(false);
-    const [page, setPage] = useState<string>(null);
-    const [settings, setSettings] = useState<Settings>(null);
-    const [profiles, setProfiles] = useState<Profile[]>(null);
-    const [activeProfile, setActiveProfile] = useState<Profile>(null);
-    const [contextMenu, setContextMenu] = useState<ContextMenuProps | null>(null);
-    const [titlebar, setTitlebar] = useState<TitlebarRef | null>(null);
+    const [page, setPage] = useState<string | null>(null);
+    const [settings, setSettings] = useState<Settings | null>(null);
+    const [profiles, setProfiles] = useState<Profile[] | null>(null);
+
+    const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        window.electron.getWindow().then((data: { parent: number | null, resizable: boolean, page: string }) => {
-            setParent(data.parent);
-            setResizable(data.resizable);
-            setPage(data.page);
-        });
+        const loadInitialData = async () => {
+            const winData = await window.electron.getWindow();
+            setParent(winData.parent);
+            setResizable(winData.resizable);
+            setPage(winData.page);
 
-        window.electron.getSettings().then((settings: Settings) => setSettings(settings));
-        window.electron.getProfiles().then((profiles: Profile[]) => setProfiles(profiles));
+            const initialSettings = await window.electron.getSettings();
+            setSettings(initialSettings);
 
-        window.electron.onSettings((settings: Settings) => setSettings(settings));
-        window.electron.onProfiles((profiles: Profile[]) => setProfiles(profiles));
+            const initialProfiles = await window.electron.getProfiles();
+            setProfiles(initialProfiles);
+        };
+
+        loadInitialData();
+
+        const unsubSettings = window.electron.onSettingsChanged(setSettings);
+        const unsubProfiles = window.electron.onProfilesChanged(setProfiles);
+
+        return () => {
+            unsubSettings();
+            unsubProfiles();
+
+            if (saveSettingsTimeoutRef.current) {
+                clearTimeout(saveSettingsTimeoutRef.current);
+                saveSettingsTimeoutRef.current = null;
+            }
+        };
     }, []);
 
-    useEffect(() => {
-        if (settings && profiles) setActiveProfile(profiles.find(p => p.id === settings.active_profile));
+    const activeProfile = useMemo(() => {
+        if (!settings || !profiles) return null;
+        return profiles.find(p => p.id === settings.activeProfile) || null;
     }, [settings, profiles]);
 
     useEffect(() => {
-        if (settings && profiles && activeProfile && page) setReady(true);
-    }, [settings, profiles, activeProfile, page]);
+        if (settings && profiles && page) setReady(true);
+    }, [settings, profiles, page]);
 
-    useEffect(() => {
-        const onResize = () => {
-            setContextMenu(null);
-        }
+    const updateSettings = (newSettings: Partial<Settings>) => {
+        if (!settings) return;
 
-        window.addEventListener('resize', onResize);
+        const updatedSettings = {...settings, ...newSettings};
+        setSettings(updatedSettings);
 
-        return () => {
-            window.removeEventListener('resize', onResize);
-        }
-    }, [contextMenu]);
-
-    const updateSettings = (settings: Settings) => {
-        setSettings(settings);
-        window.electron.saveSettings(settings);
-    }
-
-    const updateProfiles = (profiles: Profile[]) => {
-        setProfiles(profiles);
-    }
-
-    const updateContextMenu = (menu: ContextMenuProps | null) => {
-        setContextMenu(() => {
-            if (menu) menu.show = true;
-            return menu;
-        });
+        if (saveSettingsTimeoutRef.current) clearTimeout(saveSettingsTimeoutRef.current);
+        saveSettingsTimeoutRef.current = setTimeout(() => {
+            window.electron.saveSettings(updatedSettings);
+            saveSettingsTimeoutRef.current = null;
+        }, 500);
     }
 
     return (
@@ -89,14 +84,9 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
             resizable,
             page,
             settings,
-            setSettings: updateSettings,
+            updateSettings,
             profiles,
-            setProfiles: updateProfiles,
             activeProfile,
-            contextMenu,
-            setContextMenu: updateContextMenu,
-            titlebar,
-            setTitlebar
         }}>
             {children}
         </WindowContext.Provider>
@@ -105,6 +95,6 @@ export default function WindowContextProvider({children}: PropsWithChildren) {
 
 export function useWindow() {
     const context = useContext(WindowContext);
-    if (context === undefined) throw new Error('useWindowContext must be used within a WindowContextProvider');
+    if (context === undefined) throw new Error('useWindow must be used within a WindowProvider');
     return context;
 }

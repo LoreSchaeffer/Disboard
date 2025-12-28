@@ -1,24 +1,27 @@
 import styles from './TrackInfo.module.css';
-import {usePlayer} from "../../context/PlayerContext";
+import {Track} from "../../../types/track";
+import React from "react";
 
 type TrackInfoProps = {
+    track: Track
     className?: string
 }
 
-const TrackInfo = ({className}: TrackInfoProps) => {
-    const {currentTrack} = usePlayer();
-
-    const display = currentTrack ? 'flex' : 'none';
-    const thumbnail = `url("${currentTrack?.thumbnail || '/images/track.png'}")`;
-    const title = currentTrack?.title || '';
-    const src = currentTrack?.original_url || currentTrack?.uri || '';
-
+const TrackInfo = ({track, className}: TrackInfoProps) => {
     return (
-        <div className={`${styles.trackInfo} ${className}`} style={{display: display}}>
-            <div className={styles.trackThumbnail} style={{backgroundImage: thumbnail}}></div>
-            <div className={styles.trackData}>
-                <span className={styles.trackTitle}>{title}</span>
-                <span className={styles.trackSrc}>{src}</span>
+        <div className={`${styles.trackInfo} ${className}`}>
+            <img
+                className={styles.image}
+                src={track ? `music://images/${track.id}` : '/images/track.png'}
+                alt={track.title || ''}
+                onError={(e) => {
+                    const img = e.currentTarget;
+                    img.onerror = null;
+                    img.src = '/images/track.png';
+                }}
+            />
+            <div className={styles.data}>
+                <span className={styles.title}>{track.title}</span>
             </div>
         </div>
     );

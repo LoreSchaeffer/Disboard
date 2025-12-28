@@ -1,21 +1,7 @@
-import {SoundboardMode, RepeatMode} from "./types";
 import {Track} from "./track";
 
-export type Settings = {
-    width: number;
-    height: number;
-    volume: number;
-    preview_volume: number;
-    output_device: string;
-    preview_output_device: string;
-    repeat: RepeatMode;
-    active_profile?: string;
-    soundboard_mode: SoundboardMode;
-    font_size: number;
-    show_images: boolean;
-    youtube_cookie?: string;
-    bot_token?: string;
-    debug?: boolean;
+export type Profiles = {
+    profiles: Profile[];
 }
 
 export type Profile = {
@@ -37,8 +23,11 @@ export type SbButton = {
 export type SbButtonStyle = {
     text_color?: string;
     text_color_hover?: string;
+    text_color_active?: string;
     background_color?: string;
     background_color_hover?: string;
+    background_color_active?: string;
     border_color?: string;
     border_color_hover?: string;
+    border_color_active?: string;
 }

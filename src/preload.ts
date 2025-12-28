@@ -1,12 +1,21 @@
 import {contextBridge, ipcRenderer} from "electron";
 import {Profile, SbButton, Settings} from "./types/storage";
 import {Track} from "./types/track";
+import {WindowInfo} from "./types/common";
 
-contextBridge.exposeInMainWorld('electron', {
+const api = {
     /* === FROM MAIN PROCESS === */
     // All Windows
-    onSettings: (func: (settings: Settings) => void) => ipcRenderer.on('settings', (_, settings: Settings) => func(settings)),
-    onProfiles: (func: (profiles: Profile[]) => void) => ipcRenderer.on('profiles', (_, profiles: Profile[]) => func(profiles)),
+    onSettingsChanged: (func: (settings: Settings) => void) => {
+        const sub = (_: unknown, val: Settings) => func(val);
+        ipcRenderer.on('settings', sub);
+        return () => ipcRenderer.removeListener('settings', sub);
+    },
+    onProfilesChanged: (func: (profiles: Profile[]) => void) => {
+        const sub = (_: unknown, val: Profile[]) => func(val);
+        ipcRenderer.on('profiles', sub);
+        return () => ipcRenderer.removeListener('profiles', sub);
+    },
 
     // SoundboardWin
     onPlayNow: (func: (track: Track) => void) => ipcRenderer.on('play_now', (_, track: Track) => func(track)),
@@ -23,7 +32,7 @@ contextBridge.exposeInMainWorld('electron', {
 
     /* === TO MAIN PROCESS === */
     // Window
-    getWindow: () => ipcRenderer.invoke('get_window'),
+    getWindow: (): Promise<WindowInfo> => ipcRenderer.invoke('get_window'),
 
     // Navbar
     minimize: () => ipcRenderer.send('minimize'),
@@ -31,14 +40,18 @@ contextBridge.exposeInMainWorld('electron', {
     close: () => ipcRenderer.send('close'),
 
     // Store
-    getSettings: () => ipcRenderer.invoke('get_settings'),
+    getSettings: (): Promise<Settings> => ipcRenderer.invoke('get_settings'),
     saveSettings: (settings: Settings) => ipcRenderer.send('save_settings', settings),
+
+
     saveProfile: (profile: Profile) => ipcRenderer.send('save_profile', profile),
     saveButton: (profile: string, button: SbButton) => ipcRenderer.send('save_button', profile, button),
     deleteButton: (profile: string, row: number, col: number) => ipcRenderer.send('delete_button', profile, row, col),
 
     // Profiles
-    getProfiles: () => ipcRenderer.invoke('get_profiles'),
+    getProfiles: (): Promise<Profile[]> => ipcRenderer.invoke('get_profiles'),
+
+
     createProfile: (name: string, rows: number, cols: number) => ipcRenderer.invoke('create_profile', name, rows, cols),
     deleteProfile: (id: string) => ipcRenderer.invoke('delete_profile', id),
     importProfile: () => ipcRenderer.invoke('import_profile'),
@@ -46,7 +59,7 @@ contextBridge.exposeInMainWorld('electron', {
     exportProfiles: () => ipcRenderer.send('export_profiles'),
 
     // Windows
-    openMediaSelectorWin: (row: number, col: number, winId: number) => ipcRenderer.send('open_media_selector_win', row, col, winId),
+    openMediaSelectorWin: (row: number, col: number,) => ipcRenderer.send('open_media_selector_win', row, col),
     openButtonSettingsWin: (row: number, col: number) => ipcRenderer.send('open_button_settings_win', row, col),
     openNewProfileWin: () => ipcRenderer.send('open_new_profile_win'),
 
@@ -64,4 +77,8 @@ contextBridge.exposeInMainWorld('electron', {
 
     // Misc
     getFileSeparator: () => ipcRenderer.invoke('get_file_separator'),
-});
+}
+
+contextBridge.exposeInMainWorld('electron', api);
+
+export type ElectronAPI = typeof api;

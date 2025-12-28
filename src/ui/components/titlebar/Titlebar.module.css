@@ -1,16 +1,13 @@
 .titlebar {
+    width: 100%;
     height: var(--titlebar-height);
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
     background-color: var(--background-tertiary);
     user-select: none;
     display: flex;
-    justify-content: flex-end;
     align-items: center;
     -webkit-app-region: drag;
-    z-index: 1000;
+    z-index: 9000;
 }
 
 .leftData {
@@ -30,4 +27,12 @@
     font-size: 9pt;
     line-height: 9pt;
     color: var(--text-disabled);
+}
+
+.windowControls {
+    display: flex;
+}
+
+.last {
+    padding-right: 5px !important;
 }

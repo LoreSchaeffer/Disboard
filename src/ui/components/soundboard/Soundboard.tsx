@@ -5,11 +5,15 @@ import {HTML5Backend} from 'react-dnd-html5-backend';
 import DraggableButton from "./DraggableButton";
 import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
-import {SbButton, SbButtonStyle} from "../../../types/storage";
-import {ContextMenuItemProps} from "../menu/ContextMenuItem";
+import {useContextMenu} from "../../context/ContextMenuContext";
+import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
+import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlaylistBold, PiStopBold, PiTrashBold} from "react-icons/pi";
+import {FaRegPaste} from "react-icons/fa6";
+import {SbButton, SbButtonStyle} from "../../../types/profiles";
 
 const Soundboard = () => {
-    const {activeProfile, setContextMenu} = useWindow();
+    const {activeProfile} = useWindow();
+    const {showContextMenu} = useContextMenu();
     const {player, previewPlayer} = usePlayer();
 
     const [copiedButton, setCopiedButton] = useState<SbButton | null>(null);
@@ -23,7 +27,7 @@ const Soundboard = () => {
         player.playNow({...button.track, title: button.title || button.track.title});
     }
 
-    const onContextMenu = (e: MouseEvent, button: SbButton, row: number, col: number) => {
+    const onContextMenu = (event: MouseEvent, button: SbButton, row: number, col: number) => {
         const playPreview = () => {
             if (!button || !button.track) return;
             previewPlayer.playNow({...button.track, title: button.title || button.track.title});
@@ -63,100 +67,93 @@ const Soundboard = () => {
             if (!button) return;
             window.electron.deleteButton(activeProfile.id, row, col);
         }
-        
-        const items: ContextMenuItemProps[] = [];
 
-        items.push({
-            text: 'Play Now',
-            icon: 'play',
-            onClick: () => player.playNow({...button.track, title: button.title || button.track.title}),
-            disabled: !button || !button.track
-        });
+        const isButtonNotSet = !button || !button.track;
 
-        items.push({
-            text: 'Add to queue',
-            icon: 'add_to_queue',
-            onClick: () => player.addToQueue({...button.track, title: button.title || button.track.title}),
-            disabled: !button || !button.track
-        })
+        const items: ContextMenuItemData[] = [
+            {
+                label: 'Play Now',
+                icon: <PiPlayBold/>,
+                onClick: () => player.playNow({...button.track, title: button.title || button.track.title}),
+                disabled: isButtonNotSet
+            },
+            {
+                label: 'Add to queue',
+                icon: <PiPlaylistBold/>,
+                onClick: () => player.addToQueue({...button.track, title: button.title || button.track.title}),
+                disabled: isButtonNotSet
+            }
+        ];
 
         if (button && button.track) {
             items.push({
-                text: previewPlayer.getStatus().playing ? 'Stop Preview' : 'Preview',
-                icon: previewPlayer.getStatus().playing ? 'stop' : 'preview',
+                label: previewPlayer.getStatus().playing ? 'Stop Preview' : 'Preview',
+                icon: previewPlayer.getStatus().playing ? <PiPlayBold/> : <PiPlayBold/>,
                 onClick: () => previewPlayer.getStatus().playing ? stopPreview() : playPreview()
             });
         } else if (previewPlayer.getStatus().playing) {
             items.push({
-                text: 'Stop Preview',
-                icon: 'stop',
+                label: 'Stop Preview',
+                icon: <PiStopBold/>,
                 onClick: () => stopPreview()
             });
         }
 
-        items.push({type: 'separator'});
+        items.push(
+            {separator: true},
+            {
+                label: 'Chose track',
+                icon: <PiFileBold/>,
+                onClick: () => window.electron.openMediaSelectorWin(row, col)
+            },
+            {
+                label: 'Settings',
+                icon: <PiGearSixBold/>,
+                onClick: () => window.electron.openButtonSettingsWin(row, col)
+            },
+            {separator: true},
+            {
+                label: 'Copy button',
+                icon: <PiCopyBold/>,
+                onClick: () => copyButton(),
+                disabled: isButtonNotSet
+            },
+            {
+                label: 'Paste button',
+                icon: <FaRegPaste/>,
+                onClick: () => pasteButton(),
+                disabled: !copiedButton
+            },
+            {separator: true},
+            {
+                label: 'Copy style',
+                icon: <PiCopyBold/>,
+                onClick: () => copyStyle(),
+                disabled: !button || !button.style
+            },
+            {
+                label: 'Paste style',
+                icon: <FaRegPaste/>,
+                onClick: () => pasteStyle(),
+                disabled: !copiedStyle
+            },
+            {
+                label: 'Clear style',
+                icon: <PiBroomBold/>,
+                onClick: () => clearStyle(),
+                disabled: isButtonNotSet || !button.style
+            },
+            {separator: true},
+            {
+                label: 'Clear',
+                icon: <PiTrashBold/>,
+                variant: 'danger',
+                onClick: () => deleteButton(),
+                disabled: isButtonNotSet
+            }
+        );
 
-        items.push({
-            text: 'Chose file',
-            icon: 'publish',
-            onClick: () => window.electron.openMediaSelectorWin(row, col)
-        });
-        items.push({
-            text: 'Settings',
-            icon: 'settings',
-            onClick: () => window.electron.openButtonSettingsWin(row, col)
-        });
-
-        items.push({type: 'separator'});
-
-        items.push({
-            text: 'Copy button',
-            icon: 'copy',
-            onClick: () => copyButton(),
-            disabled: !button || !button.track
-        });
-        items.push({
-            text: 'Paste button',
-            icon: 'paste',
-            onClick: () => pasteButton(),
-            disabled: !copiedButton
-        });
-        
-        items.push({type: 'separator'});
-        
-        items.push({
-            text: 'Copy style',
-            icon: 'copy',
-            onClick: () => copyStyle(),
-            disabled: !button || !button.style
-        });
-        items.push({
-            text: 'Paste style',
-            icon: 'paste',
-            disabled: !copiedStyle,
-            onClick: () => pasteStyle(),
-        });
-        items.push({
-            text: 'Clear style',
-            icon: 'close',
-            onClick: () => clearStyle()
-        })
-        
-        items.push({type: 'separator'});
-        
-        items.push({
-            text: 'Clear',
-            icon: 'delete',
-            type: 'danger',
-            onClick: () => deleteButton(),
-            disabled: !button
-        });
-        
-        setContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            items: items
-        });
+        showContextMenu({items: items, event: event});
     }
 
     const swapButtons = (fromRow: number, fromCol: number, toRow: number, toCol: number) => {

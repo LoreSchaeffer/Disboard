@@ -1,3 +1,14 @@
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('/fonts/NotoSans-VariableFont_wdth,wght.ttf')
+}
+
+@font-face {
+    font-family: 'Noto Sans';
+    font-style: italic;
+    src: url('/fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf')
+}
+
 :root {
     --green: #57F287;
     --yellow: #FEE75C;
@@ -119,6 +130,34 @@
     --green-860: hsl(133, 70.4%, 5.3%);
     --green-900: hsl(129, 58.3%, 4.7%);
 
+    /* Yellow */
+    --yellow-100: hsl(52, 100%, 96.1%);
+    --yellow-130: hsl(51, 100%, 92.5%);
+    --yellow-160: hsl(50, 100%, 86%);
+    --yellow-200: hsl(48, 100%, 76%);
+    --yellow-230: hsl(47, 100%, 66%);
+    --yellow-260: hsl(46, 100%, 60%);
+    --yellow-300: hsl(45, 100%, 54%);
+    --yellow-330: hsl(45, 95%, 49%);
+    --yellow-345: hsl(44, 94%, 46%);
+    --yellow-360: hsl(43, 92%, 43%);
+    --yellow-400: hsl(41, 88%, 38%);
+    --yellow-430: hsl(40, 85%, 34%);
+    --yellow-460: hsl(38, 82%, 30%);
+    --yellow-500: hsl(36, 80%, 26%);
+    --yellow-530: hsl(35, 78%, 23%);
+    --yellow-560: hsl(34, 76%, 20%);
+    --yellow-600: hsl(32, 74%, 17.5%);
+    --yellow-630: hsl(31, 72%, 15.5%);
+    --yellow-660: hsl(30, 70%, 13.5%);
+    --yellow-700: hsl(29, 68%, 11.5%);
+    --yellow-730: hsl(28, 65%, 10%);
+    --yellow-760: hsl(27, 62%, 8.5%);
+    --yellow-800: hsl(26, 60%, 7.2%);
+    --yellow-830: hsl(25, 58%, 6.3%);
+    --yellow-860: hsl(24, 55%, 5.5%);
+    --yellow-900: hsl(22, 50%, 4.8%);
+
     --background-primary: var(--gray-600);
     --background-secondary: var(--gray-630);
     --background-secondary-alt: var(--gray-660);
@@ -177,18 +216,7 @@
     --btn-outline-success-border-hover: var(--green-430);
 
     --titlebar-height: 22px;
-    --player-height: 130px;
-}
-
-@font-face {
-    font-family: 'Noto Sans';
-    src: url('/fonts/NotoSans-VariableFont_wdth,wght.ttf')
-}
-
-@font-face {
-    font-family: 'Noto Sans';
-    font-style: italic;
-    src: url('/fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf')
+    --player-height: 90px;
 }
 
 * {
@@ -200,7 +228,9 @@
     font-synthesis: none;
 }
 
-html, body, #root {
+html,
+body,
+#root {
     margin: 0;
     padding: 0;
     width: 100%;

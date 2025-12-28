@@ -1,8 +1,4 @@
-import {BrowserWindow, BrowserWindowConstructorOptions} from 'electron';
-
-export type RepeatMode = 'none' | 'one' | 'all';
-
-export type SoundboardMode = 'normal' | 'bot';
+import {BrowserWindow, BrowserWindowConstructorOptions} from "electron";
 
 export type WindowOptions = BrowserWindowConstructorOptions & {
     page: string;

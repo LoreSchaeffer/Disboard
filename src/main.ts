@@ -1,179 +1,165 @@
-import {app, BrowserWindow, dialog, ipcMain, protocol, shell} from 'electron';
-import path from 'path';
 // eslint-disable-next-line import/no-unresolved
-import {parseFile} from "music-metadata";
-import fs from "fs";
-import {ChildProcessWithoutNullStreams, spawn} from "child_process";
-import {Store} from "./utils/store";
-import {Profile, SbButton, Settings} from "./types/storage";
-import {getInfo, getStream, initYouTube, search} from "./utils/youtube";
-import {WindowOptions} from "./types/types";
-import {Track} from "./types/track";
+import {app, BrowserWindow, ipcMain, IpcMainInvokeEvent, net, protocol} from 'electron';
+import path from 'path';
+import {pathToFileURL} from 'url';
 import {generateUUID} from "./utils/utils";
-import IpcMainInvokeEvent = Electron.IpcMainInvokeEvent;
+import {WindowOptions} from "./types/window";
+import {profilesStore, settingsStore} from "./utils/store";
+import {WindowInfo} from "./types/common";
+import {Settings} from "./types/settings";
+import {Profile, SbButton} from "./types/profiles";
 
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+declare const MAIN_WINDOW_VITE_NAME: string;
+
+// Extend the Electron BrowserWindow interface to include custom options
 declare module 'electron' {
     interface BrowserWindow {
         options: WindowOptions;
     }
 }
 
+// Global constants
 export const root = app.getPath('userData');
-export const media = path.join(root, 'media');
+export const audioDir = path.join(root, 'audio');
+export const imagesDir = path.join(root, 'images');
 
-declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
-declare const MAIN_WINDOW_VITE_NAME: string;
-
+// Global state variables
 let mainWindow: BrowserWindow | undefined;
-let settings: Store<Settings>;
-let profiles: Store<Profile[]>;
-let epidemiology: ChildProcessWithoutNullStreams;
-
-// High priority
-// TODO Remove :root from css modules and move them like in TrackInfo.module.css
-// TODO Add localization
-// TODO Add optional validation in input fields
-// TODO Many handle in main.ts do not have a return
-// TODO Ask for YouTube cookie on first run
-// TODO Move createNewProfile and settings to the mainWindow
-// TODO App settings
-
-// Mid priority
-// TODO Discord bot
-// TODO Add different preview output device
-// TODO Register media buttons hook
-// TODO Queues
-// TODO Process priority
-// TODO Download missing files
-
-// Low priority
-// TODO Redownload media when importing profiles
-// TODO Try to redownload file if missing
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-if (require('electron-squirrel-startup')) {
-    app.quit();
-}
+if (require('electron-squirrel-startup')) app.quit();
 
-// Register custom protocol for file access. This is used to access files on the local filesystem
+/**
+ * =============================================================================
+ * PROTOCOL REGISTRATION
+ * =============================================================================
+ * Registers the 'music' scheme as privileged.
+ * This allows fetching local resources with high performance and streaming support.
+ */
 protocol.registerSchemesAsPrivileged([
     {
-        scheme: 'dftp',
+        scheme: 'music',
         privileges: {
             secure: true,
-            bypassCSP: true,
-            stream: true
+            standard: true,
+            supportFetchAPI: true,
+            stream: true,
+            bypassCSP: false,
+            corsEnabled: true
         }
     }
 ]);
 
-/* ======== Initialization ======== */
+/**
+ * =============================================================================
+ * HELPER FUNCTIONS
+ * =============================================================================
+ */
 
-const start = () => {
-    settings = new Store('settings', {
-        defValue: {
-            width: 1366,
-            height: 768,
-            volume: 50,
-            preview_volume: 50,
-            output_device: 'default',
-            preview_output_device: 'default',
-            repeat: 'none',
-            soundboard_mode: 'normal',
-            font_size: 11,
-            show_images: true,
-        },
-        onChange: (store) => {
-            mainWindow.webContents.send('settings', store);
-        },
-    });
-
-    profiles = new Store('profiles', {
-        defValue: [
-            {
-                id: generateUUID(),
-                name: 'Default',
-                rows: 8,
-                cols: 10,
-                buttons: []
-            }
-        ],
-        onChange: (store) => {
-            mainWindow.webContents.send('profiles', store);
-        },
-    });
-
-    if (settings.get().active_profile == null || profiles.get().find(p => p.id === settings.get().active_profile) == null) {
-        settings.get().active_profile = profiles.get()[0].id;
-        settings.save();
-    }
-
-    if (settings.get().youtube_cookie == null || settings.get().youtube_cookie.trim() == '') {
-        //TODO Ask for cookie
-    }
-
-    initYouTube(settings.get().youtube_cookie)
-
-    createMainWindow();
+const loadWindowUrl = (win: BrowserWindow, pageName: string, queryParams: string = '') => {
+    const search = pageName !== 'main' ? `?page=${pageName}${queryParams}` : queryParams;
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`);
+    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search});
 };
 
 const createWindow = (options: WindowOptions): BrowserWindow => {
     const customOnLoaded = options.onLoaded;
 
-    options = {
-        ...options,
-        icon: path.join('icons', 'icon.png'),
+    const browserOptions: Electron.BrowserWindowConstructorOptions = {
+        width: options.width || 1080,
+        height: options.height || 608,
+        minWidth: options.minWidth,
+        minHeight: options.minHeight,
+        x: options.x,
+        y: options.y,
+        resizable: options.resizable ?? true,
+        modal: options.modal,
+        parent: options.parent,
+        icon: path.join(__dirname, '../../icons/icon.png'),
         frame: false,
         titleBarStyle: 'hidden',
         autoHideMenuBar: true,
         show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: false,
+            webSecurity: true
         },
-        onLoaded: (win) => {
-            if (customOnLoaded) customOnLoaded(win);
-            console.log(`Window ${win.id} (${options.page}) loaded`);
-        },
-        onReady: (win) => {
-            win.show();
-            console.log(`Window ${win.id} (${options.page}) ready`);
-        },
-    }
+    };
 
-    const win = new BrowserWindow(options);
+    const win = new BrowserWindow(browserOptions);
     win.options = options;
 
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html`);
-    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    const pageName = options.page || 'main';
+    loadWindowUrl(win, pageName);
 
-    if (options.onLoaded) win.webContents.on('did-finish-load', () => options.onLoaded(win));
-    if (options.onReady) win.once('ready-to-show', () => options.onReady(win));
-    if (options.onResize) win.on('resize', () => options.onResize(win));
-    if (settings.get().debug) win.webContents.openDevTools();
+    win.webContents.on('did-finish-load', () => {
+        if (customOnLoaded) customOnLoaded(win);
+    });
+
+    win.once('ready-to-show', () => {
+        if (options.onReady) options.onReady(win);
+        else win.show();
+    });
+
+    if (options.onResize) win.on('resize', () => options.onResize!(win));
+    if (settingsStore.get('debug')) win.webContents.openDevTools({mode: 'detach'});
 
     return win;
 }
 
+const handleMusicRequest = async (request: Request): Promise<Response> => {
+    try {
+        const parsedUrl = new URL(request.url);
+        const type = parsedUrl.hostname;
+        const resName = decodeURIComponent(parsedUrl.pathname.slice(1));
+
+        let targetPath = '';
+        if (type === 'audio') {
+            targetPath = path.join(audioDir, `${resName}.mp3`);
+        } else if (type === 'images') {
+            targetPath = path.join(imagesDir, `${resName}.jpg`);
+        } else {
+            return new Response('Invalid resource type', {status: 400});
+        }
+
+        return net.fetch(pathToFileURL(targetPath).toString())
+    } catch {
+        return new Response('File not found', {status: 404});
+    }
+}
+
+/**
+ * =============================================================================
+ * WINDOWS FUNCTIONS
+ * =============================================================================
+ */
+
+let resizeTimeout: NodeJS.Timeout;
 const createMainWindow = () => {
     mainWindow = createWindow({
         page: 'main',
-        width: settings.get().width,
-        height: settings.get().height,
+        width: settingsStore.get('width'),
+        height: settingsStore.get('height'),
         minWidth: 1080,
         minHeight: 608,
         onResize: (win) => {
-            const size = win.getSize();
+            clearTimeout(resizeTimeout);
 
-            settings.get().width = size[0];
-            settings.get().height = size[1];
-            settings.save();
-
-            win.webContents.send('settings', settings.get());
+            resizeTimeout = setTimeout(() => {
+                const size = win.getSize();
+                settingsStore.set('width', size[0]);
+                settingsStore.set('height', size[1]);
+                win.webContents.send('settings', settingsStore.store);
+            }, 250);
         }
     });
 }
 
-const createButtonSettings = (parent: number, row: number, col: number): BrowserWindow => {
+const createButtonSettings = (_: number, row: number, col: number): BrowserWindow => {
     return createWindow({
         page: 'button_settings',
         modal: true,
@@ -201,43 +187,58 @@ const createMediaSelector = (parent: number, row: number, col: number) => {
     });
 }
 
-const createNewProfile = () => {
-    const newProfile = new BrowserWindow({
-        modal: true,
-        parent: mainWindow,
-        icon: path.join('icons', 'icon.png'),
-        width: 350,
-        height: 180,
-        resizable: false,
-        frame: false,
-        titleBarStyle: 'hidden',
-        autoHideMenuBar: true,
-        show: false,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-        },
+/**
+ * =============================================================================
+ * APP INITIALIZATION LOGIC
+ * =============================================================================
+ */
+
+const initApp = async () => {
+    // 1. Setup custom protocol handler
+    protocol.handle('music', handleMusicRequest);
+
+    // 2. Stores listeners
+    settingsStore.onDidAnyChange((newValue) => {
+        broadcastSettings(newValue);
     });
 
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        newProfile.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html?page=new_profile`);
-    } else {
-        newProfile.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html?page=new_profile`));
+    profilesStore.onDidAnyChange((newValue) => {
+        broadcastProfiles(newValue.profiles);
+    });
+
+    // 3. Data validation
+    if (profilesStore.get('profiles').length === 0) {
+        profilesStore.set('store', [
+            {
+                id: generateUUID(),
+                name: 'Default',
+                rows: 8,
+                cols: 10,
+                buttons: []
+            }
+        ]);
     }
 
-    newProfile.webContents.on('did-finish-load', () => {
-        newProfile.webContents.send('ready', newProfile.id, mainWindow.id, false);
-        newProfile.webContents.send('settings', settings.get());
-        newProfile.webContents.send('profiles', profiles.get());
-    });
+    if (!settingsStore.get('activeProfile') || !profilesStore.get('profiles').find(p => p.id === settingsStore.get('activeProfile'))) {
+        if (profilesStore.get('profiles').length > 0) {
+            settingsStore.set('activeProfile', profilesStore.get('profiles')[0].id);
+        } else {
+            console.error('No profile found');
+        }
+    }
 
-    newProfile.once('ready-to-show', () => {
-        newProfile.show();
-    });
-}
+    // 4. Launch main window
+    createMainWindow();
+};
 
-/* ======== App Events ======== */
+/**
+ * =============================================================================
+ * ELECTRON LIFECYCLE EVENTS
+ * =============================================================================
+ */
 
-app.on('ready', start);
+
+app.whenReady().then(initApp);
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
@@ -247,86 +248,57 @@ app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 });
 
-app.on('before-quit', () => {
-    if (epidemiology) epidemiology.kill();
-});
+/**
+ * =============================================================================
+ * UTILS FUNCTIONS
+ * =============================================================================
+ */
 
-app.whenReady().then(() => {
-    protocol.registerFileProtocol('dftp', (request, response) => {
-        response({path: decodeURIComponent(request.url.slice('dftp://file/'.length))})
+const broadcastSettings = (settings: Settings) => {
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('settings', settings);
     });
-});
+}
 
-/* ======== Utils ======== */
+const broadcastProfiles = (profiles: Profile[]) => {
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('profiles', profiles);
+    });
+}
 
-function saveButton(profile: string, button: SbButton) {
-    const activeProfile = profiles.get().find(p => p.id === profile);
+const saveButton = (profile: string, button: SbButton) => {
+    const profiles = profilesStore.get('profiles');
+    const activeProfile = profiles.find(p => p.id === profile);
     if (!activeProfile) return;
 
     const index = activeProfile.buttons.findIndex(b => b.row === button.row && b.col === button.col);
     if (index === -1) activeProfile.buttons.push(button);
     else activeProfile.buttons[index] = button;
 
-    profiles.save();
-    profiles.notifyChange();
+    profilesStore.set('profiles', profiles);
 }
 
-function deleteButton(profile: string, row: number, col: number) {
-    const activeProfile = profiles.get().find(p => p.id === profile);
+const deleteButton = (profile: string, row: number, col: number) => {
+    const profiles = profilesStore.get('profiles');
+    const activeProfile = profiles.find(p => p.id === profile);
     if (!activeProfile) return;
 
     const index = activeProfile.buttons.findIndex(b => b.row === row && b.col === col);
     if (index === -1) return;
-
     activeProfile.buttons.splice(index, 1);
 
-    profiles.save();
-    profiles.notifyChange();
+    profilesStore.set('profiles', profiles);
 }
 
-/* ======== Epidemiology ======== */
-
-const runEpidemiology = () => {
-    const jar = process.env.NODE_ENV === 'development'
-        ? path.resolve(process.cwd(), 'resources', 'epidemiology.jar')
-        : path.join(process.resourcesPath, 'epidemiology.jar');
-
-    const epidemiologyRoot = path.join(app.getPath('userData'), 'epidemiology');
-    const command: string[] = `java -jar ${jar} -c ${path.join(epidemiologyRoot, 'chrome')} -d ${path.join(epidemiologyRoot, 'data')} -o ${media}`.split(' ');
-
-    epidemiology = spawn(command[0], command.slice(1), {
-        detached: false,
-        windowsHide: true
-    });
-
-    if (settings.get().debug) {
-        epidemiology.stdout.on('data', (data) => {
-            console.log(`[JOUT]: ${data}`);
-        });
-
-        epidemiology.stderr.on('data', (data) => {
-            console.error(`[JERR]: ${data}`);
-        });
-
-        epidemiology.on('error', (err) => {
-            console.error(`[JERR]:`, err);
-        });
-    }
-
-    epidemiology.unref();
-}
-
-const stopEpidemiology = () => {
-    if (epidemiology) {
-        epidemiology.kill();
-        epidemiology = undefined;
-    }
-}
-
-/* ======== IPC Handlers ======== */
+/**
+ * =============================================================================
+ * IPC HANDLERS
+ * =============================================================================
+ */
 
 // Window
-ipcMain.handle('get_window', (e: IpcMainInvokeEvent) => {
+
+ipcMain.handle('get_window', (e: IpcMainInvokeEvent): WindowInfo => {
     const win = BrowserWindow.fromId(e.frameId) as BrowserWindow;
     if (!win) throw new Error('Could not find the window');
 
@@ -338,6 +310,7 @@ ipcMain.handle('get_window', (e: IpcMainInvokeEvent) => {
 });
 
 // Navbar
+
 ipcMain.on('minimize', (e: IpcMainInvokeEvent) => {
     const win = BrowserWindow.fromId(e.frameId);
     if (win) win.minimize();
@@ -357,253 +330,256 @@ ipcMain.on('close', (e: IpcMainInvokeEvent) => {
 });
 
 // Store
-ipcMain.handle('get_settings', () => {
-    return settings.get();
+
+ipcMain.handle('get_settings', (): Settings => {
+    return settingsStore.store;
 });
 
 ipcMain.on('save_settings', (_, newSettings: Settings) => {
-    settings.set(newSettings);
-    settings.save();
-    settings.notifyChange();
-});
-
-ipcMain.on('save_profile', (_, newProfile: Profile) => {
-    const index = profiles.get().findIndex(p => p.id === newProfile.id);
-    if (index === -1) return;
-
-    profiles.get()[index] = newProfile;
-    profiles.save();
-    profiles.notifyChange();
-});
-
-ipcMain.on('save_button', async (_, profile: string, button: SbButton) => {
-    const track = button.track;
-
-    switch (track.source) {
-        case 'youtube':
-            if (track.uri === null) {
-                try {
-                    track.uri = await getStream(track.original_url);
-                    // TODO Download and update soundboard (the gui should show the download progress, at the end the button should be updated with the new uri)
-                } catch (e) {
-                    console.error(e.message);
-                }
-            }
-            break;
-        case 'remote':
-            if (track.uri === null) {
-                track.uri = track.original_url;
-                // TODO Get media info
-                // TODO Evaluated if download is needed
-            }
-            break;
-        case 'local':
-        case 'epidemic': {
-            const meta = await parseFile(track.uri);
-            track.title = meta.common.title || path.basename(track.uri);
-            track.duration = meta.format.duration * 1000 || 0;
-            // TODO Get media info
-            break;
-        }
-    }
-
-    button.track = track;
-    saveButton(profile, button);
-});
-
-ipcMain.on('delete_button', (_, profile: string, row: number, col: number) => {
-    deleteButton(profile, row, col);
+    settingsStore.set(newSettings);
+    broadcastSettings(newSettings);
 });
 
 // Profiles
-ipcMain.handle('get_profiles', () => profiles.get());
 
-ipcMain.handle('create_profile', (_, name: string, rows: number, cols: number) => {
-    const profile = {
-        id: generateUUID(),
-        name: name,
-        rows: rows,
-        cols: cols,
-        buttons: [] as SbButton[]
-    };
+ipcMain.handle('get_profiles', (): Profile[] => profilesStore.get('profiles'));
 
-    profiles.get().push(profile);
-    profiles.save();
-    profiles.notifyChange();
+// ipcMain.on('save_profile', (_, newProfile: Profile) => {
+//     const index = profiles.get().findIndex(p => p.id === newProfile.id);
+//     if (index === -1) return;
+//
+//     profiles.get()[index] = newProfile;
+//     profiles.save();
+//     profiles.notifyChange();
+// });
 
-    settings.get().active_profile = profile.id;
-    settings.save();
-    settings.notifyChange();
-});
+// ipcMain.on('save_button', async (_, profile: string, button: SbButton) => {
+//     const track = button.track;
+//
+//     switch (track.source) {
+//         case 'youtube':
+//             if (track.uri === null) {
+//                 try {
+//                     track.uri = await getStream(track.original_url);
+//                     // TODO Download and update soundboard (the gui should show the download progress, at the end the button should be updated with the new uri)
+//                 } catch (e) {
+//                     console.error(e.message);
+//                 }
+//             }
+//             break;
+//         case 'remote':
+//             if (track.uri === null) {
+//                 track.uri = track.original_url;
+//                 // TODO Get media info
+//                 // TODO Evaluated if download is needed
+//             }
+//             break;
+//         case 'local':
+//         case 'epidemic': {
+//             const meta = await parseFile(track.uri);
+//             track.title = meta.common.title || path.basename(track.uri);
+//             track.duration = meta.format.duration * 1000 || 0;
+//             // TODO Get media info
+//             break;
+//         }
+//     }
+//
+//     button.track = track;
+//     saveButton(profile, button);
+// });
 
-ipcMain.handle('rename_profile', (_, id: string, name: string) => {
-    const index = profiles.get().findIndex(p => p.id === id);
-    if (index === -1) return;
+// ipcMain.on('delete_button', (_, profile: string, row: number, col: number) => {
+//     deleteButton(profile, row, col);
+// });
 
-    profiles.get()[index].name = name;
-    profiles.save();
-    profiles.notifyChange();
-});
+// ipcMain.handle('create_profile', (_, name: string, rows: number, cols: number) => {
+//     const profile = {
+//         id: generateUUID(),
+//         name: name,
+//         rows: rows,
+//         cols: cols,
+//         buttons: [] as SbButton[]
+//     };
+//
+//     profiles.get().push(profile);
+//     profiles.save();
+//     profiles.notifyChange();
+//
+//     settings.get().activeProfile = profile.id;
+//     settings.save();
+//     settings.notifyChange();
+// });
 
-ipcMain.handle('delete_profile', (_, id: string) => {
-    const index = profiles.get().findIndex(p => p.id === id);
-    if (index === -1) return;
+// ipcMain.handle('rename_profile', (_, id: string, name: string) => {
+//     const index = profiles.get().findIndex(p => p.id === id);
+//     if (index === -1) return;
+//
+//     profiles.get()[index].name = name;
+//     profiles.save();
+//     profiles.notifyChange();
+// });
 
-    profiles.get().splice(index, 1);
-    if (profiles.get().length === 0) {
-        profiles.get().push({
-            id: generateUUID(),
-            name: 'Default',
-            rows: 8,
-            cols: 10,
-            buttons: []
-        });
-    }
+// ipcMain.handle('delete_profile', (_, id: string) => {
+//     const index = profiles.get().findIndex(p => p.id === id);
+//     if (index === -1) return;
+//
+//     profiles.get().splice(index, 1);
+//     if (profiles.get().length === 0) {
+//         profiles.get().push({
+//             id: generateUUID(),
+//             name: 'Default',
+//             rows: 8,
+//             cols: 10,
+//             buttons: []
+//         });
+//     }
+//
+//     profiles.save();
+//     profiles.notifyChange();
+//
+//     if (settings.get().activeProfile === id) {
+//         settings.get().activeProfile = profiles.get()[0].id;
+//         settings.save();
+//         settings.notifyChange();
+//     }
+// });
 
-    profiles.save();
-    profiles.notifyChange();
+// ipcMain.handle('import_profile', async () => {
+//     try {
+//         const {filePaths} = await dialog.showOpenDialog({
+//             title: 'Import profile',
+//             defaultPath: app.getPath('documents'),
+//             filters: [
+//                 {name: 'JSON', extensions: ['json']},
+//             ]
+//         });
+//
+//         if (!filePaths || filePaths.length === 0) return;
+//
+//         const profile = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8')) as Profile;
+//
+//         const index = profiles.get().findIndex(p => p.id === profile.id);
+//         if (index !== -1) profiles.get()[index] = profile;
+//         else profiles.get().push(profile);
+//
+//         profiles.save();
+//         profiles.notifyChange();
+//     } catch (e) {
+//         console.error(e.message);
+//     }
+// });
 
-    if (settings.get().active_profile === id) {
-        settings.get().active_profile = profiles.get()[0].id;
-        settings.save();
-        settings.notifyChange();
-    }
-});
+// ipcMain.on('export_profile', async (_, id: string) => {
+//     const profile = profiles.get().find(p => p.id === id);
+//     if (!profile) return;
+//
+//     try {
+//         const filePath = await dialog.showSaveDialog({
+//             title: `Export profile ${profile.name}`,
+//             defaultPath: path.join(app.getPath('documents'), profile.name.replace(/[^a-z0-9]/gi, '_') + '.json'),
+//             filters: [
+//                 {name: 'JSON', extensions: ['json']},
+//             ]
+//         });
+//
+//         if (!filePath) return;
+//
+//         fs.writeFileSync(filePath.filePath, JSON.stringify(profile, null, 2));
+//     } catch (e) {
+//         console.error(e.message);
+//     }
+// });
 
-ipcMain.handle('import_profile', async () => {
-    try {
-        const {filePaths} = await dialog.showOpenDialog({
-            title: 'Import profile',
-            defaultPath: app.getPath('documents'),
-            filters: [
-                {name: 'JSON', extensions: ['json']},
-            ]
-        });
-
-        if (!filePaths || filePaths.length === 0) return;
-
-        const profile = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8')) as Profile;
-
-        const index = profiles.get().findIndex(p => p.id === profile.id);
-        if (index !== -1) profiles.get()[index] = profile;
-        else profiles.get().push(profile);
-
-        profiles.save();
-        profiles.notifyChange();
-    } catch (e) {
-        console.error(e.message);
-    }
-});
-
-ipcMain.on('export_profile', async (_, id: string) => {
-    const profile = profiles.get().find(p => p.id === id);
-    if (!profile) return;
-
-    try {
-        const filePath = await dialog.showSaveDialog({
-            title: `Export profile ${profile.name}`,
-            defaultPath: path.join(app.getPath('documents'), profile.name.replace(/[^a-z0-9]/gi, '_') + '.json'),
-            filters: [
-                {name: 'JSON', extensions: ['json']},
-            ]
-        });
-
-        if (!filePath) return;
-
-        fs.writeFileSync(filePath.filePath, JSON.stringify(profile, null, 2));
-    } catch (e) {
-        console.error(e.message);
-    }
-});
-
-ipcMain.on('export_profiles', async () => {
-    if (profiles.get().length === 0) return;
-
-    try {
-        const {filePaths} = await dialog.showOpenDialog({
-            title: 'Export profiles',
-            defaultPath: path.join(app.getPath('documents')),
-            properties: ['openDirectory', 'createDirectory'],
-        });
-
-        if (!filePaths || filePaths.length === 0) return;
-
-        const dirPath = filePaths[0];
-        profiles.get().forEach(profile => {
-            const filePath = path.join(dirPath, profile.name.replace(/[^a-z0-9]/gi, '_') + '.json');
-            fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
-        });
-    } catch (e) {
-        console.error(e.message);
-    }
-});
+// ipcMain.on('export_profiles', async () => {
+//     if (profiles.get().length === 0) return;
+//
+//     try {
+//         const {filePaths} = await dialog.showOpenDialog({
+//             title: 'Export profiles',
+//             defaultPath: path.join(app.getPath('documents')),
+//             properties: ['openDirectory', 'createDirectory'],
+//         });
+//
+//         if (!filePaths || filePaths.length === 0) return;
+//
+//         const dirPath = filePaths[0];
+//         profiles.get().forEach(profile => {
+//             const filePath = path.join(dirPath, profile.name.replace(/[^a-z0-9]/gi, '_') + '.json');
+//             fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
+//         });
+//     } catch (e) {
+//         console.error(e.message);
+//     }
+// });
 
 // Windows
-ipcMain.on('open_media_selector_win', (_, row: number, col: number, winId: number) => createMediaSelector(winId, row, col));
+// ipcMain.on('open_media_selector_win', (_, row: number, col: number, winId: number) => createMediaSelector(winId, row, col));
 
-ipcMain.on('open_button_settings_win', (_, row: number, col: number) => createButtonSettings(mainWindow.id, row, col));
+// ipcMain.on('open_button_settings_win', (_, row: number, col: number) => createButtonSettings(mainWindow.id, row, col));
 
-ipcMain.on('open_new_profile_win', () => createNewProfile());
+// ipcMain.on('open_new_profile_win', () => createNewProfile());
 
 // System
-ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
+// ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
 
-ipcMain.handle('open_file_media_selector', async () => {
-    return await dialog.showOpenDialog({
-        filters: [
-            {name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'flac']},
-        ]
-    });
-});
+// ipcMain.handle('open_file_media_selector', async () => {
+//     return await dialog.showOpenDialog({
+//         filters: [
+//             {name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'flac']},
+//         ]
+//     });
+// });
 
 // Audio
-ipcMain.handle('search', (_, query: string) => {
-    return search(query)
-});
 
-ipcMain.handle('get_video', (_, url: string) => {
-    return getInfo(url)
-});
+// ipcMain.handle('search', (_, query: string) => {
+//     return search(query)
+// });
 
-ipcMain.handle('get_stream', (_, url: string) => {
-    return getStream(url)
-});
+// ipcMain.handle('get_video', (_, url: string) => {
+//     return getInfo(url)
+// });
 
-ipcMain.on('play_now', async (_, track: Track) => {
-    switch (track.source) {
-        case 'youtube':
-            if (track.uri === null) {
-                try {
-                    track.uri = await getStream(track.original_url);
-                } catch (e) {
-                    console.error(e.message);
-                }
-            }
-            break;
-        case 'remote':
-            if (track.uri === null) {
-                track.uri = track.original_url;
-                // TODO Get media info
-            }
-            break;
-        case 'local':
-        case 'epidemic': {
-            const meta = await parseFile(track.uri);
-            track.title = meta.common.title || path.basename(track.uri);
-            track.duration = Math.floor(meta.format.duration * 1000) || 0;
-            break;
-        }
-    }
+// ipcMain.handle('get_stream', (_, url: string) => {
+//     return getStream(url)
+// });
 
-    mainWindow.webContents.send('play_now', track);
-});
+// ipcMain.on('play_now', async (_, track: Track) => {
+//     switch (track.source) {
+//         case 'youtube':
+//             if (track.uri === null) {
+//                 try {
+//                     track.uri = await getStream(track.original_url);
+//                 } catch (e) {
+//                     console.error(e.message);
+//                 }
+//             }
+//             break;
+//         case 'remote':
+//             if (track.uri === null) {
+//                 track.uri = track.original_url;
+//                 // TODO Get media info
+//             }
+//             break;
+//         case 'local':
+//         case 'epidemic': {
+//             const meta = await parseFile(track.uri);
+//             track.title = meta.common.title || path.basename(track.uri);
+//             track.duration = Math.floor(meta.format.duration * 1000) || 0;
+//             break;
+//         }
+//     }
+//
+//     mainWindow.webContents.send('play_now', track);
+// });
 
-ipcMain.on('pause', () => mainWindow.webContents.send('pause'));
+// ipcMain.on('pause', () => mainWindow.webContents.send('pause'));
 
-ipcMain.on('return_track', (_, track: Track, winId: number) => {
-    const win = BrowserWindow.fromId(winId);
-    if (win) win.getParentWindow().webContents.send('track', track);
-});
+// ipcMain.on('return_track', (_, track: Track, winId: number) => {
+//     const win = BrowserWindow.fromId(winId);
+//     if (win) win.getParentWindow().webContents.send('track', track);
+// });
 
 // Misc
-ipcMain.handle('get_file_separator', () => path.sep);
+
+// ipcMain.handle('get_file_separator', () => path.sep);

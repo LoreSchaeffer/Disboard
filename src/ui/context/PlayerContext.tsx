@@ -1,119 +1,107 @@
 import {Player, PlayerStatus} from "../utils/player";
-import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
+import {createContext, FC, PropsWithChildren, ReactNode, useContext, useEffect, useState} from "react";
 import {Track} from "../../types/track";
-import {RepeatMode} from "../../types/types";
 import {Time} from "../utils/time";
+import {RepeatMode} from "../../types/common";
 
 type PlayerContextType = {
     player: Player;
     previewPlayer: Player;
+
     status: PlayerStatus;
     repeat: RepeatMode;
     queue: Track[];
     index: number;
     currentTrack: Track | null;
-    duration: Time | null;
-    currentTime: number;
+    duration: Time;
+    currentTime: Time;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-export default function PlayerContextProvider({children}: PropsWithChildren) {
-    const [status, setStatus] = useState<PlayerStatus>();
-    const [repeat, setRepeat] = useState<RepeatMode>();
-    const [queue, setQueue] = useState<Track[]>([]);
-    const [index, setIndex] = useState<number>(0);
-    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-    const [duration, setDuration] = useState<Time | null>(null);
-    const [currentTime, setCurrentTime] = useState<number>(0);
+export const PlayerProvider: FC<{ children: ReactNode }> = ({children}: PropsWithChildren) => {
+    const [player] = useState<Player>(() => new Player());
+    const [previewPlayer] = useState<Player>(() => new Player());
 
-    const playerRef = useRef<Player>(new Player());
-    const previewPlayerRef = useRef<Player>(new Player());
+    const [status, setStatus] = useState<PlayerStatus>(player.getStatus());
+    const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
+    const [queue, setQueue] = useState<Track[]>(player.getQueue());
+    const [index, setIndex] = useState<number>(0);
+    const [currentTrack, setCurrentTrack] = useState<Track | null>(player.getCurrentTrack());
+
+    const [duration, setDuration] = useState<Time>(new Time(0, 'ms'));
+    const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     useEffect(() => {
-        if (!playerRef.current) return;
-
-        const player = playerRef.current;
-
-        player.on('abort', () => {
+        const syncState = () => {
             setStatus(player.getStatus());
+            setRepeat(player.getRepeatMode());
+            setQueue(player.getQueue());
+            setIndex(player.getIndex());
             setCurrentTrack(player.getCurrentTrack());
-            setDuration(null);
-            setCurrentTime(0);
-        });
+
+            const dur = player.getDuration();
+            setDuration(dur ? dur : new Time(0, 'ms'));
+        };
+
+        const handleTimeUpdate = (time: Time, dur: Time) => {
+            setCurrentTime(time);
+            if (dur) setDuration(dur);
+        };
+
+        player.on('play', syncState);
+        player.on('pause', syncState);
+        player.on('resume', syncState);
+        player.on('loading', (isLoading) => setStatus(prev => ({...prev, loading: isLoading})));
 
         player.on('ended', () => {
-            setStatus(player.getStatus());
-            setCurrentTrack(player.getCurrentTrack());
-            setDuration(null);
-            setCurrentTime(0);
-            setIndex(player.getIndex());
+            syncState();
+            setCurrentTime(new Time(0, 'ms'));
         });
+
+        player.on('timeupdate', handleTimeUpdate);
+
+        player.on('trackchange', (track) => {
+            setCurrentTrack(track);
+            setCurrentTime(new Time(0, 'ms'));
+            setDuration(new Time(0, 'ms'));
+        });
+
+        player.on('queueupdate', (newQueue) => setQueue(newQueue));
+        player.on('repeatupdate', (mode) => setRepeat(mode));
 
         player.on('error', () => {
-            setStatus(player.getStatus());
-            setCurrentTrack(player.getCurrentTrack());
-            setDuration(null);
-            setCurrentTime(0);
-        });
-
-        player.on('pause', () => {
-            setStatus(player.getStatus());
-        });
-
-        player.on('resume', () => {
-            setStatus(player.getStatus());
-        });
-
-        player.on('play', (duration: Time) => {
-            setStatus(player.getStatus());
-            setCurrentTrack(player.getCurrentTrack());
-            setDuration(duration);
-            setIndex(player.getIndex());
-        });
-
-        player.on('timeupdate', (currentTime: number) => {
-            setCurrentTime(currentTime);
-        });
-
-        player.on('repeatupdate', (mode: RepeatMode) => {
-            setRepeat(mode);
-        });
-
-        player.on('queueupdate', (queue: Track[]) => {
-            setQueue(queue);
+            syncState();
+            setCurrentTime(new Time(0, 'ms'));
         });
 
         player.on('reset', () => {
-            setStatus(player.getStatus());
-            setCurrentTrack(player.getCurrentTrack());
-            setDuration(null);
-            setCurrentTime(0);
-            setIndex(player.getIndex());
-            setQueue(player.getQueue());
-        })
+            syncState();
+            setCurrentTime(new Time(0, 'ms'));
+            setDuration(new Time(0, 'ms'));
+        });
 
         return () => {
-            player.off('abort');
-            player.off('ended');
-            player.off('error');
+            player.off('play');
             player.off('pause');
             player.off('resume');
-            player.off('play');
-            player.off('seeked');
+            player.off('loading');
+            player.off('ended');
             player.off('timeupdate');
-            player.off('repeatupdate');
+            player.off('trackchange');
             player.off('queueupdate');
+            player.off('repeatupdate');
+            player.off('error');
             player.off('reset');
         }
-    }, [playerRef]);
+    }, [player]);
 
     return (
         <PlayerContext.Provider value={{
-            player: playerRef.current,
-            previewPlayer: previewPlayerRef.current,
-            status: status,
-            repeat: repeat,
+            player,
+            previewPlayer,
+            status,
+            repeat,
             queue,
             index,
             currentTrack,
@@ -127,6 +115,6 @@ export default function PlayerContextProvider({children}: PropsWithChildren) {
 
 export function usePlayer() {
     const context = useContext(PlayerContext);
-    if (context === undefined) throw new Error("usePlayerContext must be used within a PlayerContextProvider");
+    if (context === undefined) throw new Error("usePlayer must be used within a PlayerContextProvider");
     return context;
 }

@@ -1,0 +1,145 @@
+.item {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.item span {
+    color: var(--gray-0);
+    font-size: 0.875rem;
+    line-height: 0.875rem;
+}
+
+.item svg {
+    fill: var(--gray-0);
+}
+
+.item:hover:not(.disabled):not(.separator) {
+    background-color: var(--primary-500);
+}
+
+.item:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.item:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.separator {
+    border-top: 1px solid var(--gray-700);
+    padding: 0 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    cursor: default;
+}
+
+.disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.primary span {
+    color: var(--primary-500);
+}
+
+.primary svg {
+    fill: var(--primary-500);
+}
+
+.primary:hover:not(.disabled):not(.separator) {
+    background-color: var(--primary-500);
+}
+
+.primary:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.primary:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.secondary span {
+    color: var(--gray-200);
+}
+
+.secondary svg {
+    fill: var(--gray-200);
+}
+
+.secondary:hover:not(.disabled):not(.separator) {
+    background-color: var(--gray-600);
+}
+
+.secondary:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.secondary:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.success span {
+    color: var(--green-345);
+}
+
+.success svg {
+    fill: var(--green-345);
+}
+
+.success:hover:not(.disabled):not(.separator) {
+    background-color: var(--green-345);
+}
+
+.success:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.success:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.warning span {
+    color: var(--yellow-345);
+}
+
+.warning svg {
+    fill: var(--yellow-345);
+}
+
+.warning:hover:not(.disabled):not(.separator) {
+    background-color: var(--yellow-345);
+}
+
+.warning:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.warning:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.danger span {
+    color: var(--red-430);
+}
+
+.danger svg {
+    fill: var(--red-430);
+}
+
+.danger:hover:not(.disabled):not(.separator) {
+    background-color: var(--red-430);
+}
+
+.danger:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.danger:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}

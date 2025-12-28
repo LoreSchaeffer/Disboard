@@ -1,30 +1,36 @@
 .player {
+    width: 100%;
+    height: var(--player-height);
     position: fixed;
     bottom: 0;
     left: 0;
-    right: 0;
-    height: var(--player-height);
+    padding: 0 15px;
     background-color: var(--background-secondary);
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: center;
-    z-index: 10;
+    box-sizing: border-box;
+    z-index: 100;
+}
+
+.leftColumn {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .trackInfo {
-    justify-self: flex-start;
-    margin-right: auto;
+    max-width: 100%;
 }
 
-.playerControls {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 12;
-    background-color: var(--background-secondary);
+.centerColumn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 400px;
 }
 
 .playerButtons {
@@ -32,7 +38,12 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 5px;
+    margin-bottom: 4px;
+}
+
+.disabledBtn svg {
+    fill: var(--text-disabled) !important;
 }
 
 .progressGroup {
@@ -40,12 +51,11 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    margin-top: 15px;
-    min-height: 15px;
+    gap: 10px;
+    width: 100%;
 }
 
-.progressBar  {
+.progressBar {
     min-width: 500px;
     height: 5px;
     transition: width 500ms ease;
@@ -54,50 +64,33 @@
 .progressTime {
     font-size: 0.8rem;
     line-height: 0.8rem;
+    font-variant-numeric: tabular-nums;
     color: var(--text-secondary);
     user-select: none;
+    min-width: 40px;
+    text-align: center;
 }
 
-.rightControls {
+.progressTime.hidden {
+    opacity: 0;
+}
+
+.rightColumn {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-self: flex-end;
-    gap: 16px;
-    margin-left: auto;
-    margin-right: 10px;
+    justify-content: flex-end;
+    gap: 5px;
 }
 
-.rightControls .volume {
-    width: 150px;
-    height: 5px;
-}
-
-.profileSettings {
-    position: absolute;
+.volumeBlock {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background-color: var(--background-tertiary-alt);
-    user-select: none;
-    border-radius: 4px;
-    padding: 10px;
-    min-width: 150px;
-    z-index: 1500;
-    transition: opacity 200ms ease;
+    align-items: center;
+    gap: 5px;
 }
 
-.profileSettings .title {
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.profileSettings label {
-    font-size: 0.85rem;
-    line-height: 0.85rem;
-}
-
-.profileSettings .input {
-    justify-self: flex-end;
-    margin-left: auto;
+.volumeSlider {
+    min-width: 100px;
+    height: 5px;
+    transition: width 500ms ease;
 }

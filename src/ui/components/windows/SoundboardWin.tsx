@@ -1,57 +1,60 @@
 import styles from './SoundboardWin.module.css';
-import PlayerContextProvider from "../../context/PlayerContext";
 import {useWindow} from "../../context/WindowContext";
-import {useEffect, useRef} from "react";
-import SvgIcon from "../SvgIcon";
-import {ContextMenuItemProps} from "../menu/ContextMenuItem";
+import React, {useEffect, useRef, useState} from "react";
 import Soundboard from "../soundboard/Soundboard";
 import Player from "../player/Player";
+import {useTitlebar} from "../../context/TitlebarContext";
+import {useContextMenu} from "../../context/ContextMenuContext";
+import {FaChevronDown} from "react-icons/fa6";
+import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
+import {PiArrowSquareInBold, PiArrowSquareOutBold, PiPlusBold, PiTrashBold} from "react-icons/pi";
+import {IoMdRadioButtonOff, IoMdRadioButtonOn} from "react-icons/io";
+import {FaChevronUp} from "react-icons/fa";
+import {PlayerProvider} from "../../context/PlayerContext";
 
-const defProfileSelectorItems: ContextMenuItemProps[] = [
+const defProfileSelectorItems: ContextMenuItemData[] = [
+    {separator: true},
     {
-        type: 'separator'
-    },
-    {
-        text: 'New profile',
-        icon: 'add',
+        label: 'New profile',
+        icon: <PiPlusBold/>,
         onClick: () => window.electron.openNewProfileWin(),
     },
+    {separator: true},
     {
-        type: 'separator'
-    },
-    {
-        text: 'Import profile',
-        icon: 'input',
+        label: 'Import profile',
+        icon: <PiArrowSquareInBold/>,
         onClick: () => window.electron.importProfile(),
     },
     {
-        text: 'Export all',
-        icon: 'output',
+        label: 'Export all',
+        icon: <PiArrowSquareOutBold/>,
         onClick: () => window.electron.exportProfiles(),
     }
 ];
 
 const SoundboardWin = () => {
-    const {settings, setSettings, profiles, activeProfile, titlebar, setContextMenu} = useWindow();
+    const {settings, updateSettings, profiles, activeProfile} = useWindow();
+    const {setTitlebarContent} = useTitlebar();
+    const {showContextMenu} = useContextMenu();
 
-    const profileSelectorRef = useRef<HTMLSpanElement>(null);
+    const [profileSelectorOpen, setProfileSelectorOpen] = useState<boolean>(false);
+
+    const zoomRef = useRef<number>(settings.zoom || 1);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {
             if (!e.ctrlKey) return;
-
             e.preventDefault();
-            e.stopPropagation();
 
             const delta = e.deltaY;
-            const newFontSize = settings.font_size + (delta > 0 ? -1 : 1);
+            const newZoom = zoomRef.current + (delta > 0 ? -0.02 : 0.02);
 
-            if (newFontSize < 1 || newFontSize > 24) return;
+            if (newZoom < 0.1 || newZoom > 2) return;
 
-            setSettings({...settings, font_size: newFontSize});
+            updateSettings({zoom: Math.round(newZoom * 100) / 100});
         }
 
-        window.addEventListener('wheel', handleMouseWheel);
+        window.addEventListener('wheel', handleMouseWheel, {passive: false});
 
         return () => {
             window.removeEventListener('wheel', handleMouseWheel);
@@ -59,54 +62,55 @@ const SoundboardWin = () => {
     }, []);
 
     useEffect(() => {
-        titlebar?.setChildren(
-            <span ref={profileSelectorRef} className={styles.profileSelector} onClick={handleProfileSelectorClick}>
-                     {activeProfile?.name}
-                <SvgIcon icon={"chevron_down"} size={"15px"} color={"var(--text-disabled)"}/>
-                 </span>
-        );
-    }, [profiles, activeProfile, titlebar]);
+        if (settings) zoomRef.current = settings.zoom || 1;
+    }, [settings]);
 
-    const handleProfileSelectorClick = () => {
-        if (!profileSelectorRef.current) return;
+    useEffect(() => {
+        setTitlebarContent(
+            <span className={styles.profileSelector} onClick={handleProfileSelectorClick}>
+                {activeProfile?.name}
+                {profileSelectorOpen ? <FaChevronUp/> : <FaChevronDown/>}
+            </span>
+        )
+    }, [profiles, activeProfile]);
 
-        const items = profiles.map(p => ({
-            text: p.name,
-            type: activeProfile.id === p.id ? 'primary' : 'normal',
-            icon: activeProfile.id === p.id ? 'radio_button_checked' : 'radio_button',
-            submenu: {
-                items: [
-                    {
-                        text: 'Export',
-                        icon: 'output',
-                        onClick: () => window.electron.exportProfile(p.id),
-                    },
-                    {
-                        text: 'Delete',
-                        icon: 'delete',
-                        type: 'danger',
-                        onClick: () => window.electron.deleteProfile(p.id),
-                    }
-                ]
-            },
-            onClick: () => {
-                setSettings({...settings, active_profile: p.id});
-            }
+    const handleProfileSelectorClick = (event: React.MouseEvent) => {
+        const items: ContextMenuItemData[] = profiles.map(p => ({
+            label: p.name,
+            icon: activeProfile.id === p.id ? <IoMdRadioButtonOn/> : <IoMdRadioButtonOff/>,
+            variant: activeProfile.id === p.id ? 'primary' : undefined,
+            children: [
+                {
+                    label: 'Export',
+                    icon: <PiArrowSquareOutBold/>,
+                    onClick: () => window.electron.exportProfile(p.id),
+                },
+                {separator: true},
+                {
+                    label: 'Delete',
+                    icon: <PiTrashBold/>,
+                    variant: 'danger',
+                    onClick: () => window.electron.deleteProfile(p.id),
+                }
+            ],
+            onClick: () => updateSettings({activeProfile: p.id}),
         }));
 
-        const rect = profileSelectorRef.current.getBoundingClientRect();
-        setContextMenu({
-            x: rect.left,
-            y: rect.bottom + 3,
-            items: [...items, ...defProfileSelectorItems] as ContextMenuItemProps[],
+        const rect = (event.target as HTMLElement).getBoundingClientRect();
+
+        showContextMenu({
+            items: [...items, ...defProfileSelectorItems],
+            customPos: {x: rect.left, y: rect.bottom + 5},
+            onShow: () => setProfileSelectorOpen(true),
+            onHide: () => setProfileSelectorOpen(false),
         });
     }
 
     return (
-        <PlayerContextProvider>
+        <PlayerProvider>
             <Soundboard/>
             <Player/>
-        </PlayerContextProvider>
+        </PlayerProvider>
     )
 }
 

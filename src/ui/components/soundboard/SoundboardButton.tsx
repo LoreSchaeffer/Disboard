@@ -1,93 +1,122 @@
 import styles from "./SoundboardButton.module.css";
-import React, {forwardRef, MouseEvent, useEffect, useState} from "react";
+import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {useWindow} from "../../context/WindowContext";
-import {SbButton} from "../../../types/storage";
+import {clamp} from "../../../utils/utils";
+import {clsx} from "clsx";
+import {SbButton} from "../../../types/profiles";
 
-type SoundboardButtonProps = {
+export type SoundboardButtonProps = {
     row: number;
     col: number;
     button?: SbButton;
+    active?: boolean;
+    className?: string;
+    isDragging?: boolean;
+    isDropping?: boolean;
     onClick?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
     onContextMenu?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
 };
 
+type CustomCSSProperties = CSSProperties & {
+    '--sb-bg'?: string;
+    '--sb-bg-hover'?: string;
+    '--sb-bg-active'?: string;
+
+    '--sb-text'?: string;
+    '--sb-text-hover'?: string;
+    '--sb-text-active'?: string;
+
+    '--sb-border'?: string;
+    '--sb-border-hover'?: string;
+    '--sb-border-active'?: string;
+
+    '--sb-font-size'?: string;
+    '--sb-line-height'?: string;
+
+    '--sb-image-size'?: string;
+    '--sb-image-radius'?: string;
+}
+
 const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
-        {
-            row,
-            col,
-            button,
-            onClick,
-            onContextMenu
-        }, ref) => {
-        const {settings} = useWindow();
-        const [defaultStyle, setDefaultStyle] = useState<React.CSSProperties>({});
-        const [hoverStyle, setHoverStyle] = useState<React.CSSProperties>({});
-        const [style, setStyle] = useState<React.CSSProperties>({});
-        
-        const btn = button || {row, col, title: `Button ${row}-${col}`, track: null};
+    {
+        row,
+        col,
+        button,
+        active = false,
+        className,
+        isDragging = false,
+        isDropping = false,
+        onClick,
+        onContextMenu
+    }, ref) => {
+    const {settings} = useWindow();
 
-        useEffect(() => {
-            const newDefaultStyle = {
-                backgroundColor: btn.style?.background_color || 'var(--btn-background)',
-                color: btn.style?.text_color || 'var(--btn-text)',
-                borderColor: btn.style?.border_color || 'var(--btn-border)',
-            };
+    const btn = useMemo(() => button || {
+        row,
+        col,
+        title: `Button ${row}-${col}`,
+        track: null
+    }, [button, row, col]);
 
-            const newHoverStyle = {
-                backgroundColor: btn.style?.background_color_hover || btn.style?.background_color || 'var(--btn-background-hover)',
-                color: btn.style?.text_color_hover || btn.style?.text_color || 'var(--btn-text-hover)',
-                borderColor: btn.style?.border_color_hover || btn.style?.border_color || 'var(--btn-border-hover)',
-            };
+    const dynamicStyle: CustomCSSProperties = useMemo(() => {
+        const zoomFactor = Math.pow(clamp((settings.zoom || 1), 0.1, 2), 0.8);
 
-            setDefaultStyle(newDefaultStyle);
-            setHoverStyle(newHoverStyle);
-            setStyle(newDefaultStyle);
-        }, []);
+        return ({
+            '--sb-bg': btn.style?.background_color || undefined,
+            '--sb-bg-hover': btn.style?.background_color_hover || btn.style?.background_color || undefined,
+            '--sb-bg-active': btn.style?.background_color_active || btn.style?.background_color || undefined,
 
+            '--sb-text': btn.style?.text_color || undefined,
+            '--sb-text-hover': btn.style?.text_color_hover || btn.style?.text_color || undefined,
+            '--sb-text-active': btn.style?.text_color_active || btn.style?.text_color || undefined,
 
-        const getImage = () => {
-            let image = 'url(/images/track.png)';
-            if (btn.track?.thumbnail) image = `url(${btn.track.thumbnail})`;
+            '--sb-border': btn.style?.border_color || undefined,
+            '--sb-border-hover': btn.style?.border_color_hover || btn.style?.border_color || undefined,
+            '--sb-border-active': btn.style?.border_color_active || btn.style?.border_color || undefined,
 
-            return <div className={styles.sbBtnImage} style={{backgroundImage: image}}/>;
-        }
+            '--sb-font-size': `${11 * zoomFactor}pt`,
+            '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,
 
-        const handleClick = (e: MouseEvent) => {
-            onClick?.(e, btn, row, col);
-        }
+            '--sb-image-size': `${35 * zoomFactor}px`,
+            '--sb-image-radius': `${5 * zoomFactor}px`,
 
-        const handleContextMenu = (e: MouseEvent) => {
-            onContextMenu?.(e, btn, row, col);
-        }
+            justifyContent: settings.showImages ? 'flex-start' : 'center',
+        })
+    }, [btn, settings.zoom, settings.showImages]);
 
-        const onMouseEnter = (e: MouseEvent) => {
-            const target = e.currentTarget as HTMLElement;
-            if (target.classList.contains('dropping')) return;
-            setStyle(hoverStyle);
-        }
+    return (
+        <div
+            ref={ref}
+            className={clsx(
+                styles.btn,
+                active && styles.active,
+                className,
+                isDragging && styles.dragging,
+                isDropping && styles.dropping
+            )}
+            style={dynamicStyle}
+            onClick={(e) => onClick?.(e, btn, row, col)}
+            onContextMenu={(e) => onContextMenu?.(e, btn, row, col)}
+            title={btn.title}
+        >
+            {settings.showImages && (
+                <img
+                    className={styles.image}
+                    src={btn.track ? `music://images/${btn.track?.id}` : '/images/track.png'}
+                    alt={btn.title || ''}
+                    onError={(e) => {
+                        const img = e.currentTarget;
+                        img.onerror = null;
+                        img.src = '/images/track.png';
+                    }}
+                />
+            )}
 
-        return (
-            <div
-                ref={ref}
-                className={styles.sbBtn}
-                style={{justifyContent: settings.show_images ? 'flex-start' : 'center', ...style}}
-                onClick={(e: React.MouseEvent) => handleClick(e)}
-                onContextMenu={(e: React.MouseEvent) => handleContextMenu(e)}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={() => setStyle(defaultStyle)}
-            >
-                {settings.show_images && getImage()}
-                <span
-                    className={styles.sbBtnText}
-                    style={{
-                        fontSize: settings.font_size + "pt",
-                        lineHeight: settings.font_size * 1.2 + "pt",
-                }}
-                >{btn.title}
-                </span>
-            </div>
-        );
-    }
-);
+            <span className={styles.text}>
+                {btn.title}
+            </span>
+        </div>
+    );
+});
 
-export default SoundboardButton;
+export default React.memo(SoundboardButton);

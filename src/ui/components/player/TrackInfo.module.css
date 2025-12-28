@@ -1,34 +1,30 @@
 .trackInfo {
-    --thumbnail-size: 75px;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
     justify-content: center;
-    max-width: 400px;
+    gap: 8px;
+    max-width: 25vw;
 }
 
-.trackThumbnail {
-    width: var(--thumbnail-size);
-    min-width: var(--thumbnail-size);
-    height: var(--thumbnail-size);
-    margin: 0 10px;
-    border-radius: 8px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+.image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
     user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.trackData {
-    height: var(--thumbnail-size);
+.data {
+    height: 60px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
 }
 
-.trackTitle {
+.title {
     font-size: 1rem;
     line-height: calc(1rem * 1.2);
     display: -webkit-box;
@@ -38,21 +34,4 @@
     text-overflow: ellipsis;
     white-space: normal;
     color: var(--text-primary);
-}
-
-.trackSrc {
-    font-size: 0.75rem;
-    line-height: calc(0.75rem * 1.2);
-    color: var(--text-secondary);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
-    cursor: pointer;
-}
-
-.trackSrc:hover {
-    color: var(--text-secondary-hover);
 }

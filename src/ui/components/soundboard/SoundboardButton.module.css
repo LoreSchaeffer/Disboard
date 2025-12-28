@@ -1,34 +1,67 @@
-.sbBtn {
+:root {
+    --sb-bg: var(--background-primary);
+    --sb-bg-hover: var(--background-primary-hover);
+    --sb-bg-active: var(--background-primary-active);
+    --sb-text: var(--text-primary);
+    --sb-text-hover: var(--text-primary-hover);
+    --sb-text-active: var(--text-primary-active);
+    --sb-border: transparent;
+    --sb-border-hover: transparent;
+    --sb-border-active: transparent;
+    --sb-font-size: 11pt;
+    --sb-line-height: calc(11pt * 1.2);
+    --sb-image-size: 35px;
+    --sb-image-radius: 5px;
+}
+
+.btn {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    gap: 5px;
+    padding: 2px 5px;
     font-weight: 400;
     cursor: pointer;
     user-select: none;
     overflow: hidden;
     transition: all 100ms ease;
     border-radius: 4px;
+
+    background-color: var(--sb-bg);
+    color: var(--sb-text);
+    border-color: var(--sb-border);
 }
 
-.sbBtn.dropping {
+.btn.active {
+    background-color: var(--sb-bg-active);
+    border-color: var(--sb-border-active);
+}
+
+.btn:hover:not(.dropping) {
+    background-color: var(--sb-bg-hover);
+    color: var(--sb-text-hover);
+    border-color: var(--sb-border-hover);
+}
+
+.btn.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.btn.dropping {
     filter: brightness(150%);
 }
 
-.sbBtnImage {
-    min-width: 35px;
-    min-height: 35px;
-    width: 35px;
-    height: 35px;
-    aspect-ratio: 1;
-    border-radius: 5px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    margin-left: 5px;
-    margin-right: 8px;
+.image {
+    width: var(--sb-image-size);
+    height: var(--sb-image-size);
+    object-fit: cover;
+    border-radius: var(--sb-image-radius);
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.sbBtnText {
+.text {
     text-overflow: ellipsis;
     white-space: normal;
     max-width: 100%;
@@ -37,4 +70,11 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+
+    font-size: var(--sb-font-size);
+    line-height: var(--sb-line-height);
+}
+
+.btn.active .text {
+    color: var(--sb-text-active);
 }

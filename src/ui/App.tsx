@@ -1,35 +1,20 @@
 import './App.css';
-import {ReactElement, useEffect, useRef} from "react";
+import {ReactElement} from "react";
 import SoundboardWin from "./components/windows/SoundboardWin";
-import Titlebar, {TitlebarRef} from "./components/titlebar/Titlebar";
-import ContextMenu from "./components/menu/ContextMenu";
 import {useWindow} from "./context/WindowContext";
 
 const PAGES: Record<string, ReactElement> = {
     main: <SoundboardWin/>,
-    // settings: <SettingsWin/>,
-    // button_settings: <ButtonSettingsWin/>,
-    // media_selector: <MediaSelectorWin/>,
-    // new_profile: <NewProfileWin/>
 }
 
 export const App = () => {
-    const {ready, page, contextMenu, setTitlebar} = useWindow();
-    const titlebarRef = useRef<TitlebarRef | null>(null);
+    const {ready, page} = useWindow();
 
-    useEffect(() => {
-        setTitlebar(titlebarRef.current);
-    }, []);
+    if (!ready) return null;
 
     return (
-        <>
-            <Titlebar ref={titlebarRef}/>
-            {ready &&
-                <div className='app'>
-                    {contextMenu && <ContextMenu {...contextMenu}/>}
-                    {PAGES[page] || <div>Page not found</div>}
-                </div>
-            }
-        </>
+        <div className='app'>
+            {PAGES[page] || <div>Page not found</div>}
+        </div>
     )
 }

@@ -1,5 +1,22 @@
 import {TimeUnit} from "../../types/track";
 
+export const formatTime = (time: Time | number): string => {
+    if (!time || (typeof (time) === 'number' && time < 0)) return '00:00';
+
+    const totalSeconds = typeof (time) === 'number' ? time / 1000 : time.getTimeS();
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.round(totalSeconds % 60);
+
+    let formatted = '';
+    if (hours > 0) formatted += hours + ':';
+    formatted += minutes.toString() + ':';
+    formatted += seconds.toString().padStart(2, '0');
+
+    return formatted;
+}
+
 export class Time {
     private time: number;
     private unit: TimeUnit;
@@ -10,6 +27,14 @@ export class Time {
 
         this.time = time;
         this.unit = unit;
+    }
+
+    static fromMs(ms: number): Time {
+        return new Time(ms, 'ms');
+    }
+
+    static fromS(s: number): Time {
+        return new Time(s, 's');
     }
 
     getTime(unit: TimeUnit | null): number {
@@ -58,8 +83,7 @@ export class Time {
     }
 
     setTimeKeepUnit(time: Time): Time {
-        time = time.convertToUnit(this.unit);
-        this.time = time.time;
+        this.time = time.getTime(this.unit);
         return this;
     }
 
@@ -125,12 +149,21 @@ export class Time {
     }
 
     subtract(time: Time): Time {
-        if (this.isLessThan(time)) throw new Error('Resulting time cannot be negative');
-        this.time -= time.getTime(this.unit);
+        const result = this.time - time.getTime(this.unit);
+        if (result < 0) {
+            console.warn("Time subtraction resulted in negative value, clamping to 0");
+            this.time = 0;
+        } else {
+            this.time = result;
+        }
         return this;
     }
 
     copy(): Time {
         return new Time(this.time, this.unit);
+    }
+
+    formatted(): string {
+        return formatTime(this);
     }
 }

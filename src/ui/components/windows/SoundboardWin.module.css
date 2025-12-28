@@ -2,6 +2,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    gap: 6px;
     font-size: 9pt;
     line-height: 9pt;
     font-weight: 600;

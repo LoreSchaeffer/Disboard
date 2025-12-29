@@ -1,12 +1,13 @@
 import styles from './ProgressBar.module.css';
 import React, {useCallback, useEffect, useRef, useState} from "react";
+import {clsx} from "clsx";
 
 type ProgressBarProps = {
     className?: string;
     min?: number;
     max?: number;
     val?: number;
-    seek?: boolean;
+    seekable?: boolean;
     showProgress?: boolean;
     disabled?: boolean;
     onChange?: (oldValue: number, newValue: number) => void;
@@ -20,7 +21,7 @@ const ProgressBar = (
         min = 0,
         max = 100,
         val = 0,
-        seek = false,
+        seekable = false,
         showProgress = true,
         disabled = false,
         onChange,
@@ -89,7 +90,7 @@ const ProgressBar = (
     }, [isDragging, disabled, calculateValue, updateProgress, onDragEnd]);
 
     const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-        if (disabled || !seek) return;
+        if (disabled || !seekable) return;
 
         setIsDragging(true);
 
@@ -99,7 +100,7 @@ const ProgressBar = (
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (disabled || !seek) return;
+        if (disabled || !seekable) return;
 
         let step = (max - min) / 100;
         step = Math.max(1, Math.round(step));
@@ -134,41 +135,44 @@ const ProgressBar = (
 
     return (
         <div
-            className={`${styles.progressBar} ${disabled ? styles.disabled : ''} ${className || ''}`}
+            className={clsx(
+                styles.progressBar,
+                disabled && styles.disabled,
+                isDragging && styles.dragging,
+                className
+                )}
             style={{
-                cursor: seek && !disabled ? 'pointer' : 'default',
+                cursor: seekable && !disabled ? 'pointer' : 'default',
                 touchAction: 'none'
             }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleMouseDown}
             onKeyDown={handleKeyDown}
             ref={progressBarRef}
-            role={seek ? "slider" : "progressbar"}
+            role={seekable ? "slider" : "progressbar"}
             aria-valuemin={min}
             aria-valuemax={max}
             aria-valuenow={localValue}
             aria-disabled={disabled}
-            tabIndex={seek && !disabled ? 0 : -1}
+            tabIndex={seekable && !disabled ? 0 : -1}
         >
             <div
                 className={styles.progress}
                 style={{width: `${percentage}%`}}
             />
 
-            {seek && !disabled && (
+            {seekable && !disabled && (
                 <div
                     className={styles.cursor}
-                    style={{left: `calc(${percentage}% - var(--height, 10px))`}}
+                    style={{left: `${percentage}%`}}
                 />
             )}
 
-            {showProgress && seek && !disabled && (
+            {showProgress && seekable && !disabled && (
                 <span
                     className={styles.cursorProgress}
                     style={{
-                        left: `calc(${percentage}% - 16px)`,
-                        opacity: isDragging ? 1 : 0,
-                        pointerEvents: 'none'
+                        left: `${percentage}%`
                     }}
                 >
                     {displayFunction(localValue)}

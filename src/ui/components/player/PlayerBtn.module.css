@@ -1,11 +1,22 @@
 .btn {
+    --size: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
+    border-radius: 50%;
+    padding: 8px;
     cursor: pointer;
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    min-height: 30px;
+    width: var(--size);
+    height: var(--size);
+    min-width: var(--size);
+    min-height: var(--size);
+    transition: background-color 150ms ease-in-out;
+}
+
+.btn:hover:not(:disabled) {
+    background-color: hsla(var(--neutral-25-hsl) / 0.2);
 }
 
 .btn.large {

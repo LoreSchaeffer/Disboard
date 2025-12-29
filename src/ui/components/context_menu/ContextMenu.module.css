@@ -1,7 +1,7 @@
 .contextMenu {
     position: fixed;
     z-index: 99999;
-    background-color: var(--background-tertiary-alt);
+    background-color: var(--background-context-menu);
     border-radius: 6px;
     padding: 5px 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);

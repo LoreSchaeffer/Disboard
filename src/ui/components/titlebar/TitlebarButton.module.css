@@ -19,9 +19,9 @@
 }
 
 .titlebarButton.red:hover {
-    background-color: var(--red-400);
+    background-color: var(--red-45);
 }
 
 .titlebarButton.red:hover svg {
-    fill: var(--gray-100);
+    fill: var(--neutral-1);
 }

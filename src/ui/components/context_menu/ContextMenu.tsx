@@ -51,14 +51,14 @@ const ContextMenu = ({
         document.addEventListener("keydown", handleInteraction);
         window.addEventListener("scroll", handleInteraction, {capture: true});
         window.addEventListener("resize", handleInteraction);
-        window.addEventListener("blur", handleInteraction);
+        // window.addEventListener("blur", handleInteraction);
 
         return () => {
             document.removeEventListener("mousedown", handleInteraction);
             document.removeEventListener("keydown", handleInteraction);
             window.removeEventListener("scroll", handleInteraction, {capture: true});
             window.removeEventListener("resize", handleInteraction);
-            window.removeEventListener("blur", handleInteraction);
+            // window.removeEventListener("blur", handleInteraction);
         };
     }, [isRoot, onClose]);
 

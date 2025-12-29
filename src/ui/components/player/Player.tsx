@@ -77,7 +77,7 @@ const Player = () => {
                             icon={status?.playing && !status?.paused ? <PiPauseCircleFill/> : <PiPlayCircleFill/>}
                             size={'large'}
                             disabled={!currentTrack && !queueExists}
-                            onClick={player.playPause}
+                            onClick={() => player.playPause()}
                             title={status?.playing && !status?.paused ? 'Pause' : 'Play'}
                         />
                         <PlayerBtn
@@ -98,7 +98,7 @@ const Player = () => {
                         <span className={clsx(styles.progressTime, !status.playing && styles.hidden)}>{currentTime.formatted() || '00:00'}</span>
                         <ProgressBar
                             className={styles.progressBar}
-                            seek
+                            seekable
                             disabled={!status?.playing}
                             max={status.playing ? duration?.getTimeMs() : 99999999}
                             val={status.playing ? currentTime.getTimeMs() : 0}
@@ -131,7 +131,7 @@ const Player = () => {
                             onClick={toggleMute}
                             title={muted ? 'Unmute' : 'Mute'}
                         />
-                        <ProgressBar className={styles.volumeSlider} min={0} max={100} val={volume} seek onChange={changeVolume}/>
+                        <ProgressBar className={styles.volumeSlider} min={0} max={100} val={volume} seekable onChange={changeVolume}/>
                     </div>
                 </div>
             </div>

@@ -7,20 +7,22 @@
     padding: 4px 8px;
     cursor: pointer;
     border-radius: 4px;
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
 .item span {
-    color: var(--gray-0);
+    color: var(--text-primary);
     font-size: 0.875rem;
     line-height: 0.875rem;
 }
 
 .item svg {
-    fill: var(--gray-0);
+    fill: var(--text-primary);
 }
 
 .item:hover:not(.disabled):not(.separator) {
-    background-color: var(--primary-500);
+    background-color: var(--background-context-menu-hover);
 }
 
 .item:hover:not(.disabled):not(.separator) span {
@@ -32,10 +34,9 @@
 }
 
 .separator {
-    border-top: 1px solid var(--gray-700);
+    border-top: 1px solid var(--neutral-68);
     padding: 0 10px;
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin: 5px 8px;
     cursor: default;
 }
 
@@ -45,101 +46,101 @@
 }
 
 .primary span {
-    color: var(--primary-500);
+    color: var(--blurple-35);
 }
 
 .primary svg {
-    fill: var(--primary-500);
+    fill: var(--blurple-35);
 }
 
 .primary:hover:not(.disabled):not(.separator) {
-    background-color: var(--primary-500);
+    background-color: hsl(var(--blurple-55-hsl) / 0.2);
 }
 
 .primary:hover:not(.disabled):not(.separator) span {
-    color: white;
+    color: var(--blurple-35);
 }
 
 .primary:hover:not(.disabled):not(.separator) svg {
-    fill: white;
+    fill: var(--blurple-35);
 }
 
 .secondary span {
-    color: var(--gray-200);
+    color: var(--neutral-35);
 }
 
 .secondary svg {
-    fill: var(--gray-200);
+    fill: var(--neutral-35);
 }
 
 .secondary:hover:not(.disabled):not(.separator) {
-    background-color: var(--gray-600);
+    background-color: hsla(var(--neutral-35-hsl), 0.1);
 }
 
 .secondary:hover:not(.disabled):not(.separator) span {
-    color: white;
+    color: var(--neutral-35);
 }
 
 .secondary:hover:not(.disabled):not(.separator) svg {
-    fill: white;
+    fill: var(--neutral-35);
 }
 
 .success span {
-    color: var(--green-345);
+    color: var(--green-35);
 }
 
 .success svg {
-    fill: var(--green-345);
+    fill: var(--green-35);
 }
 
 .success:hover:not(.disabled):not(.separator) {
-    background-color: var(--green-345);
+    background-color: hsl(var(--green-55-hsl) / 0.1);
 }
 
 .success:hover:not(.disabled):not(.separator) span {
-    color: white;
+    color: var(--green-35);
 }
 
 .success:hover:not(.disabled):not(.separator) svg {
-    fill: white;
+    fill: var(--green-35);
 }
 
 .warning span {
-    color: var(--yellow-345);
+    color: var(--yellow-35);
 }
 
 .warning svg {
-    fill: var(--yellow-345);
+    fill: var(--yellow-35);
 }
 
 .warning:hover:not(.disabled):not(.separator) {
-    background-color: var(--yellow-345);
+    background-color: hsl(var(--yellow-55-hsl) / 0.1);
 }
 
 .warning:hover:not(.disabled):not(.separator) span {
-    color: white;
+    color: var(--yellow-35);
 }
 
 .warning:hover:not(.disabled):not(.separator) svg {
-    fill: white;
+    fill: var(--yellow-35);
 }
 
 .danger span {
-    color: var(--red-430);
+    color: var(--red-35);
 }
 
 .danger svg {
-    fill: var(--red-430);
+    fill: var(--red-35);
 }
 
 .danger:hover:not(.disabled):not(.separator) {
-    background-color: var(--red-430);
+    background-color: hsl(var(--red-55-hsl) / 0.1);
 }
 
 .danger:hover:not(.disabled):not(.separator) span {
-    color: white;
+    color: var(--red-35);
 }
 
 .danger:hover:not(.disabled):not(.separator) svg {
-    fill: white;
+    fill: var(--red-35);
 }

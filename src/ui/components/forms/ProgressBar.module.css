@@ -1,69 +1,71 @@
 .progressBar {
-    --height: 8px;
-    --progress-size: 26px;
+    --height: 4px;
+    --thumb-size: 12px;
+
     position: relative;
     width: 100%;
     height: var(--height);
-    border-radius: 1000px;
+    border-radius: 4px;
     background-color: var(--background-tertiary);
     user-select: none;
-}
-
-.progressBar:hover .progress {
-    background-color: var(--primary-530);
+    cursor: pointer;
+    transition: height 0.2s ease;
+    display: flex;
+    align-items: center;
 }
 
 .progress {
     height: 100%;
-    border-radius: 1000px;
-    background-color: var(--primary-500);
-    transition: background-color 100ms ease;
+    border-radius: 4px;
+    background-color: var(--primary);
 }
 
 .cursor {
     position: absolute;
-    width: calc(var(--height) + 2px);
-    height: calc(var(--height) + 2px);
-    top: 50%;
-    transform: translateY(-50%);
+    width: var(--thumb-size);
+    height: var(--thumb-size);
     border-radius: 50%;
-    background-color: var(--text-primary);
+    background-color: var(--neutral-1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.1s ease;
+    z-index: 10;
+}
+
+.progressBar:hover .cursor,
+.progressBar:active .cursor {
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .cursorProgress {
     position: absolute;
-    width: var(--progress-size);
-    height: var(--progress-size);
-    top: 0;
-    font-size: 0.65rem;
-    font-weight: 500;
-    line-height: var(--progress-size);
-    text-align: center;
-    color: var(--text-primary);
-    transform: translateY(calc(-100% - var(--height) - 3px));
+    top: -30px;
+    left: 0;
+    transform: translateX(-50%);
+    background-color: var(--background-tertiary);
+    color: var(--neutral-1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    pointer-events: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    white-space: nowrap;
+    opacity: 0;
     transition: opacity 100ms ease;
 }
 
-.cursorProgress::before {
-    content: '';
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: var(--progress-size);
-    height: var(--progress-size);
-    background-color: var(--primary-500);
-    border-top-left-radius: 50%;
-    border-top-right-radius: 50%;
-    border-bottom-left-radius: 50%;
-    transform: translate(-50%, -50%) rotate(45deg);
-    z-index: -1;
+.progressBar:hover .cursorProgress,
+.progressBar.dragging .cursorProgress {
+    opacity: 1;
+}
+
+.progressBar.disabled {
+    cursor: default;
+    opacity: 0.6;
 }
 
 .progressBar.disabled .progress {
-    background-color: var(--gray-400);
-}
-
-.progressBar.disabled .cursor {
-    background-color: var(--gray-300);
+    background-color: var(--text-disabled);
 }

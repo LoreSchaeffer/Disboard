@@ -77,7 +77,7 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             '--sb-font-size': `${11 * zoomFactor}pt`,
             '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,
 
-            '--sb-image-size': `${35 * zoomFactor}px`,
+            '--sb-image-size': `${30 * zoomFactor}px`,
             '--sb-image-radius': `${5 * zoomFactor}px`,
 
             justifyContent: settings.showImages ? 'flex-start' : 'center',

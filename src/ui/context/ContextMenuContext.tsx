@@ -1,4 +1,4 @@
-import React, {createContext, FC, PropsWithChildren, ReactNode, useCallback, useContext, useRef, useState} from "react";
+import React, {createContext, PropsWithChildren, useCallback, useContext, useRef, useState} from "react";
 import {ContextMenuItemData} from "../components/context_menu/ContextMenuItem";
 import ContextMenu from "../components/context_menu/ContextMenu";
 import {Position} from "../types/common";
@@ -25,7 +25,7 @@ type ContextMenuState = {
 
 const ContextMenuContext = createContext<ContextMenuContextType | undefined>(undefined);
 
-export const ContextMenuProvider: FC<{ children: ReactNode }> = ({children}: PropsWithChildren) => {
+export const ContextMenuProvider = ({children}: PropsWithChildren) => {
     const [menuState, setMenuState] = useState<ContextMenuState>({
         isOpen: false,
         x: 0,

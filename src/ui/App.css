@@ -974,27 +974,20 @@ body {
     background: var(--background-tertiary);
 }
 
-.app::before {
-    content: '';
-    display: block;
+.app {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--background-primary);
+}
+
+.pageContainer {
+    position: absolute;
+    top: var(--titlebar-height);
+    left: 0;
     width: 100%;
-    height: var(--titlebar-height);
-}
-
-.subtitle {
-    font-weight: 600;
-    font-size: 9pt;
-    line-height: 9pt;
-    color: var(--text-disabled);
-}
-
-.col {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-label {
-    color: var(--text-primary);
-    font-weight: 400;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--background-primary);
 }

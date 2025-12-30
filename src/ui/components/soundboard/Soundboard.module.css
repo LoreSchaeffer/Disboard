@@ -1,5 +1,5 @@
 .soundboard {
-    height: calc(100vh - var(--titlebar-height) - var(--player-height));
+    height: calc(100vh - var(--titlebar-height) - var(--player-height) - 10px);
     margin: 0;
     display: grid;
     grid-template-columns: auto auto auto;

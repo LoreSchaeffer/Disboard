@@ -1,5 +1,5 @@
 import {Player, PlayerStatus} from "../utils/player";
-import {createContext, FC, PropsWithChildren, ReactNode, useContext, useEffect, useState} from "react";
+import {createContext, PropsWithChildren, useContext, useEffect, useState} from "react";
 import {Track} from "../../types/track";
 import {Time} from "../utils/time";
 import {RepeatMode} from "../../types/common";
@@ -19,7 +19,7 @@ type PlayerContextType = {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-export const PlayerProvider: FC<{ children: ReactNode }> = ({children}: PropsWithChildren) => {
+export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 

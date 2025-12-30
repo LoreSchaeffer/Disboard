@@ -2,6 +2,7 @@
     width: 100%;
     height: var(--titlebar-height);
     position: fixed;
+    padding-left: 5px;
     background-color: var(--background-tertiary);
     user-select: none;
     display: flex;
@@ -17,7 +18,7 @@
     align-items: center;
     justify-self: flex-start;
     margin-right: auto;
-    padding-left: 6px;
+    margin-left: 5px;
     gap: 15px;
     -webkit-app-region: no-drag;
 }
@@ -34,5 +35,5 @@
 }
 
 .last {
-    padding-right: 5px !important;
+    padding-right: 10px !important;
 }

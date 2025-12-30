@@ -1,13 +1,14 @@
 // eslint-disable-next-line import/no-unresolved
-import {app, BrowserWindow, ipcMain, IpcMainInvokeEvent, net, protocol} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, net, protocol, shell} from 'electron';
 import path from 'path';
 import {pathToFileURL} from 'url';
-import {generateUUID} from "./utils/utils";
+import {clamp, generateUUID, getButtonPositionFromId, sanitizeButtons, validateProfileName} from "./utils/utils";
 import {WindowOptions} from "./types/window";
-import {profilesStore, settingsStore} from "./utils/store";
-import {WindowInfo} from "./types/common";
+import {cacheStore, profilesStore, settingsStore} from "./utils/store";
+import {ButtonSettingsWin, IpcResponse, MediaSelectorWin, WindowInfo} from "./types/common";
 import {Settings} from "./types/settings";
 import {Profile, SbButton} from "./types/profiles";
+import * as fs from "node:fs";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -159,7 +160,7 @@ const createMainWindow = () => {
     });
 }
 
-const createButtonSettings = (_: number, row: number, col: number): BrowserWindow => {
+const createButtonSettings = (row: number, col: number): BrowserWindow => {
     return createWindow({
         page: 'button_settings',
         modal: true,
@@ -266,30 +267,6 @@ const broadcastProfiles = (profiles: Profile[]) => {
     });
 }
 
-const saveButton = (profile: string, button: SbButton) => {
-    const profiles = profilesStore.get('profiles');
-    const activeProfile = profiles.find(p => p.id === profile);
-    if (!activeProfile) return;
-
-    const index = activeProfile.buttons.findIndex(b => b.row === button.row && b.col === button.col);
-    if (index === -1) activeProfile.buttons.push(button);
-    else activeProfile.buttons[index] = button;
-
-    profilesStore.set('profiles', profiles);
-}
-
-const deleteButton = (profile: string, row: number, col: number) => {
-    const profiles = profilesStore.get('profiles');
-    const activeProfile = profiles.find(p => p.id === profile);
-    if (!activeProfile) return;
-
-    const index = activeProfile.buttons.findIndex(b => b.row === row && b.col === col);
-    if (index === -1) return;
-    activeProfile.buttons.splice(index, 1);
-
-    profilesStore.set('profiles', profiles);
-}
-
 /**
  * =============================================================================
  * IPC HANDLERS
@@ -335,7 +312,9 @@ ipcMain.handle('get_settings', (): Settings => {
     return settingsStore.store;
 });
 
-ipcMain.on('save_settings', (_, newSettings: Settings) => {
+ipcMain.on('update_settings', (_, settings: Partial<Settings>) => {
+    const currentSettings = settingsStore.store;
+    const newSettings = {...currentSettings, ...settings};
     settingsStore.set(newSettings);
     broadcastSettings(newSettings);
 });
@@ -344,242 +323,326 @@ ipcMain.on('save_settings', (_, newSettings: Settings) => {
 
 ipcMain.handle('get_profiles', (): Profile[] => profilesStore.get('profiles'));
 
-// ipcMain.on('save_profile', (_, newProfile: Profile) => {
-//     const index = profiles.get().findIndex(p => p.id === newProfile.id);
-//     if (index === -1) return;
-//
-//     profiles.get()[index] = newProfile;
-//     profiles.save();
-//     profiles.notifyChange();
-// });
+ipcMain.handle('create_profile', (_, profile: Partial<Profile>): IpcResponse<void> => {
+    if (!profile.name) return {success: false, error: 'name_required'};
+    if (!validateProfileName(profile.name)) return {success: false, error: 'name_invalid'};
 
-// ipcMain.on('save_button', async (_, profile: string, button: SbButton) => {
-//     const track = button.track;
-//
-//     switch (track.source) {
-//         case 'youtube':
-//             if (track.uri === null) {
-//                 try {
-//                     track.uri = await getStream(track.original_url);
-//                     // TODO Download and update soundboard (the gui should show the download progress, at the end the button should be updated with the new uri)
-//                 } catch (e) {
-//                     console.error(e.message);
-//                 }
-//             }
-//             break;
-//         case 'remote':
-//             if (track.uri === null) {
-//                 track.uri = track.original_url;
-//                 // TODO Get media info
-//                 // TODO Evaluated if download is needed
-//             }
-//             break;
-//         case 'local':
-//         case 'epidemic': {
-//             const meta = await parseFile(track.uri);
-//             track.title = meta.common.title || path.basename(track.uri);
-//             track.duration = meta.format.duration * 1000 || 0;
-//             // TODO Get media info
-//             break;
-//         }
-//     }
-//
-//     button.track = track;
-//     saveButton(profile, button);
-// });
+    const profiles = profilesStore.get('profiles');
+    if (profiles.some(p => p.name.toLowerCase() === profile.name!.toLowerCase())) return {success: false, error: 'name_exists'};
 
-// ipcMain.on('delete_button', (_, profile: string, row: number, col: number) => {
-//     deleteButton(profile, row, col);
-// });
+    const newProfile = {
+        id: generateUUID(),
+        name: profile.name,
+        rows: clamp(Math.floor(profile.rows) || 8, 1, 50),
+        cols: clamp(Math.floor(profile.cols) || 10, 1, 50),
+        buttons: [] as SbButton[]
+    }
 
-// ipcMain.handle('create_profile', (_, name: string, rows: number, cols: number) => {
-//     const profile = {
-//         id: generateUUID(),
-//         name: name,
-//         rows: rows,
-//         cols: cols,
-//         buttons: [] as SbButton[]
-//     };
-//
-//     profiles.get().push(profile);
-//     profiles.save();
-//     profiles.notifyChange();
-//
-//     settings.get().activeProfile = profile.id;
-//     settings.save();
-//     settings.notifyChange();
-// });
+    profiles.push(newProfile);
+    profilesStore.set('profiles', profiles);
+    settingsStore.set('activeProfile', newProfile.id);
 
-// ipcMain.handle('rename_profile', (_, id: string, name: string) => {
-//     const index = profiles.get().findIndex(p => p.id === id);
-//     if (index === -1) return;
-//
-//     profiles.get()[index].name = name;
-//     profiles.save();
-//     profiles.notifyChange();
-// });
+    broadcastProfiles(profiles);
+    broadcastSettings(settingsStore.store);
+    return {success: true};
+});
 
-// ipcMain.handle('delete_profile', (_, id: string) => {
-//     const index = profiles.get().findIndex(p => p.id === id);
-//     if (index === -1) return;
-//
-//     profiles.get().splice(index, 1);
-//     if (profiles.get().length === 0) {
-//         profiles.get().push({
-//             id: generateUUID(),
-//             name: 'Default',
-//             rows: 8,
-//             cols: 10,
-//             buttons: []
-//         });
-//     }
-//
-//     profiles.save();
-//     profiles.notifyChange();
-//
-//     if (settings.get().activeProfile === id) {
-//         settings.get().activeProfile = profiles.get()[0].id;
-//         settings.save();
-//         settings.notifyChange();
-//     }
-// });
+ipcMain.handle('update_profile', (_, id: string, profile: Partial<Profile>): IpcResponse<void> => {
+    if (!id) return {success: false, error: 'id_required'};
 
-// ipcMain.handle('import_profile', async () => {
-//     try {
-//         const {filePaths} = await dialog.showOpenDialog({
-//             title: 'Import profile',
-//             defaultPath: app.getPath('documents'),
-//             filters: [
-//                 {name: 'JSON', extensions: ['json']},
-//             ]
-//         });
-//
-//         if (!filePaths || filePaths.length === 0) return;
-//
-//         const profile = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8')) as Profile;
-//
-//         const index = profiles.get().findIndex(p => p.id === profile.id);
-//         if (index !== -1) profiles.get()[index] = profile;
-//         else profiles.get().push(profile);
-//
-//         profiles.save();
-//         profiles.notifyChange();
-//     } catch (e) {
-//         console.error(e.message);
-//     }
-// });
+    const profiles = profilesStore.get('profiles');
+    const idx = profiles.findIndex(p => p.id === id);
+    if (idx === -1) return {success: false, error: 'id_not_found'};
 
-// ipcMain.on('export_profile', async (_, id: string) => {
-//     const profile = profiles.get().find(p => p.id === id);
-//     if (!profile) return;
-//
-//     try {
-//         const filePath = await dialog.showSaveDialog({
-//             title: `Export profile ${profile.name}`,
-//             defaultPath: path.join(app.getPath('documents'), profile.name.replace(/[^a-z0-9]/gi, '_') + '.json'),
-//             filters: [
-//                 {name: 'JSON', extensions: ['json']},
-//             ]
-//         });
-//
-//         if (!filePath) return;
-//
-//         fs.writeFileSync(filePath.filePath, JSON.stringify(profile, null, 2));
-//     } catch (e) {
-//         console.error(e.message);
-//     }
-// });
+    const existingProfile = profiles[idx];
+    const newValues: Partial<Profile> = {};
 
-// ipcMain.on('export_profiles', async () => {
-//     if (profiles.get().length === 0) return;
-//
-//     try {
-//         const {filePaths} = await dialog.showOpenDialog({
-//             title: 'Export profiles',
-//             defaultPath: path.join(app.getPath('documents')),
-//             properties: ['openDirectory', 'createDirectory'],
-//         });
-//
-//         if (!filePaths || filePaths.length === 0) return;
-//
-//         const dirPath = filePaths[0];
-//         profiles.get().forEach(profile => {
-//             const filePath = path.join(dirPath, profile.name.replace(/[^a-z0-9]/gi, '_') + '.json');
-//             fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
-//         });
-//     } catch (e) {
-//         console.error(e.message);
-//     }
-// });
+    if (profile.name) {
+        if (!validateProfileName(profile.name)) return {success: false, error: 'name_invalid'};
+        if (profiles.some(p => p.id !== id && p.name.toLowerCase() === profile.name!.toLowerCase())) return {success: false, error: 'name_exists'};
+        newValues.name = profile.name;
+    }
+
+    if (profile.rows !== undefined) newValues.rows = clamp(Math.floor(profile.rows), 1, 50);
+    if (profile.cols !== undefined) newValues.cols = clamp(Math.floor(profile.cols), 1, 50);
+
+    profiles[idx] = {
+        ...existingProfile,
+        ...newValues
+    };
+
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+    return {success: true};
+});
+
+ipcMain.handle('delete_profile', (_, id: string): IpcResponse<void> => {
+    if (!id) return {success: false, error: 'id_required'};
+
+    const profiles = profilesStore.get('profiles');
+    const idx = profiles.findIndex(p => p.id === id);
+    if (idx === -1) return {success: false, error: 'id_not_found'};
+
+    profiles.splice(idx, 1);
+    if (profiles.length === 0) {
+        profiles.push({
+            id: generateUUID(),
+            name: 'Default',
+            rows: 8,
+            cols: 10,
+            buttons: []
+        });
+    }
+
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+
+    const activeProfile = settingsStore.get('activeProfile');
+    if (activeProfile === id || !profiles.find(p => p.id === activeProfile)) {
+        settingsStore.set('activeProfile', profiles[0].id);
+        broadcastSettings(settingsStore.store);
+    }
+
+    return {success: true};
+});
+
+ipcMain.on('import_profile', async () => {
+    const defaultPath: string = cacheStore.get('profilesDir') || app.getPath('documents');
+
+    const {canceled, filePaths} = await dialog.showOpenDialog({
+        title: 'Import Profile',
+        defaultPath: defaultPath,
+        properties: ['openFile'],
+        filters: [
+            {name: 'JSON Profile', extensions: ['json']},
+        ]
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+        console.info('Import canceled');
+        return;
+    }
+
+    const filePath = filePaths[0];
+    cacheStore.set('profilesDir', path.dirname(filePath));
+
+    let rawData: Partial<Profile>;
+    try {
+        rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    } catch (e) {
+        console.error("JSON Parse Error:", e);
+        return;
+    }
+
+    if (!rawData || typeof rawData !== 'object' || !rawData.name) {
+        console.error('Invalid profile format');
+        return;
+    }
+
+    const profiles = profilesStore.get('profiles');
+
+    let newName = rawData.name;
+    let counter = 1;
+    while (profiles.some(p => p.name.toLowerCase() === newName.toLowerCase())) {
+        newName = `${rawData.name} (${counter++})`;
+    }
+
+    const newProfile: Profile = {
+        id: generateUUID(),
+        name: newName,
+        rows: clamp(Math.floor(rawData.rows || 8), 1, 50),
+        cols: clamp(Math.floor(rawData.cols || 10), 1, 50),
+        buttons: sanitizeButtons(rawData.buttons)
+    };
+
+    profiles.push(newProfile);
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+});
+
+ipcMain.on('export_profile', async (_, id: string) => {
+    const profile = profilesStore.get('profiles').find(p => p.id === id);
+
+    if (!profile) {
+        console.error('Profile not found');
+        return;
+    }
+
+    const safeFilename = profile.name.replace(/[^a-z0-9\-_]/gi, '_');
+
+    const {canceled, filePath} = await dialog.showSaveDialog({
+        title: `Export profile ${profile.name}`,
+        defaultPath: path.join(
+            cacheStore.get('profilesDir') || app.getPath('documents'),
+            `${safeFilename}.json`
+        ),
+        filters: [
+            {name: 'JSON', extensions: ['json']},
+        ]
+    });
+
+    if (canceled || !filePath) {
+        console.info('Export canceled');
+        return;
+    }
+
+    cacheStore.set('profilesDir', path.dirname(filePath));
+
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
+    } catch (e) {
+        console.error('Error exporting profile:', e.message);
+    }
+});
+
+ipcMain.on('export_profiles', async () => {
+    const profiles = profilesStore.get('profiles');
+    if (!profiles || profiles.length === 0) return;
+
+    const {canceled, filePaths} = await dialog.showOpenDialog({
+        title: 'Select Export Directory',
+        defaultPath: cacheStore.get('profilesDir') || app.getPath('documents'),
+        properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+        console.info('Export canceled');
+        return;
+    }
+
+    const exportDir = filePaths[0];
+
+    cacheStore.set('profilesDir', exportDir);
+
+    const usedFilenames = new Set<string>();
+
+    for (const profile of profiles) {
+        try {
+            let safeName = profile.name.replace(/[^a-z0-9\-_]/gi, '_');
+            if (!safeName || safeName.trim() === '') safeName = `profile_${profile.id}`;
+
+            let filename = `${safeName}.json`;
+            let counter = 1;
+
+            while (usedFilenames.has(filename.toLowerCase()) || fs.existsSync(path.join(exportDir, filename))) {
+                filename = `${safeName} (${counter++}).json`;
+            }
+
+            usedFilenames.add(filename.toLowerCase());
+
+            const filePath = path.join(exportDir, filename);
+
+            fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
+        } catch (e) {
+            console.error(`Errore esportando il profilo ${profile.name}:`, e.message);
+        }
+    }
+});
+
+// Buttons
+
+ipcMain.handle('update_button', (_, profileId: string, buttonId: string, button: Partial<SbButton>): IpcResponse<void> => {
+    const profiles = profilesStore.get('profiles');
+
+    const profileIdx = profiles.findIndex(p => p.id === profileId);
+    if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+
+    const profile = profiles[profileIdx];
+    const buttonPos = getButtonPositionFromId(buttonId);
+    if (!buttonPos) return {success: false, error: 'invalid_button_id'};
+
+    const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
+    if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
+
+    const existingButton = profile.buttons[existingButtonIdx];
+    profile.buttons[existingButtonIdx] = {
+        ...existingButton,
+        ...button
+    };
+
+    profiles[profileIdx] = profile;
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+
+    return {success: true};
+});
+
+ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcResponse<void> => {
+    const profiles = profilesStore.get('profiles');
+
+    const profileIdx = profiles.findIndex(p => p.id === profileId);
+    if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+
+    const profile = profiles[profileIdx];
+    const buttonPos = getButtonPositionFromId(buttonId);
+    if (!buttonPos) return {success: false, error: 'invalid_button_id'};
+
+    const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
+    if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
+
+    profile.buttons.splice(existingButtonIdx, 1);
+
+    profiles[profileIdx] = profile;
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+
+    return {success: true};
+});
 
 // Windows
-// ipcMain.on('open_media_selector_win', (_, row: number, col: number, winId: number) => createMediaSelector(winId, row, col));
 
-// ipcMain.on('open_button_settings_win', (_, row: number, col: number) => createButtonSettings(mainWindow.id, row, col));
-
-// ipcMain.on('open_new_profile_win', () => createNewProfile());
+ipcMain.on('open_window', (_, winId: string, args?: unknown) => {
+    switch (winId) {
+        case 'media_selector': {
+            const safeArgs = (args || {}) as MediaSelectorWin;
+            createMediaSelector(safeArgs.parent, safeArgs.row, safeArgs.col);
+            break;
+        }
+        case 'button_settings': {
+            if (args && typeof args === 'object' && 'row' in args && 'col' in args) {
+                const {row, col} = args as ButtonSettingsWin;
+                createButtonSettings(row, col);
+            } else {
+                console.error('Invalid arguments for button_settings window');
+            }
+            break;
+        }
+        default:
+            console.error('Unknown window ID:', winId);
+            break;
+    }
+});
 
 // System
-// ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
 
-// ipcMain.handle('open_file_media_selector', async () => {
-//     return await dialog.showOpenDialog({
-//         filters: [
-//             {name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'flac']},
-//         ]
-//     });
-// });
+ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
 
-// Audio
+ipcMain.handle('open_file_media_selector', async (): Promise<IpcResponse<string>> => {
+    const {canceled, filePaths} = await dialog.showOpenDialog({
+        title: 'Select Audio File',
+        defaultPath: cacheStore.get('audioDir') || app.getPath('documents'),
+        properties: ['openFile'],
+        filters: [
+            {
+                name: 'All Media Files',
+                extensions: [
+                    'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac',
+                    'mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv'
+                ]
+            },
+            {
+                name: 'Audio Only',
+                extensions: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac']
+            },
+            {
+                name: 'Video Only',
+                extensions: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv']
+            }
+        ]
+    });
 
-// ipcMain.handle('search', (_, query: string) => {
-//     return search(query)
-// });
-
-// ipcMain.handle('get_video', (_, url: string) => {
-//     return getInfo(url)
-// });
-
-// ipcMain.handle('get_stream', (_, url: string) => {
-//     return getStream(url)
-// });
-
-// ipcMain.on('play_now', async (_, track: Track) => {
-//     switch (track.source) {
-//         case 'youtube':
-//             if (track.uri === null) {
-//                 try {
-//                     track.uri = await getStream(track.original_url);
-//                 } catch (e) {
-//                     console.error(e.message);
-//                 }
-//             }
-//             break;
-//         case 'remote':
-//             if (track.uri === null) {
-//                 track.uri = track.original_url;
-//                 // TODO Get media info
-//             }
-//             break;
-//         case 'local':
-//         case 'epidemic': {
-//             const meta = await parseFile(track.uri);
-//             track.title = meta.common.title || path.basename(track.uri);
-//             track.duration = Math.floor(meta.format.duration * 1000) || 0;
-//             break;
-//         }
-//     }
-//
-//     mainWindow.webContents.send('play_now', track);
-// });
-
-// ipcMain.on('pause', () => mainWindow.webContents.send('pause'));
-
-// ipcMain.on('return_track', (_, track: Track, winId: number) => {
-//     const win = BrowserWindow.fromId(winId);
-//     if (win) win.getParentWindow().webContents.send('track', track);
-// });
-
-// Misc
-
-// ipcMain.handle('get_file_separator', () => path.sep);
+    if (canceled || !filePaths || filePaths.length === 0) return {success: false, error: 'canceled'};
+    const filePath = filePaths[0];
+    cacheStore.set('audioDir', path.dirname(filePath));
+    return {success: true, data: filePath};
+});

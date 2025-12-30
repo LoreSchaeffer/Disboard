@@ -42,4 +42,9 @@ const profilesStore = new Store<Profiles>({
     }
 });
 
-export {settingsStore, profilesStore};
+const cacheStore = new Store<Cache>({
+    name: 'cache',
+    watch: true,
+});
+
+export {settingsStore, profilesStore, cacheStore};

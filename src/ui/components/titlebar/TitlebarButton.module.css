@@ -9,6 +9,15 @@
     transition: background-color 100ms ease;
 }
 
+.titlebarButton.disabled svg {
+    fill: var(--text-disabled);
+}
+
+.titlebarButton.disabled:hover {
+    background-color: transparent;
+    cursor: default;
+}
+
 .titlebarButton svg {
     height: calc(var(--titlebar-height) - 8px);
     fill: var(--text-disabled);

@@ -1,8 +1,9 @@
 import {contextBridge, ipcRenderer} from "electron";
 import {Track} from "./types/track";
-import {IpcResponse, WindowInfo} from "./types/common";
+import {IpcResponse} from "./types/common";
 import {Settings} from "./types/settings";
 import {Profile, SbButton} from "./types/profiles";
+import {WindowId, WindowInfo} from "./types/window";
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -28,7 +29,6 @@ const api = {
     handleMediaPrev: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
 
     // ButtonWin
-    handleButton: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
     handleTrack: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
 
     /* === TO MAIN PROCESS === */
@@ -46,6 +46,7 @@ const api = {
 
     // Profiles
     getProfiles: (): Promise<Profile[]> => ipcRenderer.invoke('get_profiles'),
+    getProfile: (id: string): Promise<Profile | null> => ipcRenderer.invoke('get_profile', id),
     createProfile: (profile: Partial<Profile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('create_profile', profile),
     updateProfile: (id: string, profile: Partial<Profile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_profile', id, profile),
     deleteProfile: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_profile', id),
@@ -54,11 +55,12 @@ const api = {
     exportProfiles: () => ipcRenderer.send('export_profiles'),
 
     // Buttons
+    getButton: (profileId: string, buttonId: string): Promise<SbButton | null> => ipcRenderer.invoke('get_button', profileId, buttonId),
     updateButton: (profileId: string, buttonId: string, button: Partial<SbButton>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_button', profileId, buttonId, button),
     deleteButton: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_button', profileId, buttonId),
 
     // Windows
-    openWindow: (winId: string, args?: unknown) => ipcRenderer.send('open_window', winId, args),
+    openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),

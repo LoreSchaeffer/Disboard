@@ -2,23 +2,16 @@
 import {app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, net, protocol, shell} from 'electron';
 import path from 'path';
 import {pathToFileURL} from 'url';
-import {clamp, generateUUID, getButtonPositionFromId, sanitizeButtons, validateProfileName} from "./utils/utils";
-import {WindowOptions} from "./types/window";
+import {clamp, generateButtonId, generateUUID, getButtonPositionFromId, sanitizeButtons, validateProfileName} from "./utils/utils";
+import {ButtonWindowData, WindowData, WindowId, WindowInfo, WindowOptions} from "./types/window";
 import {cacheStore, profilesStore, settingsStore} from "./utils/store";
-import {ButtonSettingsWin, IpcResponse, MediaSelectorWin, WindowInfo} from "./types/common";
+import {ButtonSettingsWin, IpcResponse, MediaSelectorWin} from "./types/common";
 import {Settings} from "./types/settings";
 import {Profile, SbButton} from "./types/profiles";
 import * as fs from "node:fs";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
-
-// Extend the Electron BrowserWindow interface to include custom options
-declare module 'electron' {
-    interface BrowserWindow {
-        options: WindowOptions;
-    }
-}
 
 // Global constants
 export const root = app.getPath('userData');
@@ -27,6 +20,8 @@ export const imagesDir = path.join(root, 'images');
 
 // Global state variables
 let mainWindow: BrowserWindow | undefined;
+const winOptions = new Map<number, WindowOptions>();
+const winData = new Map<number, WindowData<unknown>>();
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -60,8 +55,8 @@ protocol.registerSchemesAsPrivileged([
 
 const loadWindowUrl = (win: BrowserWindow, pageName: string, queryParams: string = '') => {
     const search = pageName !== 'main' ? `?page=${pageName}${queryParams}` : queryParams;
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`);
-    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search});
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`).catch(e => console.log(`Failed to load URL: ${e}`));
+    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search}).catch(e => console.log(`Failed to load file: ${e}`));
 };
 
 const createWindow = (options: WindowOptions): BrowserWindow => {
@@ -92,7 +87,9 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
     };
 
     const win = new BrowserWindow(browserOptions);
-    win.options = options;
+    winOptions.set(win.id, options);
+
+    if (options.data) winData.set(win.id, options.data);
 
     const pageName = options.page || 'main';
     loadWindowUrl(win, pageName);
@@ -104,6 +101,11 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
     win.once('ready-to-show', () => {
         if (options.onReady) options.onReady(win);
         else win.show();
+    });
+
+    win.on('closed', () => {
+        winOptions.delete(win.id);
+        winData.delete(win.id);
     });
 
     if (options.onResize) win.on('resize', () => options.onResize!(win));
@@ -160,7 +162,8 @@ const createMainWindow = () => {
     });
 }
 
-const createButtonSettings = (row: number, col: number): BrowserWindow => {
+// TODO Data should be updated manually from the main process when it's changed
+const createButtonSettings = (profileId: string, buttonId: string): BrowserWindow => {
     return createWindow({
         page: 'button_settings',
         modal: true,
@@ -168,12 +171,17 @@ const createButtonSettings = (row: number, col: number): BrowserWindow => {
         width: 500,
         height: 600,
         resizable: false,
-        onLoaded: (win) => {
-            win.webContents.send('button', row, col);
+        data: {
+            type: 'button',
+            data: {
+                profileId: profileId,
+                buttonId: buttonId
+            } as ButtonWindowData
         }
     });
 }
 
+// TODO Update this to use new WindowData structure
 const createMediaSelector = (parent: number, row: number, col: number) => {
     return createWindow({
         page: 'media_selector',
@@ -229,7 +237,10 @@ const initApp = async () => {
     }
 
     // 4. Launch main window
-    createMainWindow();
+    // createMainWindow();
+
+    // TODO Only for development purposes
+    createButtonSettings(settingsStore.get('activeProfile'), generateButtonId(0, 0));
 };
 
 /**
@@ -276,13 +287,17 @@ const broadcastProfiles = (profiles: Profile[]) => {
 // Window
 
 ipcMain.handle('get_window', (e: IpcMainInvokeEvent): WindowInfo => {
-    const win = BrowserWindow.fromId(e.frameId) as BrowserWindow;
+    const win = BrowserWindow.fromWebContents(e.sender);
     if (!win) throw new Error('Could not find the window');
 
+    const options = winOptions.get(win.id);
+    if (!options) throw new Error('Could not find the window options');
+
     return {
-        parent: win.options.parent ? win.options.parent.id : null,
+        parent: options.parent ? options.parent.id : null,
         resizable: win.resizable,
-        page: win.options.page,
+        page: options.page,
+        data: winData.get(win.id)
     };
 });
 
@@ -322,6 +337,8 @@ ipcMain.on('update_settings', (_, settings: Partial<Settings>) => {
 // Profiles
 
 ipcMain.handle('get_profiles', (): Profile[] => profilesStore.get('profiles'));
+
+ipcMain.handle('get_profile', (_, id: string) => profilesStore.get('profiles').find(p => p.id === id) || null);
 
 ipcMain.handle('create_profile', (_, profile: Partial<Profile>): IpcResponse<void> => {
     if (!profile.name) return {success: false, error: 'name_required'};
@@ -534,12 +551,22 @@ ipcMain.on('export_profiles', async () => {
 
             fs.writeFileSync(filePath, JSON.stringify(profile, null, 2));
         } catch (e) {
-            console.error(`Errore esportando il profilo ${profile.name}:`, e.message);
+            console.error(`Error during profile ${profile.name} export:`, e.message);
         }
     }
 });
 
 // Buttons
+
+ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbButton | null => {
+    const profile = profilesStore.get('profiles').find(p => p.id === profileId);
+    if (!profile) return null;
+
+    const buttonPos = getButtonPositionFromId(buttonId);
+    if (!buttonPos) return null;
+
+    return profile.buttons.find(b => b.row === buttonPos.row && b.col === buttonPos.col) || null;
+});
 
 ipcMain.handle('update_button', (_, profileId: string, buttonId: string, button: Partial<SbButton>): IpcResponse<void> => {
     const profiles = profilesStore.get('profiles');
@@ -591,7 +618,7 @@ ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcRes
 
 // Windows
 
-ipcMain.on('open_window', (_, winId: string, args?: unknown) => {
+ipcMain.on('open_window', (_, winId: WindowId, args?: unknown) => {
     switch (winId) {
         case 'media_selector': {
             const safeArgs = (args || {}) as MediaSelectorWin;
@@ -599,9 +626,9 @@ ipcMain.on('open_window', (_, winId: string, args?: unknown) => {
             break;
         }
         case 'button_settings': {
-            if (args && typeof args === 'object' && 'row' in args && 'col' in args) {
-                const {row, col} = args as ButtonSettingsWin;
-                createButtonSettings(row, col);
+            if (args && typeof args === 'object' && 'profileId' in args && 'buttonId' in args) {
+                const {profileId, buttonId} = args as ButtonSettingsWin;
+                createButtonSettings(profileId, buttonId);
             } else {
                 console.error('Invalid arguments for button_settings window');
             }

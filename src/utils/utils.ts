@@ -17,6 +17,13 @@ export const validateProfileName = (name: string) => {
     return profileNameRegex.test(name);
 }
 
+const buttonTitleRegex = /^[a-zA-Z0-9 \-_/]+$/;
+export const validateButtonTitle = (title: string) => {
+    if (!title || title.trim().length === 0) return false;
+    if (title.length < 3 || title.length > 32) return false;
+    return buttonTitleRegex.test(title);
+}
+
 export const generateButtonId = (row: number, col: number) => {
     return `btn_${row}_${col}`;
 }

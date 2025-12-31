@@ -1,6 +1,7 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
 import {Settings} from "../../types/settings";
 import {Profile} from "../../types/profiles";
+import {WindowData} from "../../types/window";
 
 type WindowContextType = {
     ready: boolean;
@@ -11,6 +12,7 @@ type WindowContextType = {
     updateSettings?: (settings: Partial<Settings>) => void;
     profiles: Profile[] | null;
     activeProfile: Profile | null;
+    data: WindowData<unknown> | null;
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined);
@@ -22,6 +24,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [page, setPage] = useState<string | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [profiles, setProfiles] = useState<Profile[] | null>(null);
+    const [data, setData] = useState<WindowData<unknown> | null>(null);
 
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,6 +34,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
             setParent(winData.parent);
             setResizable(winData.resizable);
             setPage(winData.page);
+            setData(winData.data || null);
 
             const initialSettings = await window.electron.getSettings();
             setSettings(initialSettings);
@@ -72,7 +76,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
 
         if (saveSettingsTimeoutRef.current) clearTimeout(saveSettingsTimeoutRef.current);
         saveSettingsTimeoutRef.current = setTimeout(() => {
-            window.electron.saveSettings(updatedSettings);
+            window.electron.updateSettings(newSettings);
             saveSettingsTimeoutRef.current = null;
         }, 500);
     }
@@ -87,6 +91,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
             updateSettings,
             profiles,
             activeProfile,
+            data,
         }}>
             {children}
         </WindowContext.Provider>

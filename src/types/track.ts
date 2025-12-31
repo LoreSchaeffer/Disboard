@@ -3,7 +3,6 @@ export type Track = {
     source: Source;
     title: string;
     duration: number;
-    cropOptions?: CropOptions;
     volume?: number;
 }
 
@@ -13,15 +12,3 @@ export type Source = {
     url?: string;
     videoId?: string;
 }
-
-export type CropOptions = {
-    startTime?: number;
-    startTimeUnit?: TimeUnit;
-    endTimeType?: EndTimeType;
-    endTime?: number;
-    endTimeUnit?: TimeUnit;
-}
-
-export type TimeUnit = 'ms' | 's' | 'm';
-
-export type EndTimeType = 'at' | 'after';

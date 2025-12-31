@@ -1,0 +1,19 @@
+.tbData {
+    display: flex;
+    gap: 5px;
+    font-size: 9pt;
+    color: var(--text-secondary);
+    -webkit-app-region: drag;
+}
+
+.tbProfile {
+    font-weight: 600;
+}
+
+.errorMessage {
+    color: var(--red-35);
+}
+
+.space {
+    margin-bottom: 10px;
+}

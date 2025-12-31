@@ -1,9 +1,11 @@
 import {createContext, PropsWithChildren, ReactNode, useContext, useState} from "react";
 import Titlebar from "../components/titlebar/Titlebar";
 
+export type ContentPos = 'default' | 'centered';
+
 type TitlebarContextType = {
     setTitle: (title: string) => void;
-    setTitlebarContent: (children: ReactNode) => void;
+    setTitlebarContent: (children: ReactNode, position?: ContentPos) => void;
 };
 
 const TitlebarContext = createContext<TitlebarContextType | undefined>(undefined);
@@ -11,10 +13,16 @@ const TitlebarContext = createContext<TitlebarContextType | undefined>(undefined
 export const TitlebarProvider = ({children}: PropsWithChildren) => {
     const [title, setTitle] = useState<string>('Disboard');
     const [childrenContent, setChildrenContent] = useState<ReactNode>(null);
+    const [contentPos, setContentPos] = useState<ContentPos>('default');
+
+    const setTitlebarContent = (children: ReactNode, position: ContentPos = 'default') => {
+        setChildrenContent(children);
+        setContentPos(position);
+    }
 
     return (
-        <TitlebarContext.Provider value={{setTitle, setTitlebarContent: setChildrenContent}}>
-            <Titlebar title={title}>{childrenContent}</Titlebar>
+        <TitlebarContext.Provider value={{setTitle, setTitlebarContent}}>
+            <Titlebar title={title} contentPos={contentPos}>{childrenContent}</Titlebar>
             {children}
         </TitlebarContext.Provider>
     );

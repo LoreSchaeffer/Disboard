@@ -1,11 +1,5 @@
 export type RepeatMode = 'none' | 'one' | 'all';
 
-export type WindowInfo = {
-    parent: number | null;
-    resizable: boolean;
-    page: string;
-}
-
 export type IpcResponse<T> = {
     success: boolean;
     data?: T;
@@ -19,6 +13,6 @@ export type MediaSelectorWin = {
 }
 
 export type ButtonSettingsWin = {
-    row: number;
-    col: number;
+    profileId: string;
+    buttonId: string;
 }

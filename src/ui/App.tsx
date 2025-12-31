@@ -4,10 +4,12 @@ import SoundboardWin from "./components/windows/SoundboardWin";
 import {useWindow} from "./context/WindowContext";
 import {useNavigation} from "./context/NavigationContext";
 import SettingsWin from "./components/windows/SettingsWin";
+import ButtonSettingsWin from "./components/windows/ButtonSettingsWin";
 
 const PAGES: Record<string, ReactElement> = {
     main: <SoundboardWin/>,
     settings: <SettingsWin/>,
+    button_settings: <ButtonSettingsWin/>,
 }
 
 const FallbackPage = () => <div>Page not found!</div>

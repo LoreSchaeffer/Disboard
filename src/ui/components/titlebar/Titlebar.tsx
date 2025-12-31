@@ -4,27 +4,34 @@ import {PropsWithChildren} from "react";
 import {useWindow} from "../../context/WindowContext";
 import {PiListBold, PiMinusBold, PiSquareBold, PiXBold} from "react-icons/pi";
 import {useNavigation} from "../../context/NavigationContext";
+import {ContentPos} from "../../context/TitlebarContext";
+import {clsx} from "clsx";
 
 export type TitlebarProps = PropsWithChildren<{
     title?: string;
+    contentPos?: ContentPos;
 }>;
 
-const Titlebar = ({title, children}: TitlebarProps) => {
+const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
     const {resizable} = useWindow();
     const {navigate, visibleStack} = useNavigation();
 
     return (
         <div className={styles.titlebar}>
-            <TitlebarButton
-                onClick={() => navigate('settings', false)}
-                disabled={visibleStack.indexOf('settings') !== -1}
-                icon={PiListBold}
-            />
-            <div className={styles.leftData}>
-                <h1 className={styles.windowTitle}>{title}</h1>
-                <div className={styles.injectedContent}>
-                    {children}
-                </div>
+            {visibleStack.find(s => s === 'main') && (
+                <TitlebarButton
+                    onClick={() => navigate('settings', false)}
+                    disabled={visibleStack.indexOf('settings') !== -1}
+                    icon={PiListBold}
+                />
+            )}
+            <h1 className={styles.windowTitle}>{title}</h1>
+
+            <div className={clsx(
+                styles.injectedContent,
+                contentPos === 'centered' && styles.centered
+            )}>
+                {children}
             </div>
 
             <div className={styles.windowControls}>

@@ -1,425 +1,222 @@
-import './ButtonSettingsWin.css';
-import Window from "./Window";
-import React, {ChangeEvent} from "react";
-import {useButton} from "../../utils/buttonContext";
-import {useData} from "../../utils/windowContext";
-import InputField from "../generic/forms/InputField";
-import Button from "../generic/Button";
-import Select from "../generic/forms/Select";
-import Separator from "../generic/Separator";
-import ColorSetting from "../button_settings/ColorSetting";
+import styles from './ButtonSettingsWin.module.css';
+import React, {useEffect, useState} from "react";
+import {Profile, SbButton} from "../../../types/profiles";
+import {useWindow} from "../../context/WindowContext";
+import {ButtonWindowData} from "../../../types/window";
+import Spinner from "../misc/Spinner";
+import {useTitlebar} from "../../context/TitlebarContext";
+import Input from "../forms/Input";
+import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiXBold} from "react-icons/pi";
+import {validateButtonTitle} from "../../../utils/utils";
+import Button from "../misc/Button";
 import SoundboardButton from "../soundboard/SoundboardButton";
-import {TimeUnit} from "../../utils/store/profiles";
-import {Time} from "../../utils/time";
+import Separator from "../misc/Separator";
+import Select from "../forms/Select";
+import Row from "../layout/Row";
+import Col from "../layout/Col";
+
+type Errors = {
+    [key: string]: string;
+}
+
+const timeOptions = [
+    {value: 's', label: 'Seconds'},
+    {value: 'ms', label: 'Milliseconds'},
+    {value: 'm', label: 'Minutes'}
+]
 
 const ButtonSettingsWin = () => {
-    const {activeProfile, winId} = useData();
-    const {button, setButton} = useButton();
+    const {data} = useWindow();
+    const {setTitlebarContent} = useTitlebar();
+    const [profile, setProfile] = useState<Profile | undefined>(undefined);
+    const [button, setButton] = useState<SbButton | undefined>(undefined);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleUriChange = (e: ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault();
-    }
+    const [errors, setErrors] = useState<Errors>({});
+    const [newButton, setNewButton] = useState<Partial<SbButton>>({});
 
-    const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => setButton((prev) => {
-        return {...prev, title: e.target.value};
-    });
+    useEffect(() => {
+        if (!data || data.type !== 'button') return;
 
-    const handleStartTimeChange = (e: ChangeEvent<HTMLInputElement>) => setButton((prev) => {
-        if (!button.song || !button.song.duration) return prev;
+        const {profileId, buttonId} = data.data as ButtonWindowData;
 
-        const startTime = new Time(parseInt(e.target.value), button.song.start_time_unit || 's');
-
-        if (startTime.isNegative()) {
-            startTime.setTime(0);
-        } else {
-            if (startTime.toMs() > button.song.duration) {
-                startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
-            }
-
-            if (button.song.end_time) {
-                let endTime = new Time(button.song.end_time, button.song.end_time_unit || 's');
-
-                if (button.song.end_time_type === 'at') {
-                    if (startTime.toMs() > endTime.toMs()) {
-                        startTime.setTimeKeepUnit(endTime);
-                    }
-                } else if (button.song.end_time_type === 'after') {
-                    endTime = endTime.add(startTime);
-
-                    if (endTime.toMs() > button.song.duration) {
-                        startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(endTime));
-                    }
-                }
-            }
+        if (!profileId || !buttonId) {
+            setError("Profile id of Button id missing.");
+            setLoading(false);
+            return;
         }
 
-        return {
-            ...prev, song: {
-                ...prev.song,
-                start_time: startTime.getTime(),
-                start_time_unit: startTime.getTimeUnit()
-            }
-        };
-    });
+        setLoading(true);
 
-    const handleStartTimeUnitChange = (value: TimeUnit) => setButton((prev) => {
-        if (!button.song || !button.song.duration) return prev;
+        Promise.all([
+            window.electron.getProfile(profileId),
+            window.electron.getButton(profileId, buttonId)
+        ]).then(([fetchedProfile, fetchedButton]) => {
+            if (!fetchedProfile) throw new Error("Profile not found");
+            if (!fetchedButton) throw new Error("Button not found");
 
-        const startTime = new Time(button.song.start_time || 0, value);
+            setProfile(fetchedProfile);
+            setButton(fetchedButton);
 
-        if (startTime.toMs() > button.song.duration) {
-            startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
-        }
+            setTitlebarContent(
+                <div className={styles.tbData}>
+                    <span className={styles.tbProfile}>{fetchedProfile.name}</span>
+                    <span className={styles.tbButton}>{fetchedButton.row} - {fetchedButton.col}</span>
+                </div>,
+                'centered'
+            );
+        }).catch((err) => {
+            console.error(err);
+            setError(err.message || "An error occurred while fetching data.");
+        }).finally(() => {
+            setLoading(false);
+        });
+    }, [data]);
 
-        if (button.song.end_time) {
-            let endTime = new Time(button.song.end_time, button.song.end_time_unit || 's');
-
-            if (button.song.end_time_type === 'at') {
-                if (startTime.toMs() > endTime.toMs()) {
-                    startTime.setTimeKeepUnit(endTime);
-                }
-            } else if (button.song.end_time_type === 'after') {
-                endTime = endTime.add(startTime);
-
-                if (endTime.toMs() > button.song.duration) {
-                    startTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(endTime));
-                }
-            }
-        }
-
-        return {
-            ...prev, song: {
-                ...prev.song,
-                start_time: startTime.getTime(),
-                start_time_unit: startTime.getTimeUnit()
-            }
-        };
-    });
-
-    const handleEndTimeTypeChange = (value: string) => setButton((prev) => {
-        if (!button.song || !button.song.duration) return prev;
-
-        const endTime = new Time(button.song.end_time || 0, button.song.end_time_unit || 's');
-        let endTimeToUpdate = null;
-
-        if (value === 'at') {
-            if (endTime.toMs() > button.song.duration) {
-                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
-                endTimeToUpdate = endTime;
-            }
-
-            if (button.song.start_time) {
-                const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
-
-                if (endTime.toMs() < startTime.toMs()) {
-                    endTime.setTimeKeepUnit(startTime);
-                    endTimeToUpdate = endTime;
-                }
-            }
-        } else if (value === 'after') {
-            const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
-            const et = endTime.add(startTime);
-
-            if (et.toMs() > button.song.duration) {
-                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
-                endTimeToUpdate = endTime;
-            }
-        }
-
-        return {
-            ...prev, song: {
-                ...prev.song,
-                end_time_type: value,
-                end_time: endTimeToUpdate ? endTimeToUpdate.getTime() : button.song.end_time,
-                end_time_unit: endTimeToUpdate ? endTimeToUpdate.getTimeUnit() : button.song.end_time_unit
-            }
-        };
-    });
-
-    const handleEndTimeChange = (e: ChangeEvent<HTMLInputElement>) => setButton((prev) => {
-        if (!button.song || !button.song.duration) return prev;
-
-        const endTime = new Time(parseInt(e.target.value), button.song.end_time_unit || 's');
-
-        if (endTime.isNegative()) {
-            endTime.setTime(0);
-        } else {
-            const endTimeType = button.song.end_time_type || 'after';
-
-            if (endTimeType === 'at') {
-                if (endTime.toMs() > button.song.duration) {
-                    endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
-                }
-
-                if (button.song.start_time) {
-                    const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
-
-                    if (endTime.toMs() < startTime.toMs()) {
-                        endTime.setTimeKeepUnit(startTime);
-                    }
-                }
-            } else if (endTimeType === 'after') {
-                const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
-                const et = endTime.add(startTime);
-
-                if (et.toMs() > button.song.duration) {
-                    endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
-                }
-            }
-        }
-
-        return {
-            ...prev, song: {
-                ...prev.song,
-                end_time: endTime.getTime(),
-                end_time_unit: endTime.getTimeUnit(),
-                end_time_type: button.song.end_time_type || 'after'
-            }
-        };
-    });
-
-    const handleEndTimeUnitChange = (value: TimeUnit) => setButton((prev) => {
-        if (!button.song || !button.song.duration) return prev;
-
-        const endTime = new Time(button.song.end_time || 0, value);
-
-        const endTimeType = button.song.end_time_type || 'after';
-        if (endTimeType === 'at') {
-            if (endTime.toMs() > button.song.duration) {
-                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms'));
-            }
-
-            if (button.song.start_time) {
-                const startTime = new Time(button.song.start_time, button.song.start_time_unit || 's');
-
-                if (endTime.toMs() < startTime.toMs()) {
-                    endTime.setTimeKeepUnit(startTime);
-                }
-            }
-        } else if (endTimeType === 'after') {
-            const startTime = new Time(button.song.start_time || 0, button.song.start_time_unit || 's');
-            const et = endTime.add(startTime);
-
-            if (et.toMs() > button.song.duration) {
-                endTime.setTimeKeepUnit(new Time(button.song.duration, 'ms').subtract(startTime));
-            }
-        }
-
-        return {
-            ...prev, song: {
-                ...prev.song,
-                end_time: endTime.getTime(),
-                end_time_unit: endTime.getTimeUnit(),
-                end_time_type: button.song.end_time_type || 'after'
-            }
-        };
-    });
-
-    const handleBackgroundColorChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {background_color: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, background_color: color}};
-            });
-        }
-    };
-
-    const handleBackgroundColorHoverChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {background_color_hover: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, background_color_hover: color}};
-            });
-        }
-    };
-
-    const handleTextColorChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {text_color: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, text_color: color}};
-            });
-        }
-    };
-
-    const handleTextColorHoverChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {text_color_hover: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, text_color_hover: color}};
-            });
-        }
-    };
-
-    const handleBorderColorChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {border_color: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, border_color: color}};
-            });
-        }
-    };
-
-    const handleBorderColorHoverChange = (color: string) => {
-        if (button.style === undefined) {
-            setButton((prev) => {
-                return {...prev, style: {border_color_hover: color}};
-            });
-        } else {
-            setButton((prev) => {
-                return {...prev, style: {...prev.style, border_color_hover: color}};
-            });
-        }
-    };
-
-    const openMediaSelectorWin = () => (window as any).electron.openMediaSelectorWin(button.row, button.col, winId);
-
-    const closeWindow = () => (window as any).electron.close(winId);
-
-    const saveButton = () => {
-        if (!button.song) return;
-        if (button.song.start_time === 0) {
-            button.song.start_time = null;
-            button.song.start_time_unit = null;
-        }
-
-        if (button.song.end_time === 0) {
-            button.song.end_time_type = null;
-            button.song.end_time = null;
-            button.song.end_time_unit = null;
-        }
-
-        (window as any).electron.saveButton(activeProfile.id, button);
-        (window as any).electron.close(winId);
-    };
-
-    if (button === undefined) {
-        return <Window/>
-    } else {
+    if (loading) {
         return (
-            <Window titlebar={<span className={"subtitle"}>Button {button?.row}.{button?.col}</span>}>
-                <div className={"row"}>
-                    <label>File or Url</label>
-                    <InputField value={button.song?.original_url} placeholder={"File or Url"} readOnly={true} onChange={handleUriChange}/>
-                    <Button icon={"edit"} className={'primary'} onClick={openMediaSelectorWin}>Edit</Button>
-                </div>
-                <Separator/>
-                <div className={"row"}>
-                    <label>Title</label>
-                    <InputField value={button?.title} placeholder={"Title"} onChange={handleTitleChange}/>
-                </div>
-                <div className={"row"}>
-                    <label>Track starts after</label>
-                    <InputField
-                        className={"number"}
-                        value={button.song?.start_time ? button.song.start_time : 0}
-                        type={"number"}
-                        min={0}
-                        max={button.song?.duration ? button.song.duration : undefined}
-                        disabled={!button.song}
-                        onChange={handleStartTimeChange}
-                    />
-                    <Select
-                        options={[
-                            {value: 's', label: 'Seconds', selected: button.song?.start_time_unit === 's'},
-                            {value: 'ms', label: 'Milliseconds', selected: button.song?.start_time_unit === 'ms'},
-                            {value: 'm', label: 'Minutes', selected: button.song?.start_time_unit === 'm'}
-                        ]}
-                        disabled={!button.song}
-                        onChange={handleStartTimeUnitChange}
-                    />
-                </div>
-                <div className={"row"}>
-                    <label>Track ends</label>
-                    <Select
-                        options={[
-                            {value: 'after', label: 'After', selected: button.song?.end_time_type === 'after'},
-                            {value: 'at', label: 'At', selected: button.song?.end_time_type === 'at'}
-                        ]}
-                        disabled={!button.song}
-                        onChange={handleEndTimeTypeChange}
-                    />
-                    <InputField
-                        className={"number"}
-                        value={button.song?.end_time ? button.song.end_time : 0}
-                        type={"number"}
-                        min={0}
-                        max={button.song?.duration ? button.song.duration : undefined}
-                        disabled={!button.song}
-                        onChange={handleEndTimeChange}
-                    />
-                    <Select
-                        options={[
-                            {value: 's', label: 'Seconds', selected: button.song?.start_time_unit === 's'},
-                            {value: 'ms', label: 'Milliseconds', selected: button.song?.start_time_unit === 'ms'},
-                            {value: 'm', label: 'Minutes', selected: button.song?.start_time_unit === 'm'}
-                        ]}
-                        disabled={!button.song}
-                        onChange={handleEndTimeUnitChange}
-                    />
-                </div>
-                <Separator/>
-                <div className={"row col-container"}>
-                    <div className={"col"}>
-                        <ColorSetting
-                            label={"Background color"}
-                            color={button.style?.background_color}
-                            onChange={handleBackgroundColorChange}
-                        />
-                        <ColorSetting
-                            label={"Background hover color"}
-                            color={button.style?.background_color_hover}
-                            onChange={handleBackgroundColorHoverChange}
-                        />
-                        <ColorSetting
-                            label={"Text color"}
-                            color={button.style?.text_color}
-                            onChange={handleTextColorChange}
-                        />
-                        <ColorSetting
-                            label={"Text hover color"}
-                            color={button.style?.text_color_hover}
-                            onChange={handleTextColorHoverChange}
-                        />
-                        <ColorSetting
-                            label={"Border color"}
-                            color={button.style?.border_color}
-                            onChange={handleBorderColorChange}
-                        />
-                        <ColorSetting
-                            label={"Border hover color"}
-                            color={button.style?.border_color_hover}
-                            onChange={handleBorderColorHoverChange}
-                        />
-                    </div>
-                    <div className={"col"}>
-                        <div className={"preview-container"}>
-                            <SoundboardButton row={button.row} col={button.col} button={button}/>
-                        </div>
-                    </div>
-                </div>
-                <div className={"buttons"}>
-                    <Button icon={"close"} className={"danger"} onClick={closeWindow}>Discard</Button>
-                    <Button icon={"save"} className={"success"} onClick={saveButton} disabled={!button.song}>Save</Button>
-                </div>
-            </Window>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+            }}>
+                <Spinner size={'lg'}/>
+            </div>
         );
     }
+
+    if (error || !profile || !button) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+            }}>
+                <span className={styles.errorMessage}>{error || "Unknown error"}</span>
+            </div>
+        );
+    }
+
+    const performValidation = (btn: Partial<SbButton>): boolean => {
+        const err: Errors = {};
+
+        if (!btn.title && !button.title) err.title = 'Title is required';
+        else if (btn.title && !validateButtonTitle(btn.title)) err.title = 'Title contains invalid characters';
+
+        setErrors(err);
+        return Object.keys(err).length === 0;
+    }
+
+    const handleTitleChange = (value: string) => {
+        if (value === button.title) return;
+
+        setNewButton(prev => {
+            const updated = {...prev, title: value};
+            performValidation(updated);
+            return updated;
+        });
+    }
+
+    const handleTitleReset = () => {
+        setNewButton(prev => {
+            const updated = {...prev};
+            delete updated.title;
+            performValidation(updated);
+            return updated;
+        });
+    }
+
+    return (
+        <div className={'bordered'}>
+            <Row>
+                <Col size={4}>
+                    <label>Title</label>
+                </Col>
+                <Col>
+                    <Input
+                        type={'text'}
+                        value={newButton.title || button.title}
+                        onChange={(e) => handleTitleChange(e.target.value)}
+                        icon={<PiArrowCounterClockwiseBold/>}
+                        iconSettings={{
+                            onClick: () => handleTitleReset(),
+                            customStyles: {
+                                opacity: 'title' in newButton ? 1 : 0.5,
+                                cursor: 'title' in newButton ? 'pointer' : 'default'
+                            }
+                        }}
+                        placeholder={"Title"}
+                        error={errors.title}
+                    />
+                </Col>
+            </Row>
+            <Separator/>
+            <Row className={styles.space}>
+                <Col size={4}>
+                    <label>Track starts after</label>
+                </Col>
+                <Col size={3}>
+                    <Input
+                        type={'number'}
+                        placeholder={'Time'}
+                        value={newButton.cropOptions?.startTime || button.cropOptions?.startTime || undefined}
+                        min={0}
+                    />
+                </Col>
+                <Col>
+                    <Select
+                        options={timeOptions}
+                        value={newButton.cropOptions?.startTimeUnit || button.cropOptions?.startTimeUnit || 's'}
+                    />
+                </Col>
+            </Row>
+            <Row>
+                <Col size={3}>
+                    <label>Track ends</label>
+                </Col>
+                <Col size={3}>
+                    <Select
+                        options={[
+                            {value: 'after', label: 'After'},
+                            {value: 'at', label: 'At'}
+                        ]}
+                        value={newButton.cropOptions?.endTimeType || button.cropOptions?.endTimeType || 'after'}
+                    />
+                </Col>
+                <Col size={2}>
+                    <Input
+                        type={'number'}
+                        placeholder={'Time'}
+                        value={newButton.cropOptions?.endTime || button.cropOptions?.endTime || undefined}
+                        min={0}
+                    />
+                </Col>
+                <Col>
+                    <Select
+                        options={timeOptions}
+                        value={newButton.cropOptions?.endTimeUnit || button.cropOptions?.endTimeUnit || 's'}
+                    />
+                </Col>
+            </Row>
+            <Separator/>
+            <div className={'row'}>
+                <div className={'col-8'}>
+                    <span>Test</span>
+                </div>
+                <div className={'col-4'}>
+                    <SoundboardButton row={button.row} col={button.col} button={button}/>
+                </div>
+            </div>
+
+            <div className={'windowButtons'}>
+                <Button variant={'danger'} icon={<PiXBold/>}>Discard</Button>
+                <Button variant={'success'} icon={<PiFloppyDiskBold/>}>Save</Button>
+            </div>
+        </div>
+    )
 };
 
 export default ButtonSettingsWin;

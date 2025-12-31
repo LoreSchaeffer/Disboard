@@ -17,6 +17,7 @@ export type SbButton = {
     col: number;
     title: string;
     style?: SbButtonStyle;
+    cropOptions?: CropOptions;
     track: Track;
 }
 
@@ -31,3 +32,15 @@ export type SbButtonStyle = {
     border_color_hover?: string;
     border_color_active?: string;
 }
+
+export type CropOptions = {
+    startTime?: number;
+    startTimeUnit?: TimeUnit;
+    endTimeType?: EndTimeType;
+    endTime?: number;
+    endTimeUnit?: TimeUnit;
+}
+
+export type TimeUnit = 'ms' | 's' | 'm';
+
+export type EndTimeType = 'at' | 'after';

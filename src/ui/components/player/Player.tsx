@@ -35,7 +35,7 @@ const Player = () => {
     };
 
     const search = () => {
-        window.electron.openMediaSelectorWin(null, null);
+        window.electron.openWindow('media_selector');
     };
 
     const changeVolume = (_: number, newValue: number) => {

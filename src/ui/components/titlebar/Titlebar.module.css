@@ -1,7 +1,7 @@
 .titlebar {
     width: 100%;
     height: var(--titlebar-height);
-    position: fixed;
+    position: relative;
     padding-left: 5px;
     background-color: var(--background-tertiary);
     user-select: none;
@@ -11,27 +11,33 @@
     z-index: 9000;
 }
 
-.leftData {
-    height: var(--titlebar-height);
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    justify-self: flex-start;
-    margin-right: auto;
-    margin-left: 5px;
-    gap: 15px;
-    -webkit-app-region: no-drag;
-}
-
 .windowTitle {
     font-weight: 900;
     font-size: 9pt;
     line-height: 9pt;
     color: var(--text-disabled);
+    white-space: nowrap;
+    margin-left: 5px;
+}
+
+.injectedContent {
+    display: flex;
+    align-items: center;
+    -webkit-app-region: no-drag;
+    margin-left: 15px;
+    height: 100%;
+}
+
+.centered {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-left: 0;
 }
 
 .windowControls {
     display: flex;
+    margin-left: auto;
 }
 
 .last {

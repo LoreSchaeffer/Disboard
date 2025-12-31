@@ -1,65 +1,173 @@
-.select {
-    width: fit-content;
-    min-width: 100px;
-    height: 20px;
-    min-height: 20px;
+.selectContainer {
+    width: 100%;
+    position: relative;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.selectContainer * {
+    box-sizing: border-box;
+}
+
+.trigger {
     display: flex;
-    flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
-    gap: 5px;
-    padding: 0 4px;
-    border-radius: 6px;
-    background-color: var(--background-tertiary);
-    transition: background-color 500ms ease;
-    outline: none !important;
-    color: var(--text-primary);
-    font-size: 9pt;
+    justify-content: space-between;
+    width: 100%;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--neutral-100);
+    background-color: transparent;
     cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    color: var(--text-primary);
 }
 
-.select svg {
-    justify-self: flex-end;
-    margin-left: auto;
+.leftContent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
 }
 
-.disabled {
-    background-color: var(--gray-645);
-    color: var(--text-disabled);
-    cursor: default;
+.leftIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 1rem;
 }
 
-.disabled svg {
-    fill: var(--text-disabled);
+.valueText {
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.selectDropdown {
+.placeholder {
+    color: var(--text-secondary);
+}
+
+.primary {
+    border-color: var(--border-on-primary);
+}
+
+.secondary {
+    border-color: var(--border-on-secondary);
+}
+
+.tertiary {
+    border-color: var(--border-on-tertiary);
+}
+
+.error {
+    border-color: var(--red-35);
+}
+
+.trigger:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.trigger.open {
+    border-color: var(--primary);
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.trigger.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.chevron {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+.trigger.open .chevron {
+    transform: rotate(180deg);
+}
+
+.dropdownMenu {
     position: absolute;
-    display: none;
-    flex-direction: column;
-    border-radius: 6px;
-    background-color: var(--background-tertiary);
-    color: var(--text-primary);
-    font-size: 9pt;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--neutral-70);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    padding: 4px;
+    animation: fadeIn 0.1s ease-out;
 }
 
-.selectOption {
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 9pt;
-    padding: 3px 4px;
+.dropdownMenu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.dropdownMenu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dropdownMenu::-webkit-scrollbar-thumb {
+    background: var(--background-context-menu-hover);
+    border-radius: 2px;
+}
+
+.option {
+    padding: 6px 8px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 200ms ease;
+    transition: background-color 0.1s ease;
+    margin-bottom: 1px;
 }
 
-.selectOption:hover {
-    background-color: var(--primary-500);
+.option:hover {
+    background-color: var(--background-context-menu-hover);
+    color: white;
 }
 
-.selectOption.selected {
-    background-color: var(--primary-500);
+.option.selected {
+    background-color: var(--primary);
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
-.selectOption.selected:hover {
-    background-color: var(--primary-530);
+.option.selected:hover {
+    background-color: var(--primary-hover);
+}
+
+.emptyMessage {
+    padding: 8px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.errorMessage {
+    color: var(--red-35);
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

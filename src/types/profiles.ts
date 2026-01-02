@@ -31,6 +31,7 @@ export type SbButtonStyle = {
     border_color?: string;
     border_color_hover?: string;
     border_color_active?: string;
+    auto_pick?: boolean;
 }
 
 export type CropOptions = {

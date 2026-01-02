@@ -1,11 +1,23 @@
 .colorPicker {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    background-color: var(--gray-1000);
+    width: 35px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-on-primary);
     cursor: pointer;
 }
 
-.colorPicker.disabled {
+.disabled {
     cursor: default;
+}
+
+.primary {
+    border-color: var(--border-on-primary);
+}
+
+.secondary {
+    border-color: var(--border-on-secondary);
+}
+
+.tertiary {
+    border-color: var(--border-on-tertiary);
 }

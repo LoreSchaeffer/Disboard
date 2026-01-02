@@ -1,27 +1,36 @@
 import styles from './ColorPicker.module.css';
 import {ChangeEvent, useEffect, useRef, useState} from "react";
 import {validateHexColor} from "../../utils/utils";
+import {Background} from "../../types/common";
+import {clsx} from "clsx";
 
 type ColorPickerProps = {
     value?: string;
-    onChange?: (value: string) => void;
+    background?: Background
     disabled?: boolean;
+    onChange?: (value: string) => void;
 }
 
 const ColorPicker = (
     {
         value = '#000000',
-        onChange,
-        disabled = false
+        background = 'primary',
+        disabled = false,
+        onChange
     }: ColorPickerProps) => {
     const [val, setVal] = useState(value || '#000000');
-
     const colorInputRef = useRef<HTMLInputElement>(null);
+    const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined);
 
     useEffect(() => {
-        if (validateHexColor(val)) setVal(value);
-        else setVal('#000000');
+        setVal(value || '#000000');
     }, [value]);
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, []);
 
     const showColorPicker = () => {
         if (disabled) return;
@@ -30,13 +39,21 @@ const ColorPicker = (
 
     const handleColorChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newVal = e.target.value;
+        if (!validateHexColor(newVal)) return;
+
         setVal(newVal);
-        if (onChange) onChange(newVal);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+        debounceTimer.current = setTimeout(() => onChange?.(newVal), 10);
     };
 
     return (
         <div
-            className={`${styles.colorPicker} ${disabled ? 'disabled' : ''}`}
+            className={clsx(
+                styles.colorPicker,
+                styles[background],
+                disabled && styles.disabled
+            )}
             style={{backgroundColor: val}}
             onClick={showColorPicker}
         >

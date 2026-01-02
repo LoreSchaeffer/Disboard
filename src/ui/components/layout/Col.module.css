@@ -60,3 +60,15 @@
 .col-12 {
     width: 100%;
 }
+
+.align-start {
+    justify-content: flex-start;
+}
+
+.align-center {
+    justify-content: center;
+}
+
+.align-end {
+    justify-content: flex-end;
+}

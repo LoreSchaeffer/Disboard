@@ -9,6 +9,7 @@ import {ButtonSettingsWin, IpcResponse, MediaSelectorWin} from "./types/common";
 import {Settings} from "./types/settings";
 import {Profile, SbButton} from "./types/profiles";
 import * as fs from "node:fs";
+import {applyUpdates} from "./ui/utils/utils";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -568,7 +569,7 @@ ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbButton 
     return profile.buttons.find(b => b.row === buttonPos.row && b.col === buttonPos.col) || null;
 });
 
-ipcMain.handle('update_button', (_, profileId: string, buttonId: string, button: Partial<SbButton>): IpcResponse<void> => {
+ipcMain.handle('update_button', (_, profileId: string, buttonId: string, updates: Partial<SbButton>): IpcResponse<void> => {
     const profiles = profilesStore.get('profiles');
 
     const profileIdx = profiles.findIndex(p => p.id === profileId);
@@ -581,18 +582,29 @@ ipcMain.handle('update_button', (_, profileId: string, buttonId: string, button:
     const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
     if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
 
-    const existingButton = profile.buttons[existingButtonIdx];
-    profile.buttons[existingButtonIdx] = {
-        ...existingButton,
-        ...button
-    };
+    const existingButton = {...profile.buttons[existingButtonIdx]};
+    applyUpdates(existingButton, updates);
 
+    if (updates.style) {
+        if (!existingButton.style) existingButton.style = {};
+        applyUpdates(existingButton.style, updates.style);
+        if (Object.keys(existingButton.style).length === 0) delete existingButton.style;
+    }
+
+    if (updates.cropOptions) {
+        if (!existingButton.cropOptions) existingButton.cropOptions = {};
+        applyUpdates(existingButton.cropOptions, updates.cropOptions);
+        if (Object.keys(existingButton.cropOptions).length === 0) delete existingButton.cropOptions;
+    }
+
+    profile.buttons[existingButtonIdx] = existingButton;
     profiles[profileIdx] = profile;
     profilesStore.set('profiles', profiles);
     broadcastProfiles(profiles);
 
     return {success: true};
 });
+
 
 ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcResponse<void> => {
     const profiles = profilesStore.get('profiles');

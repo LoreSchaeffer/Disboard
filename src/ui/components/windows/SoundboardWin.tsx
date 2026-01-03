@@ -107,10 +107,10 @@ const SoundboardWin = () => {
     }
 
     return (
-        <PlayerProvider>
+        <>
             <Soundboard/>
             <Player/>
-        </PlayerProvider>
+        </>
     )
 }
 

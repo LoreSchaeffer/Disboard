@@ -5,12 +5,17 @@ import {useWindow} from "./context/WindowContext";
 import {useNavigation} from "./context/NavigationContext";
 import SettingsWin from "./components/windows/SettingsWin";
 import ButtonSettingsWin from "./components/windows/ButtonSettingsWin";
+import {PlayerProvider} from "./context/PlayerContext";
 
-const PAGES: Record<string, ReactElement> = {
-    main: <SoundboardWin/>,
-    settings: <SettingsWin/>,
-    button_settings: <ButtonSettingsWin/>,
-}
+const PAGES: {
+    name: string;
+    component: ReactElement;
+    usePlayer: boolean;
+}[] = [
+    {name: 'main', component: <SoundboardWin/>, usePlayer: true},
+    {name: 'settings', component: <SettingsWin/>, usePlayer: false},
+    {name: 'button_settings', component: <ButtonSettingsWin/>, usePlayer: true},
+];
 
 const FallbackPage = () => <div>Page not found!</div>
 
@@ -31,28 +36,38 @@ export const App = () => {
 
     if (!ready) return null;
 
+    const currentVisiblePage = visibleStack[visibleStack.length - 1];
+    const isValidPage = PAGES.some(p => p.name === currentVisiblePage);
+
     return (
         <div className='app'>
-            {Object.entries(PAGES).map(([key, component]) => {
-                if (!loadedPages.has(key)) return null;
-                const stackIndex = visibleStack.indexOf(key);
+            {PAGES.map((page) => {
+                if (!loadedPages.has(page.name)) return null;
+
+                const stackIndex = visibleStack.indexOf(page.name);
                 const isVisible = stackIndex !== -1;
+
+                const content = page.usePlayer ? (
+                    <PlayerProvider>{page.component}</PlayerProvider>
+                ) : (
+                    page.component
+                );
 
                 return (
                     <div
-                        key={key}
+                        key={page.name}
                         className="pageContainer"
                         style={{
                             display: isVisible ? 'block' : 'none',
                             zIndex: isVisible ? 10 + stackIndex : 0,
                         }}
                     >
-                        {component}
+                        {content}
                     </div>
                 );
             })}
 
-            {!(visibleStack[visibleStack.length - 1] in PAGES) && <FallbackPage/>}
+            {!isValidPage && <FallbackPage/>}
         </div>
     )
 }

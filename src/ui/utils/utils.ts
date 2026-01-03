@@ -110,3 +110,14 @@ export const getVolumeIcon = (volume: number): ElementType => {
     if (volume < 50) return PiSpeakerLowBold;
     return PiSpeakerHighBold;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const applyUpdates = (target: any, source: any) => {
+    Object.keys(source).forEach(key => {
+        if (key === 'style' || key === 'cropOptions') return;
+
+        const value = source[key];
+        if (value === null) delete target[key];
+        else if (value !== undefined) target[key] = value;
+    });
+}

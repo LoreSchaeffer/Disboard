@@ -6,8 +6,8 @@ import {ButtonWindowData} from "../../../types/window";
 import Spinner from "../misc/Spinner";
 import {useTitlebar} from "../../context/TitlebarContext";
 import Input from "../forms/Input";
-import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiXBold} from "react-icons/pi";
-import {validateButtonTitle} from "../../../utils/utils";
+import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiStopFill, PiXBold} from "react-icons/pi";
+import {generateButtonId, validateButtonTitle} from "../../../utils/utils";
 import Button from "../misc/Button";
 import SoundboardButton from "../soundboard/SoundboardButton";
 import Separator from "../misc/Separator";
@@ -19,6 +19,7 @@ import {clsx} from "clsx";
 import Toggle from "../forms/Toggle";
 import {hexToHsl, hslToHex} from "../../utils/utils";
 import {Time} from "../../utils/time";
+import {usePlayer} from "../../context/PlayerContext";
 
 type Errors = {
     [key: string]: string;
@@ -32,6 +33,7 @@ const timeOptions = [
 
 const ButtonSettingsWin = () => {
     const {data} = useWindow();
+    const {previewPlayer, previewStatus} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const [profile, setProfile] = useState<Profile | undefined>(undefined);
     const [button, setButton] = useState<SbButton | undefined>(undefined);
@@ -319,6 +321,28 @@ const ButtonSettingsWin = () => {
 
     const isCropModified = (field: keyof CropOptions) => newButton.cropOptions && field in newButton.cropOptions;
 
+    const canSubmit = () => {
+        return button && profile && Object.keys(errors).length === 0 && Object.keys(newButton).length > 0;
+    }
+
+    const handleSubmit = () => {
+        if (!canSubmit()) return;
+
+        window.electron.updateButton(profile.id, generateButtonId(button.row, button.col), newButton).then((res) => {
+            if (res.success) window.electron.close();
+            else console.log(res.error);
+        })
+    }
+
+    const playPausePreview = () => {
+        if (previewStatus.playing) {
+            previewPlayer.stop();
+        } else {
+            if (!button) return;
+            previewPlayer.playNow(button.track);
+        }
+    }
+
     const previewButtonObj: SbButton | undefined = button ? {
         ...button,
         ...newButton,
@@ -350,7 +374,13 @@ const ButtonSettingsWin = () => {
                     />
                 </Col>
                 <Col size={3}>
-                    <Button variant={'primary'} icon={<PiPlayFill/>}>Preview</Button>
+                    <Button
+                        variant={'primary'}
+                        icon={previewStatus.playing ? <PiStopFill/> : <PiPlayFill/>}
+                        onClick={playPausePreview}
+                    >
+                        {previewStatus.playing ? 'Stop' : 'Preview'}
+                    </Button>
                 </Col>
             </Row>
 
@@ -477,8 +507,21 @@ const ButtonSettingsWin = () => {
             </div>
 
             <div className={'windowButtons'}>
-                <Button variant={'danger'} icon={<PiXBold/>}>Discard</Button>
-                <Button variant={'success'} icon={<PiFloppyDiskBold/>}>Save</Button>
+                <Button
+                    variant={'danger'}
+                    icon={<PiXBold/>}
+                    onClick={() => window.electron.close()}
+                >
+                    Discard
+                </Button>
+                <Button
+                    variant={'success'}
+                    icon={<PiFloppyDiskBold/>}
+                    onClick={handleSubmit}
+                    disabled={!canSubmit()}
+                >
+                    Save
+                </Button>
             </div>
         </div>
     )

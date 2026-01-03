@@ -6,8 +6,6 @@ import {RepeatMode} from "../../types/common";
 
 type PlayerContextType = {
     player: Player;
-    previewPlayer: Player;
-
     status: PlayerStatus;
     repeat: RepeatMode;
     queue: Track[];
@@ -15,6 +13,12 @@ type PlayerContextType = {
     currentTrack: Track | null;
     duration: Time;
     currentTime: Time;
+
+    previewPlayer: Player;
+    previewStatus: PlayerStatus;
+    previewCurrentTrack: Track | null;
+    previewDuration: Time;
+    previewCurrentTime: Time;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -28,9 +32,13 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [queue, setQueue] = useState<Track[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
     const [currentTrack, setCurrentTrack] = useState<Track | null>(player.getCurrentTrack());
-
     const [duration, setDuration] = useState<Time>(new Time(0, 'ms'));
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
+
+    const [previewStatus, setPreviewStatus] = useState<PlayerStatus>(previewPlayer.getStatus());
+    const [previewCurrentTrack, setPreviewCurrentTrack] = useState<Track | null>(previewPlayer.getCurrentTrack());
+    const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
+    const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     useEffect(() => {
         const syncState = () => {
@@ -96,17 +104,78 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         }
     }, [player]);
 
+    useEffect(() => {
+        const syncPreviewState = () => {
+            setPreviewStatus(previewPlayer.getStatus());
+            setPreviewCurrentTrack(previewPlayer.getCurrentTrack());
+
+            const dur = previewPlayer.getDuration();
+            setPreviewDuration(dur ? dur : new Time(0, 'ms'));
+        };
+
+        const handlePreviewTimeUpdate = (time: Time, dur: Time) => {
+            setPreviewCurrentTime(time);
+            if (dur) setPreviewDuration(dur);
+        };
+
+        previewPlayer.on('play', syncPreviewState);
+        previewPlayer.on('pause', syncPreviewState);
+        previewPlayer.on('resume', syncPreviewState);
+        previewPlayer.on('loading', (isLoading) => setPreviewStatus(prev => ({...prev, loading: isLoading})));
+
+        previewPlayer.on('ended', () => {
+            syncPreviewState();
+            setPreviewCurrentTime(new Time(0, 'ms'));
+        });
+
+        previewPlayer.on('timeupdate', handlePreviewTimeUpdate);
+
+        previewPlayer.on('trackchange', (track) => {
+            setPreviewCurrentTrack(track);
+            setPreviewCurrentTime(new Time(0, 'ms'));
+            setPreviewDuration(new Time(0, 'ms'));
+        });
+
+        previewPlayer.on('error', () => {
+            syncPreviewState();
+            setPreviewCurrentTime(new Time(0, 'ms'));
+        });
+
+        previewPlayer.on('reset', () => {
+            syncPreviewState();
+            setPreviewCurrentTime(new Time(0, 'ms'));
+            setPreviewDuration(new Time(0, 'ms'));
+        });
+
+        return () => {
+            previewPlayer.off('play');
+            previewPlayer.off('pause');
+            previewPlayer.off('resume');
+            previewPlayer.off('loading');
+            previewPlayer.off('ended');
+            previewPlayer.off('timeupdate');
+            previewPlayer.off('trackchange');
+            previewPlayer.off('error');
+            previewPlayer.off('reset');
+        };
+    }, [previewPlayer]);
+
     return (
         <PlayerContext.Provider value={{
             player,
-            previewPlayer,
             status,
             repeat,
             queue,
             index,
             currentTrack,
             duration,
-            currentTime
+            currentTime,
+
+            previewPlayer,
+            previewStatus,
+            previewCurrentTrack,
+            previewDuration,
+            previewCurrentTime
         }}>
             {children}
         </PlayerContext.Provider>

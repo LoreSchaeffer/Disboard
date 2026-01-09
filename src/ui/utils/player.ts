@@ -126,7 +126,6 @@ export class Player {
     public addToQueue(track: Track) {
         this.queue.push(track);
         this.eventHandlers['queueupdate']?.([...this.queue]);
-        // Se è la prima traccia e non stiamo suonando, imposta l'indice
         if (this.queue.length === 1 && !this.currentTrack) {
             this.index = 0;
         }
@@ -290,7 +289,14 @@ export class Player {
         this.eventHandlers['trackchange']?.(this.currentTrack);
         this._calculateCropsAndDuration();
 
-        this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
+        if (this.currentTrack.id.startsWith('yt_') || this.currentTrack.id.startsWith('url_')) {
+            this.audio.src = this.currentTrack.source.url;
+        } else if (this.currentTrack.id.startsWith('file_')) {
+            this.audio.src = `music://file/${encodeURIComponent(this.currentTrack.source.originalPath)}`;
+        } else {
+            this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
+        }
+
         this.audio.load();
     }
 

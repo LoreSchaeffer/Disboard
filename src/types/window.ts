@@ -1,4 +1,5 @@
 import {BrowserWindow, BrowserWindowConstructorOptions} from "electron";
+import {MediaSelectorAction} from "./common";
 
 export type WindowId = 'media_selector' | 'button_settings';
 
@@ -18,12 +19,18 @@ export type WindowInfo = {
 }
 
 export type WindowData<T> = {
-    type: 'button'
+    type: 'button' | 'media_selector';
     data: T;
 }
 
 // Window Data
 export type ButtonWindowData = {
+    profileId: string;
+    buttonId: string;
+}
+
+export type MediaSelectorWindowData = {
+    action: MediaSelectorAction;
     profileId: string;
     buttonId: string;
 }

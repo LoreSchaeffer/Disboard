@@ -11,5 +11,12 @@ export type Settings = {
     activeProfile: string | null;
     zoom: number;
     showImages: boolean;
+    musicApi: string;
+    musicApiCredentials: ApiCredentials;
     debug: boolean;
+}
+
+export type ApiCredentials = {
+    clientId: string;
+    clientSecret: string;
 }

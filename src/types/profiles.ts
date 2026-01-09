@@ -9,19 +9,37 @@ export type Profile = {
     name: string;
     rows: number;
     cols: number;
-    buttons: SbButton[];
+    buttons: ProfileBtn[];
 }
 
-export type SbButton = {
+export type ProfileBtn = {
     row: number;
     col: number;
-    title: string;
-    style?: SbButtonStyle;
+    track: string;
+    title?: string;
+    style?: BtnStyle;
     cropOptions?: CropOptions;
-    track: Track;
 }
 
-export type SbButtonStyle = {
+export type SbProfile = {
+    id: string;
+    name: string;
+    rows: number;
+    cols: number;
+    buttons: SbBtn[];
+}
+
+export type SbBtn = {
+    id: string;
+    row: number;
+    col: number;
+    track: Track;
+    title: string;
+    style?: BtnStyle;
+    cropOptions?: CropOptions;
+}
+
+export type BtnStyle = {
     text_color?: string;
     text_color_hover?: string;
     text_color_active?: string;

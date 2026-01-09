@@ -1,14 +1,22 @@
+import {TrackSource} from "./common";
+import {CropOptions} from "./profiles";
+
+export type Tracks = {
+    tracks: Track[];
+}
+
 export type Track = {
     id: string;
     source: Source;
     title: string;
     duration: number;
-    volume?: number;
 }
 
 export type Source = {
-    source: 'file' | 'url' | 'youtube'
-    originalPath?: string;
-    url?: string;
-    videoId?: string;
+    type: Exclude<TrackSource, 'list'>;
+    src?: string;
+}
+
+export type PlayerTrack = Track & {
+    cropOptions?: CropOptions;
 }

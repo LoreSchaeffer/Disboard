@@ -5,18 +5,16 @@ import {clsx} from "clsx";
 import Spinner from "./Spinner";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant: Variant;
+    variant?: Variant;
     icon?: ReactNode;
     loading?: boolean;
-    fullWidth?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>((
     {
-        variant,
+        variant = 'primary',
         icon,
         loading = false,
-        fullWidth = false,
         disabled,
         className,
         type = 'button',

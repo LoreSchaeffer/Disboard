@@ -6,6 +6,7 @@ import {useNavigation} from "./context/NavigationContext";
 import SettingsWin from "./components/windows/SettingsWin";
 import ButtonSettingsWin from "./components/windows/ButtonSettingsWin";
 import {PlayerProvider} from "./context/PlayerContext";
+import MediaSelectorWin from "./components/windows/MediaSelectorWin";
 
 const PAGES: {
     name: string;
@@ -15,6 +16,7 @@ const PAGES: {
     {name: 'main', component: <SoundboardWin/>, usePlayer: true},
     {name: 'settings', component: <SettingsWin/>, usePlayer: false},
     {name: 'button_settings', component: <ButtonSettingsWin/>, usePlayer: true},
+    {name: 'media_selector', component: <MediaSelectorWin/>, usePlayer: true},
 ];
 
 const FallbackPage = () => <div>Page not found!</div>

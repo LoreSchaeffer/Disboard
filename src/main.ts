@@ -3,26 +3,33 @@ import {app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, net, protocol, 
 import path from 'path';
 import {pathToFileURL} from 'url';
 import {clamp, generateButtonId, generateUUID, getButtonPositionFromId, sanitizeButtons, validateProfileName} from "./utils/utils";
-import {ButtonWindowData, WindowData, WindowId, WindowInfo, WindowOptions} from "./types/window";
-import {cacheStore, profilesStore, settingsStore} from "./utils/store";
-import {ButtonSettingsWin, IpcResponse, MediaSelectorWin} from "./types/common";
+import {ButtonWindowData, MediaSelectorWindowData, WindowData, WindowId, WindowInfo, WindowOptions} from "./types/window";
+import {cacheStore, profilesStore, settingsStore, tracksStore} from "./utils/store";
+import {ButtonSettingsWin, IpcResponse, MediaSelectorAction, MediaSelectorWin, TrackSource} from "./types/common";
 import {Settings} from "./types/settings";
-import {Profile, SbButton} from "./types/profiles";
+import {Profile, ProfileBtn, SbBtn, SbProfile} from "./types/profiles";
 import * as fs from "node:fs";
 import {applyUpdates} from "./ui/utils/utils";
+import {getVideoId, MusicApi} from "./utils/music-api";
+import {YTSearchResult, YTStream} from "./types/music-api";
+import {Source, Track} from "./types/track";
+import {extractCoverImage, fetchTitle, saveAsMp3} from "./utils/ffmpeg";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Global constants
 export const root = app.getPath('userData');
-export const audioDir = path.join(root, 'audio');
-export const imagesDir = path.join(root, 'images');
+export const audioDir = path.join(root, 'media', 'audio');
+export const imagesDir = path.join(root, 'media', 'images');
 
 // Global state variables
 let mainWindow: BrowserWindow | undefined;
 const winOptions = new Map<number, WindowOptions>();
 const winData = new Map<number, WindowData<unknown>>();
+const ytStreamCache = new Map<string, YTStream>();
+
+let musicApi: MusicApi | null = null;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -126,6 +133,8 @@ const handleMusicRequest = async (request: Request): Promise<Response> => {
             targetPath = path.join(audioDir, `${resName}.mp3`);
         } else if (type === 'images') {
             targetPath = path.join(imagesDir, `${resName}.jpg`);
+        } else if (type === 'file') {
+            targetPath = resName;
         } else {
             return new Response('Invalid resource type', {status: 400});
         }
@@ -134,6 +143,70 @@ const handleMusicRequest = async (request: Request): Promise<Response> => {
     } catch {
         return new Response('File not found', {status: 404});
     }
+}
+
+const getYoutubeStream = async (videoId: string): Promise<YTStream> => {
+    const cachedStream = ytStreamCache.get(videoId);
+
+    if (cachedStream) {
+        try {
+            const response = await net.fetch(cachedStream.content, {method: 'HEAD'});
+
+            if (response.status >= 200 && response.status < 400) return cachedStream;
+            else ytStreamCache.delete(videoId);
+        } catch {
+            ytStreamCache.delete(videoId);
+        }
+    }
+
+    if (!musicApi) throw new Error('not_initialized');
+    if (!musicApi.isAuthenticated()) throw new Error('not_authenticated');
+
+    const result = await musicApi.getStream(videoId);
+    ytStreamCache.set(videoId, result);
+    return result;
+}
+
+const downloadTrack = async (uri: string, source: Source, title?: string): Promise<Track> => {
+    const id = generateUUID();
+    let duration = 0;
+
+    try {
+        duration = await saveAsMp3(uri, audioDir, id);
+    } catch (e) {
+        const file = path.join(audioDir, `${id}.mp3`);
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+        throw new Error(e.message || 'download_error');
+    }
+
+    try {
+        await extractCoverImage(uri, imagesDir, id);
+    } catch {
+        const file = path.join(imagesDir, `${id}.jpg`);
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+    }
+
+    if (!title) {
+        try {
+            title = await fetchTitle(uri);
+            if (!title) throw new Error();
+        } catch {
+            title = 'Unknown Title';
+        }
+    }
+
+    const track = {
+        id: id,
+        source: source,
+        title: title,
+        duration: duration
+    }
+
+    const tracks = tracksStore.get('tracks');
+    tracks.push(track);
+    tracksStore.set('tracks', tracks);
+
+    return track;
 }
 
 /**
@@ -182,17 +255,21 @@ const createButtonSettings = (profileId: string, buttonId: string): BrowserWindo
     });
 }
 
-// TODO Update this to use new WindowData structure
-const createMediaSelector = (parent: number, row: number, col: number) => {
+const createMediaSelector = (action: MediaSelectorAction, parent?: number, profileId?: string, buttonId?: string) => {
     return createWindow({
         page: 'media_selector',
         modal: true,
-        parent: BrowserWindow.fromId(parent),
+        parent: parent ? BrowserWindow.fromId(parent) : undefined,
         width: 500,
         height: 600,
         resizable: false,
-        onLoaded: (win) => {
-            if (row !== null && col !== null) win.webContents.send('button', row, col);
+        data: {
+            type: 'media_selector',
+            data: {
+                action: action,
+                profileId: profileId,
+                buttonId: buttonId
+            } as MediaSelectorWindowData
         }
     });
 }
@@ -237,11 +314,20 @@ const initApp = async () => {
         }
     }
 
-    // 4. Launch main window
+    // 4. Initialize Music API
+    const musicApiEndpoint = settingsStore.get('musicApi');
+    const musicApiCredentials = settingsStore.get('musicApiCredentials');
+    if (musicApiEndpoint && musicApiCredentials.clientId && musicApiCredentials.clientSecret) {
+        console.log('Initializing Music API...');
+        setTimeout(() => musicApi = new MusicApi(musicApiEndpoint, musicApiCredentials), 0);
+    }
+
+    // 5. Launch main window
     // createMainWindow();
 
     // TODO Only for development purposes
-    createButtonSettings(settingsStore.get('activeProfile'), generateButtonId(0, 0));
+    //createButtonSettings(settingsStore.get('activeProfile'), generateButtonId(0, 0));
+    createMediaSelector(null, null, null);
 };
 
 /**
@@ -322,7 +408,7 @@ ipcMain.on('close', (e: IpcMainInvokeEvent) => {
     if (win) win.close();
 });
 
-// Store
+// Settings
 
 ipcMain.handle('get_settings', (): Settings => {
     return settingsStore.store;
@@ -337,9 +423,36 @@ ipcMain.on('update_settings', (_, settings: Partial<Settings>) => {
 
 // Profiles
 
-ipcMain.handle('get_profiles', (): Profile[] => profilesStore.get('profiles'));
+ipcMain.handle('get_profiles', (): Profile[] => {
+    return profilesStore.get('profiles').map(p => ({id: p.id, name: p.name, rows: p.rows, cols: p.cols, buttons: [] as ProfileBtn[]}))
+});
 
-ipcMain.handle('get_profile', (_, id: string) => profilesStore.get('profiles').find(p => p.id === id) || null);
+ipcMain.handle('get_profile', (_, id: string): SbProfile => {
+    const profile = profilesStore.get('profiles').find(p => p.id === id) || null
+    if (!profile) return null;
+
+    const tracks = tracksStore.get('tracks');
+
+    return {
+        id: profile.id,
+        name: profile.name,
+        rows: profile.rows,
+        cols: profile.cols,
+        buttons: profile.buttons.map(b => {
+            const track = tracks.find(t => t.id === b.track) || null;
+            if (!track) return null;
+
+            return {
+                id: generateButtonId(b.row, b.col),
+                row: b.row,
+                col: b.col,
+                track: track,
+                style: b.style,
+                cropOptions: b.cropOptions
+            }
+        }).filter(b => b !== null) as SbBtn[]
+    }
+});
 
 ipcMain.handle('create_profile', (_, profile: Partial<Profile>): IpcResponse<void> => {
     if (!profile.name) return {success: false, error: 'name_required'};
@@ -353,7 +466,7 @@ ipcMain.handle('create_profile', (_, profile: Partial<Profile>): IpcResponse<voi
         name: profile.name,
         rows: clamp(Math.floor(profile.rows) || 8, 1, 50),
         cols: clamp(Math.floor(profile.cols) || 10, 1, 50),
-        buttons: [] as SbButton[]
+        buttons: [] as ProfileBtn[]
     }
 
     profiles.push(newProfile);
@@ -559,7 +672,7 @@ ipcMain.on('export_profiles', async () => {
 
 // Buttons
 
-ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbButton | null => {
+ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbBtn | null => {
     const profile = profilesStore.get('profiles').find(p => p.id === profileId);
     if (!profile) return null;
 
@@ -569,7 +682,7 @@ ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbButton 
     return profile.buttons.find(b => b.row === buttonPos.row && b.col === buttonPos.col) || null;
 });
 
-ipcMain.handle('update_button', (_, profileId: string, buttonId: string, updates: Partial<SbButton>): IpcResponse<void> => {
+ipcMain.handle('update_button', (_, profileId: string, buttonId: string, updates: Partial<SbBtn>): IpcResponse<void> => {
     const profiles = profilesStore.get('profiles');
 
     const profileIdx = profiles.findIndex(p => p.id === profileId);
@@ -605,7 +718,6 @@ ipcMain.handle('update_button', (_, profileId: string, buttonId: string, updates
     return {success: true};
 });
 
-
 ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcResponse<void> => {
     const profiles = profilesStore.get('profiles');
 
@@ -628,13 +740,91 @@ ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcRes
     return {success: true};
 });
 
+// Tracks
+
+ipcMain.handle('get_tracks', (): Track[] => {
+    return tracksStore.get('tracks');
+});
+
+ipcMain.handle('get_track', (_, trackId: string): Track | null => {
+    const tracks = tracksStore.get('tracks');
+    return tracks.find(t => t.id === trackId) || null;
+});
+
+ipcMain.handle('add_track', async (_, source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string): Promise<IpcResponse<void>> => {
+    if (!source || !media || !profileId || !buttonId) return {success: false, error: 'invalid_parameters'};
+    if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
+    if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
+
+    let track: Track;
+
+    if (source === 'list') {
+        track = tracksStore.get('tracks').find(t => t.id === media);
+        if (!track) return {success: false, error: 'track_not_found'};
+    } else {
+        let uri = typeof media === 'string' ? media : null;
+
+        if (source === 'youtube') {
+            try {
+                const stream = await getYoutubeStream((media as YTSearchResult).id);
+                if (!stream) return {success: false, error: 'stream_not_found'};
+                uri = stream.content;
+            } catch (e) {
+                return {success: false, error: e.message || 'unknown_error'};
+            }
+        }
+
+        try {
+            track = await downloadTrack(
+                uri,
+                {
+                    type: source,
+                    src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
+                },
+                source === 'youtube' ? (media as YTSearchResult).name : undefined
+            );
+
+            if (!track) throw new Error('download_failed');
+        } catch (e) {
+            return {success: false, error: e.message || 'download_error'};
+        }
+    }
+
+    const profiles = profilesStore.get('profiles');
+    const profileIdx = profiles.findIndex(p => p.id === profileId);
+    if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+
+    const profile = profiles[profileIdx];
+    const buttonPos = getButtonPositionFromId(buttonId);
+    if (!buttonPos) return {success: false, error: 'invalid_button_id'};
+
+    const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
+    if (existingButtonIdx === -1) {
+        profile.buttons.push({
+            row: buttonPos.row,
+            col: buttonPos.col,
+            track: track.id
+        } as SbButton);
+    } else {
+        const existingButton = {...profile.buttons[existingButtonIdx]};
+        existingButton.track = track.id;
+        profile.buttons[existingButtonIdx] = existingButton;
+    }
+
+    profiles[profileIdx] = profile;
+    profilesStore.set('profiles', profiles);
+    broadcastProfiles(profiles);
+
+    return {success: true};
+});
+
 // Windows
 
 ipcMain.on('open_window', (_, winId: WindowId, args?: unknown) => {
     switch (winId) {
         case 'media_selector': {
             const safeArgs = (args || {}) as MediaSelectorWin;
-            createMediaSelector(safeArgs.parent, safeArgs.row, safeArgs.col);
+            createMediaSelector(safeArgs.action, safeArgs.parent, safeArgs.profileId, safeArgs.buttonId);
             break;
         }
         case 'button_settings': {
@@ -684,4 +874,40 @@ ipcMain.handle('open_file_media_selector', async (): Promise<IpcResponse<string>
     const filePath = filePaths[0];
     cacheStore.set('audioDir', path.dirname(filePath));
     return {success: true, data: filePath};
+});
+
+// Music API
+
+ipcMain.handle('use_music_api', (): boolean => {
+    return !(!musicApi || !musicApi.isAuthenticated());
+
+});
+
+ipcMain.handle('search_music', async (_, query: string): Promise<IpcResponse<YTSearchResult[]>> => {
+    try {
+        if (!musicApi) throw new Error('not_initialized');
+        if (!musicApi.isAuthenticated()) throw new Error('not_authenticated');
+
+        const results = (await musicApi.search(query))
+            .map(res => {
+                return {
+                    ...res,
+                    id: getVideoId(res.url)
+                }
+            });
+        return {success: true, data: results};
+    } catch (e) {
+        return {success: false, error: e.message || 'unknown_error'};
+    }
+});
+
+ipcMain.handle('get_video_stream', async (_, videoId: string): Promise<IpcResponse<YTStream>> => {
+    try {
+        const result = await getYoutubeStream(videoId);
+        if (!result) throw new Error('stream_not_found');
+
+        return {success: true, data: result};
+    } catch (e) {
+        return {success: false, error: e.message || 'unknown_error'};
+    }
 });

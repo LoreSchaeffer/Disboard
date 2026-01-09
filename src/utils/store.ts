@@ -2,6 +2,7 @@ import Store from 'electron-store';
 import {generateUUID} from "./utils";
 import {Settings} from "../types/settings";
 import {Profiles} from "../types/profiles";
+import {Tracks} from "../types/track";
 
 const settingsStore = new Store<Settings>({
     name: 'settings',
@@ -17,6 +18,8 @@ const settingsStore = new Store<Settings>({
         zoom: 1,
         showImages: true,
         activeProfile: null,
+        musicApi: 'https://ma.lycoris.it',
+        musicApiCredentials: undefined,
         debug: false
     },
     // migrations: {
@@ -47,4 +50,12 @@ const cacheStore = new Store<Cache>({
     watch: true,
 });
 
-export {settingsStore, profilesStore, cacheStore};
+const tracksStore = new Store<Tracks>({
+    name: 'tracks',
+    watch: true,
+    defaults: {
+        tracks: []
+    }
+});
+
+export {settingsStore, profilesStore, cacheStore, tracksStore};

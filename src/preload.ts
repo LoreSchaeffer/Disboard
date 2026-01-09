@@ -1,9 +1,10 @@
 import {contextBridge, ipcRenderer} from "electron";
 import {Track} from "./types/track";
-import {IpcResponse} from "./types/common";
+import {IpcResponse, TrackSource} from "./types/common";
 import {Settings} from "./types/settings";
 import {Profile, SbButton} from "./types/profiles";
 import {WindowId, WindowInfo} from "./types/window";
+import {YTSearchResult, YTStream} from "./types/music-api";
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -59,12 +60,23 @@ const api = {
     updateButton: (profileId: string, buttonId: string, button: Partial<SbButton>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_button', profileId, buttonId, button),
     deleteButton: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_button', profileId, buttonId),
 
+    // Tracks
+    getTracks: (): Promise<Track[]> => ipcRenderer.invoke('get_tracks'),
+    getTrack: (trackId: string): Promise<Track | null> => ipcRenderer.invoke('get_track', trackId),
+    addTrack: (source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, profileId, buttonId),
+    playNow: (source: TrackSource, media: YTSearchResult | string) => ipcRenderer.send('play_now', source, media),
+
     // Windows
     openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),
     openFileMediaSelector: (): Promise<IpcResponse<string>> => ipcRenderer.invoke('open_file_media_selector'),
+
+    // Music API
+    useMusicApi: (): Promise<boolean> => ipcRenderer.invoke('use_music_api'),
+    searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
+    getVideoStream: (videoId: string): Promise<IpcResponse<YTStream>> => ipcRenderer.invoke('get_video_stream', videoId),
 }
 
 contextBridge.exposeInMainWorld('electron', api);

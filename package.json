@@ -40,8 +40,10 @@
     "vite": "^7.3.0"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/react-dnd": "^3.0.2",
     "@types/react-dnd-html5-backend": "^3.0.2",
+    "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",

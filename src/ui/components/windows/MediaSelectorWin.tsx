@@ -1,213 +1,398 @@
-import './MediaSelectorWin.css';
-import Window from "./Window";
-import React, {ChangeEvent, useEffect, useState} from "react";
-import {useButton} from "../../utils/buttonContext";
-import {useData} from "../../utils/windowContext";
-import {SbButton, Song} from "../../utils/store/profiles";
-import Button from "../generic/Button";
-import InputField from "../generic/forms/InputField";
-import Separator from "../generic/Separator";
-import {formatTime, getBiggestThumbnail, isRemoteUrl, isYouTubeUrl} from "../../utils/utils";
-import SvgIcon from "../generic/SvgIcon";
-import {YouTubeVideo} from "play-dl";
-import OpenDialogReturnValue = Electron.OpenDialogReturnValue;
+import styles from './MediaSelectorWin.module.css';
+import React, {useEffect, useMemo, useState} from "react";
+import Button from "../misc/Button";
+import {PiFloppyDiskBold, PiFolderOpenBold, PiGlobeBold, PiMagnifyingGlassBold, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopFill, PiXBold, PiYoutubeLogoFill} from "react-icons/pi";
+import Separator from "../misc/Separator";
+import {Track} from "../../../types/track";
+import Input from "../forms/Input";
+import {clsx} from "clsx";
+import {formatTime, Time} from "../../utils/time";
+import {YTSearchResult} from "../../../types/music-api";
+import {usePlayer} from "../../context/PlayerContext";
+import {getBestThumbnail} from "../../../utils/music-api";
+import Col from "../layout/Col";
+import Row from "../layout/Row";
+import {useWindow} from "../../context/WindowContext";
+import {MediaSelectorWindowData} from "../../../types/window";
+import {MediaSelectorAction, TrackSource} from "../../../types/common";
 
-const ButtonSettingsWin = () => {
-        const {settings, winId, winParent, previewPlayer} = useData();
-        const {button, hasButton} = useButton();
-        const [uriField, setUriField] = useState('');
-        const [searchField, setSearchField] = useState('');
-        const [searchResults, setSearchResults] = useState<YouTubeVideo[]>(undefined);
-        const [selectedResult, setSelectedResult] = useState<YouTubeVideo | null>(null);
-        const [playing, setPlaying] = useState<YouTubeVideo | null>(null);
+const MediaSelectorWin = () => {
+    const {data} = useWindow();
+    const {previewPlayer, previewStatus} = usePlayer();
+    const [action, setAction] = useState<MediaSelectorAction>(null);
+    const [mode, setMode] = useState<TrackSource>('list');
+    const [useMusicApi, setUseMusicApi] = useState<boolean>(false);
+    const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string>(null);
 
-        useEffect(() => {
-            const handleStop = () => setPlaying(null);
+    useEffect(() => {
+        window.electron.useMusicApi().then(setUseMusicApi);
+    }, []);
 
-            previewPlayer.addEventListener('stop', handleStop);
+    useEffect(() => {
+        if (!data || data.type !== 'media_selector') return;
+        const winData = data.data as MediaSelectorWindowData;
+        setAction(winData.action);
+    }, [data]);
 
-            return () => {
-                previewPlayer.removeEventListener('stop', handleStop);
-            }
-        }, [previewPlayer]);
+    const handleOnChange = (selected: YTSearchResult | string) => {
+        setSelectedMedia(selected);
+    }
 
-        useEffect(() => {
-            if (button) {
-                setUriField(button.song?.original_url);
-            }
-        }, []);
-
-        const openMediaSelector = () => {
-            (window as any).electron.openFileMediaSelector().then((response: OpenDialogReturnValue) => {
-                if (response.canceled) return;
-                setUriField(response.filePaths[0]);
-            });
+    const playPausePreview = () => {
+        if (previewStatus.playing) {
+            previewPlayer.stop();
+            return;
         }
 
-        const handleSearchFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
-            setSearchField(e.target.value);
-        }
+        if (!selectedMedia) return;
 
-        const handleUriFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
-            setUriField(e.target.value);
-        }
-
-        const search = () => {
-            setSelectedResult(null);
-            if (isYouTubeUrl(searchField)) {
-                (window as any).electron.getVideo(searchField)
-                    .then((result: YouTubeVideo) => setSearchResults([result]));
-            } else {
-                (window as any).electron.search(searchField)
-                    .then((results: YouTubeVideo[]) => setSearchResults(results));
-            }
-        }
-
-        const openUrl = (url: string) => {
-            (window as any).electron.openLink(url);
-        }
-
-        const preview = async (e: React.MouseEvent, result: YouTubeVideo) => {
-            e.stopPropagation();
-
-            if (playing) {
-                previewPlayer.stop();
-                return;
-            }
-
-            const url = await (window as any).electron.getStream(result.url);
-            if (!url) return;
-
-            (window as any).electron.pause();
-            previewPlayer.playNow({
-                title: result.title,
-                uri: url
-            } as Song);
-
-            setPlaying(result);
-        }
-
-        const selectResult = (result: YouTubeVideo) => {
-            setSelectedResult(result);
-            setUriField(result.url);
-        }
-
-        const closeWindow = () => {
-            (window as any).electron.close(winId);
-        };
-
-        const save = async () => {
-            let song;
-            if (selectedResult) {
-                song = {
-                    title: selectedResult.title,
-                    source: 'youtube',
-                    id: selectedResult.id,
-                    original_url: selectedResult.url,
-                    uri: null,
-                    duration: selectedResult.durationInSec * 1000,
-                    thumbnail: getBiggestThumbnail(selectedResult).url
-                } as Song;
-            } else {
-                if (isYouTubeUrl(uriField)) {
-                    const video = await (window as any).electron.getVideo(uriField);
-                    song = {
-                        title: video.title,
-                        source: 'youtube',
-                        id: video.id,
-                        original_url: video.url,
-                        uri: null,
-                        duration: video.durationInSec * 1000,
-                        thumbnail: getBiggestThumbnail(video).url
-                    } as Song;
-                } else if (isRemoteUrl(uriField)) {
-                    song = {
-                        title: uriField,
-                        source: 'remote',
-                        original_url: uriField,
-                        uri: null,
-                        duration: null,
-                        thumbnail: null
-                    }
-                } else {
-                    const sep = await (window as any).electron.getFileSeparator();
-                    song = {
-                        title: uriField.split(sep).slice(-1)[0].split('.')[0],
-                        source: 'local',
-                        original_url: uriField,
-                        uri: uriField,
-                        duration: null,
-                        thumbnail: null
-                    }
-                }
-            }
-
-            if (!hasButton) {
-                (window as any).electron.playNow(song);
-            } else {
-                if (winParent === 1) {
-                    const btn: SbButton = button;
-                    btn.song = song as Song;
-                    btn.title = song.title;
-
-                    (window as any).electron.saveButton(settings.active_profile, btn);
-                } else {
-                    (window as any).electron.returnSong(song, winId);
-                }
-            }
-
-            (window as any).electron.close(winId);
-        };
-
-        const displaySearchResults = () => {
-            if (searchResults === undefined) {
-                return <span className={"placeholder"}>Perform a search to see the results...</span>;
-            } else if (searchResults.length === 0) {
-                return <span className={"placeholder"}>Your search did not yield any results.</span>;
-            } else {
-                return searchResults.map((result: YouTubeVideo) => {
-                    return (
-                        <div className={`result${selectedResult != null && selectedResult.id === result.id ? " active" : ""}`} key={result.id} onClick={() => selectResult(result)}>
-                            <div className={"result-thumbnail"} style={{backgroundImage: `url(${getBiggestThumbnail(result).url}`}}></div>
-                            <div className={"result-info"}>
-                                <span className={"result-title"}>{result.title}</span>
-                                <span className={"result-url"} onClick={() => openUrl(result.url)}>{result.url}</span>
-                            </div>
-                            <span className={"result-duration"}>{formatTime(result.durationInSec * 1000)}</span>
-                            <SvgIcon icon={playing != null && playing.id === result.id ? 'pause' : 'play'} className={"preview-button"} size={"20px"} onClick={(e: React.MouseEvent) => preview(e, result)}/>
-                        </div>
-                    );
+        switch (mode) {
+            case 'list':
+                window.electron.getTrack(selectedMedia as string).then(track => {
+                    if (track) previewPlayer.playNow(track);
                 });
+                break;
+            case 'youtube': {
+                const ytResult = selectedMedia as YTSearchResult;
+                window.electron.getVideoStream(ytResult.id).then(res => {
+                    if (res.success) {
+                        const track: Track = {
+                            id: `yt_${Date.now()}`,
+                            title: ytResult.name,
+                            duration: ytResult.duration,
+                            source: {
+                                type: 'youtube',
+                                src: res.data.content
+                            }
+                        };
+                        previewPlayer.playNow(track);
+                    }
+                });
+                break;
             }
-        }
-
-        if (hasButton && button === undefined) {
-            return <Window/>
-        } else {
-            return (
-                <Window titlebar={hasButton ? <span className={"subtitle"}>{hasButton ? `Button ${button.row}.${button.col}` : 'Button'}</span> : undefined}>
-                    <div className={"row"}>
-                        <label>File or Url</label>
-                        <InputField type={"text"} value={uriField} onChange={handleUriFieldChange}/>
-                        <Button icon={"folder_open"} className={'primary'} onClick={openMediaSelector}>Open</Button>
-                    </div>
-                    <Separator/>
-                    <div className={"row"}>
-                        <label>Search</label>
-                        <InputField type={"text"} placeholder={"Title or content"} autoFocus={true} onChange={handleSearchFieldChange} onSubmit={search}/>
-                        <Button icon={"search"} className={'primary'} onClick={search}>Search</Button>
-                    </div>
-                    <div className={"results-container"}>
-                        {displaySearchResults()}
-                    </div>
-                    <div className={"buttons"}>
-                        <Button icon={"close"} className={"danger"} onClick={closeWindow}>{hasButton ? "Discard" : "Close"}</Button>
-                        <Button icon={hasButton ? "save" : "play"} className={"success"} disabled={uriField == null || uriField.trim() === ''} onClick={save}>{hasButton ? "Save" : "Play"}</Button>
-                    </div>
-                </Window>
-            );
+            case 'file': {
+                const track: Track = {
+                    id: `file_${Date.now()}`,
+                    title: (selectedMedia as string).split('/').pop(),
+                    duration: 0,
+                    source: {
+                        type: 'file',
+                        src: selectedMedia as string
+                    },
+                };
+                previewPlayer.playNow(track);
+                break;
+            }
+            case 'url': {
+                const track: Track = {
+                    id: `url_${Date.now()}`,
+                    title: selectedMedia as string,
+                    duration: 0,
+                    source: {
+                        type: 'url',
+                        src: selectedMedia as string
+                    },
+                };
+                previewPlayer.playNow(track);
+                break;
+            }
         }
     }
-;
 
-export default ButtonSettingsWin;
+    const canSubmit = useMemo(() => {
+        if (!selectedMedia) return false;
+        if (mode === 'youtube' && !(selectedMedia as YTSearchResult).id) return false;
+        return !(mode !== 'youtube' && (selectedMedia as string).trim().length < 2);
+    }, [selectedMedia, mode]);
+
+    const handleSubmit = () => {
+        if (!data || data.type !== 'media_selector') return;
+        const winData = data.data as MediaSelectorWindowData;
+        if (!canSubmit) return;
+
+        if (action === 'play_now') {
+            window.electron.playNow(mode, selectedMedia);
+            window.electron.close();
+        } else {
+            window.electron.addTrack(mode, selectedMedia, winData.profileId, winData.buttonId).then((res) => {
+                if (res.success) window.electron.close();
+                else console.log('Failed to add track:', res.error);
+            });
+        }
+    }
+
+    return (
+        <div className={'bordered'}>
+            <div className={styles.tabBar}>
+                <Button
+                    variant={mode === 'list' ? 'primary' : 'secondary'}
+                    icon={<PiPlaylistBold/>}
+                    onClick={() => setMode('list')}
+                >
+                    List
+                </Button>
+                <Button
+                    variant={mode === 'youtube' ? 'primary' : 'secondary'}
+                    icon={<PiYoutubeLogoFill/>}
+                    disabled={!useMusicApi}
+                    onClick={() => setMode('youtube')}
+                >
+                    YouTube
+                </Button>
+                <Button
+                    variant={mode === 'file' ? 'primary' : 'secondary'}
+                    icon={<PiFolderOpenBold/>}
+                    onClick={() => setMode('file')}
+                >
+                    File
+                </Button>
+                <Button
+                    variant={mode === 'url' ? 'primary' : 'secondary'}
+                    icon={<PiGlobeBold/>}
+                    onClick={() => setMode('url')}
+                >
+                    URL
+                </Button>
+            </div>
+            <Separator margin={'lg'}/>
+            {mode === 'list' && <ListSelector onChange={handleOnChange}/>}
+            {mode === 'youtube' && <YouTubeSelector onChange={handleOnChange}/>}
+            {mode === 'file' && <FileSelector onChange={handleOnChange}/>}
+            {mode === 'url' && <URLSelector onChange={handleOnChange}/>}
+
+            <div className={'windowButtons'}>
+                <Button
+                    className={styles.previewBtn}
+                    variant={'primary'}
+                    icon={previewStatus.playing ? <PiStopFill/> : <PiPlayFill/>}
+                    onClick={playPausePreview}
+                >
+                    {previewStatus.playing ? 'Stop' : 'Preview'}
+                </Button>
+                <Button
+                    variant={'danger'}
+                    icon={<PiXBold/>}
+                    onClick={() => window.electron.close()}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant={'success'}
+                    icon={action === 'play_now' ? <PiPlayBold/> : <PiFloppyDiskBold/>}
+                    disabled={!canSubmit}
+                    onClick={handleSubmit}
+                >
+                    {action === 'play_now' ? 'Play Now' : 'Save'}
+                </Button>
+            </div>
+        </div>
+    )
+};
+
+type SelectorProps = {
+    onChange?: (selected: YTSearchResult | string) => void;
+}
+
+const ListSelector = ({onChange}: SelectorProps) => {
+    const [tracks, setTracks] = useState<Track[]>([]);
+    const [query, setQuery] = useState<string>('');
+    const [selected, setSelected] = useState<string>(null);
+
+    useEffect(() => {
+        window.electron.getTracks().then(setTracks);
+    }, []);
+
+    const handleSelect = (trackId: string) => {
+        setSelected(trackId);
+        onChange?.(trackId);
+    }
+
+    const filteredTracks = useMemo(() => {
+        if (!query) return tracks;
+
+        const lowerQuery = query.toLowerCase();
+        return tracks.filter(track => track.title.toLowerCase().includes(lowerQuery));
+    }, [tracks, query]);
+
+    return (
+        <div>
+            <Input
+                type={'text'}
+                icon={<PiMagnifyingGlassBold/>}
+                placeholder={'Search...'}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={styles.mb}
+            />
+
+            <div className={styles.resultsContainer}>
+                <div className={clsx(styles.results, filteredTracks.length === 0 && styles.noResults)}>
+                    {filteredTracks.length === 0 && tracks.length === 0 && <span>No results</span>}
+                    {filteredTracks.length === 0 && tracks.length > 0 && <span>No tracks match your search.</span>}
+                    {filteredTracks.map(track => (
+                        <div
+                            key={track.id}
+                            className={clsx(styles.result, selected === track.id && styles.active)}
+                            onClick={() => handleSelect(track.id)}
+                        >
+                            <img
+                                className={styles.resultThumbnail}
+                                src={`music://images/${track.id}`}
+                                alt={track.title || ''}
+                                onError={(e) => {
+                                    const img = e.currentTarget;
+                                    img.onerror = null;
+                                    img.src = '/images/track.png';
+                                }}
+                            />
+                            <div className={styles.resultInfo}>
+                                <span className={styles.resultTitle}>{track.title}</span>
+                                <span className={styles.resultSource}>
+                                    {track.source?.src || ''}
+                                </span>
+                            </div>
+                            <span className={styles.resultDuration}>
+                                {formatTime(new Time(track.duration || 0, 's'))}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const YouTubeSelector = ({onChange}: SelectorProps) => {
+    const [query, setQuery] = useState<string>('');
+    const [results, setResults] = useState<YTSearchResult[]>([]);
+    const [searched, setSearched] = useState<boolean>(false);
+    const [selected, setSelected] = useState<YTSearchResult>(null);
+
+    const handleSelect = (result: YTSearchResult) => {
+        setSelected(result);
+        onChange?.(result);
+    }
+
+    return (
+        <div>
+            <Input
+                type={'text'}
+                icon={<PiMagnifyingGlassBold/>}
+                placeholder={'Search...'}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={styles.mb}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                        if (query.trim().length < 2) return;
+
+                        setSearched(false);
+
+                        window.electron.searchMusic(query).then(res => {
+                            if (res.success) setResults(res.data);
+                            else setResults([]);
+                            setSearched(true);
+                        });
+                    }
+                }}
+            />
+
+            <div className={styles.resultsContainer}>
+                <div className={clsx(styles.results, results.length === 0 && styles.noResults)}>
+                    {results.length === 0 && !searched && <span>Search something...</span>}
+                    {results.length === 0 && searched && <span>No tracks match your search.</span>}
+                    {results.map(result => (
+                        <div
+                            key={result.id}
+                            className={clsx(styles.result, (selected != null && selected.id === result.id) && styles.active)}
+                            onClick={() => handleSelect(result)}
+                        >
+                            <img
+                                className={styles.resultThumbnail}
+                                src={getBestThumbnail(result.thumbnails)}
+                                alt={result.name || ''}
+                                onError={(e) => {
+                                    const img = e.currentTarget;
+                                    img.onerror = null;
+                                    img.src = '/images/track.png';
+                                }}
+                            />
+                            <div className={styles.resultInfo}>
+                                <span className={styles.resultTitle}>{result.name}</span>
+                                <span className={styles.resultSource}>
+                                    {result.url}
+                                </span>
+                            </div>
+                            <span className={styles.resultDuration}>
+                                {formatTime(new Time(result.duration || 0, 's'))}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const FileSelector = ({onChange}: SelectorProps) => {
+    const [path, setPath] = useState<string>('');
+
+    const handleChange = (newUrl: string) => {
+        setPath(newUrl);
+        onChange?.(newUrl);
+    }
+
+    const handleSearch = () => {
+        window.electron.openFileMediaSelector().then(res => {
+            if (res.success) handleChange(res.data);
+            else handleChange('');
+        });
+    }
+
+    return (
+        <div>
+            <Row stretch>
+                <Col>
+                    <Input
+                        type={'text'}
+                        placeholder={'File Path'}
+                        value={path}
+                        onChange={(e) => handleChange(e.target.value)}
+                        className={styles.mb}
+                    />
+                </Col>
+                <Col size={1}>
+                    <Button
+                        variant={'primary'}
+                        icon={<PiFolderOpenBold/>}
+                        style={{height: '30px'}}
+                        onClick={handleSearch}
+                    />
+                </Col>
+            </Row>
+        </div>
+    );
+}
+
+const URLSelector = ({onChange}: SelectorProps) => {
+    const [url, setUrl] = useState<string>('');
+
+    const handleChange = (newUrl: string) => {
+        setUrl(newUrl);
+        onChange?.(newUrl);
+    }
+
+    return (
+        <div>
+            <Input
+                type={'url'}
+                placeholder={'URL'}
+                value={url}
+                onChange={(e) => handleChange(e.target.value)}
+                className={styles.mb}
+            />
+        </div>
+    );
+}
+
+export default MediaSelectorWin;

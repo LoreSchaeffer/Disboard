@@ -1,6 +1,6 @@
-import {ApiCredentials} from "../types/settings";
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig} from "axios";
-import {YTSearchResult, YTStream} from "../types/music-api";
+import {ApiCredentials} from "../../types/settings";
+import {YTSearchResult, YTStream} from "../../types/music-api";
 
 type AuthResponse = {
     accessToken: string;
@@ -64,7 +64,7 @@ export class MusicApi {
         return res.data;
     }
 
-    public async getStream(videoId: string): Promise<YTStream> {
+    public async getStream(videoId: string): Promise<string> {
         const res = await this.api.get<YTStream>('/newpipe/stream', {
             params: {
                 id: videoId
@@ -72,7 +72,7 @@ export class MusicApi {
         });
 
         if (res.status < 200 || res.status >= 300) throw new Error(`Get stream request failed with status ${res.status}`);
-        return res.data;
+        return res.data?.content;
     }
 
     public isAuthenticated(): boolean {

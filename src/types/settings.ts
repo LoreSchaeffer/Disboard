@@ -1,22 +1,26 @@
-import {RepeatMode} from "./common";
+import {RepeatModeSchema} from "./common";
+import {z} from "zod";
 
-export type Settings = {
-    width: number;
-    height: number;
-    volume: number;
-    previewVolume: number;
-    outputDevice: string;
-    previewOutputDevice: string;
-    repeat: RepeatMode;
-    activeProfile: string | null;
-    zoom: number;
-    showImages: boolean;
-    musicApi: string;
-    musicApiCredentials: ApiCredentials;
-    debug: boolean;
-}
+export const ApiCredentialsSchema = z.object({
+    clientId: z.string().default(''),
+    clientSecret: z.string().default('')
+});
 
-export type ApiCredentials = {
-    clientId: string;
-    clientSecret: string;
-}
+export const SettingsSchema = z.object({
+    width: z.number().min(1080).max(10000).default(1366),
+    height: z.number().min(608).max(10000).default(768),
+    volume: z.number().min(0).max(100).default(50),
+    previewVolume: z.number().min(0).max(100).default(50),
+    outputDevice: z.string().default('default'),
+    previewOutputDevice: z.string().default('default'),
+    repeat: RepeatModeSchema.default('none'),
+    activeProfile: z.string().nullable().default(null),
+    zoom: z.number().min(0.5).max(3).default(1),
+    showImages: z.boolean().default(true),
+    musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
+    musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
+    debug: z.boolean().default(false)
+});
+
+export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
+export type Settings = z.infer<typeof SettingsSchema>;

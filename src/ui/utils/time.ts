@@ -1,4 +1,4 @@
-import {TimeUnit} from "../../types/profiles";
+import {TimeUnit} from "../../types/data";
 
 export const formatTime = (time: Time | number): string => {
     if (!time || (typeof (time) === 'number' && time < 0)) return '00:00';

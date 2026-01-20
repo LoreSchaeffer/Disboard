@@ -1,6 +1,6 @@
 import {Track} from "../../types/track";
 import {Time} from "./time";
-import {clamp} from "../../utils/utils";
+import {clamp} from "../../common/utils";
 import {RepeatMode} from "../../types/common";
 
 export type PlayerStatus = {

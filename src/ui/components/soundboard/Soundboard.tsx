@@ -9,7 +9,7 @@ import {useContextMenu} from "../../context/ContextMenuContext";
 import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
 import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlaylistBold, PiStopBold, PiTrashBold} from "react-icons/pi";
 import {FaRegPaste} from "react-icons/fa6";
-import {SbButton, SbButtonStyle} from "../../../types/profiles";
+import {SbButton, SbButtonStyle} from "../../../types/data";
 
 const Soundboard = () => {
     const {activeProfile} = useWindow();

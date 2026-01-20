@@ -1,6 +1,6 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
 import {Settings} from "../../types/settings";
-import {Profile} from "../../types/profiles";
+import {Profile} from "../../types/data";
 import {WindowData} from "../../types/window";
 
 type WindowContextType = {

@@ -9,7 +9,7 @@ import {clsx} from "clsx";
 import {formatTime, Time} from "../../utils/time";
 import {YTSearchResult} from "../../../types/music-api";
 import {usePlayer} from "../../context/PlayerContext";
-import {getBestThumbnail} from "../../../utils/music-api";
+import {getBestThumbnail} from "../../../common/music-api";
 import Col from "../layout/Col";
 import Row from "../layout/Row";
 import {useWindow} from "../../context/WindowContext";

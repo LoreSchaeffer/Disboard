@@ -1,13 +1,13 @@
 import styles from './ButtonSettingsWin.module.css';
 import React, {useEffect, useState} from "react";
-import {CropOptions, Profile, SbButton, SbButtonStyle, TimeUnit} from "../../../types/profiles";
+import {CropOptions, Profile, SbButton, SbButtonStyle, TimeUnit} from "../../../types/data";
 import {useWindow} from "../../context/WindowContext";
 import {ButtonWindowData} from "../../../types/window";
 import Spinner from "../misc/Spinner";
 import {useTitlebar} from "../../context/TitlebarContext";
 import Input from "../forms/Input";
 import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiStopFill, PiXBold} from "react-icons/pi";
-import {generateButtonId, validateButtonTitle} from "../../../utils/utils";
+import {generateButtonId, validateButtonTitle} from "../../../common/utils";
 import Button from "../misc/Button";
 import SoundboardButton from "../soundboard/SoundboardButton";
 import Separator from "../misc/Separator";

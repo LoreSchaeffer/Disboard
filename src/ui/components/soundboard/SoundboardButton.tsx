@@ -1,9 +1,9 @@
 import styles from "./SoundboardButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {useWindow} from "../../context/WindowContext";
-import {clamp} from "../../../utils/utils";
+import {clamp} from "../../../common/utils";
 import {clsx} from "clsx";
-import {SbButton} from "../../../types/profiles";
+import {SbButton} from "../../../types/data";
 
 export type SoundboardButtonProps = {
     row: number;

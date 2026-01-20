@@ -1,8 +1,7 @@
 import {contextBridge, ipcRenderer} from "electron";
-import {Track} from "./types/track";
 import {IpcResponse, TrackSource} from "./types/common";
 import {Settings} from "./types/settings";
-import {Profile, SbButton} from "./types/profiles";
+import {PlayerTrack, Profile, SbBtn, Track} from "./types/data";
 import {WindowId, WindowInfo} from "./types/window";
 import {YTSearchResult, YTStream} from "./types/music-api";
 
@@ -20,8 +19,14 @@ const api = {
         return () => ipcRenderer.removeListener('profiles', sub);
     },
 
+    // Main Window
+    onPlayNow: (func: (track: PlayerTrack) => void) => {
+        const sub = (_: unknown, track: PlayerTrack) => func(track);
+        ipcRenderer.on('play_now', sub);
+        return () => ipcRenderer.removeListener('play_now', sub);
+    },
+
     // SoundboardWin
-    onPlayNow: (func: (track: Track) => void) => ipcRenderer.on('play_now', (_, track: Track) => func(track)),
     handlePause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
     handlePlay: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
     handleMediaPlayPause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
@@ -34,12 +39,11 @@ const api = {
 
     /* === TO MAIN PROCESS === */
     // Window
-    getWindow: (): Promise<WindowInfo> => ipcRenderer.invoke('get_window'),
-
-    // Navbar
     minimize: () => ipcRenderer.send('minimize'),
     maximize: () => ipcRenderer.send('maximize'),
     close: () => ipcRenderer.send('close'),
+    getWindow: (): Promise<WindowInfo> => ipcRenderer.invoke('get_window'),
+    openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
 
     // Store
     getSettings: (): Promise<Settings> => ipcRenderer.invoke('get_settings'),
@@ -54,10 +58,8 @@ const api = {
     importProfile: () => ipcRenderer.send('import_profile'),
     exportProfile: (id: string) => ipcRenderer.send('export_profile', id),
     exportProfiles: () => ipcRenderer.send('export_profiles'),
-
-    // Buttons
-    getButton: (profileId: string, buttonId: string): Promise<SbButton | null> => ipcRenderer.invoke('get_button', profileId, buttonId),
-    updateButton: (profileId: string, buttonId: string, button: Partial<SbButton>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_button', profileId, buttonId, button),
+    getButton: (profileId: string, buttonId: string): Promise<SbBtn | null> => ipcRenderer.invoke('get_button', profileId, buttonId),
+    updateButton: (profileId: string, buttonId: string, updates: Partial<SbBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_button', profileId, buttonId, updates),
     deleteButton: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_button', profileId, buttonId),
 
     // Tracks
@@ -65,9 +67,6 @@ const api = {
     getTrack: (trackId: string): Promise<Track | null> => ipcRenderer.invoke('get_track', trackId),
     addTrack: (source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, profileId, buttonId),
     playNow: (source: TrackSource, media: YTSearchResult | string) => ipcRenderer.send('play_now', source, media),
-
-    // Windows
-    openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),

@@ -1,25 +1,25 @@
 import styles from './ButtonSettingsWin.module.css';
 import React, {useEffect, useState} from "react";
-import {CropOptions, Profile, SbButton, SbButtonStyle, TimeUnit} from "../../../types/data";
-import {useWindow} from "../../context/WindowContext";
-import {ButtonWindowData} from "../../../types/window";
-import Spinner from "../misc/Spinner";
-import {useTitlebar} from "../../context/TitlebarContext";
-import Input from "../forms/Input";
+import {BtnStyle, CropOptions, Profile, SbBtn, TimeUnit} from "../../types/data";
+import {useWindow} from "../context/WindowContext";
+import {ButtonWindowData} from "../../types/window";
+import Spinner from "../components/misc/Spinner";
+import {useTitlebar} from "../context/TitlebarContext";
+import Input from "../components/forms/Input";
 import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiStopFill, PiXBold} from "react-icons/pi";
-import {generateButtonId, validateButtonTitle} from "../../../common/utils";
-import Button from "../misc/Button";
-import SoundboardButton from "../soundboard/SoundboardButton";
-import Separator from "../misc/Separator";
-import Select from "../forms/Select";
-import Row from "../layout/Row";
-import Col from "../layout/Col";
-import ColorPicker from "../forms/ColorPicker";
+import Button from "../components/misc/Button";
+import SoundboardButton from "../components/soundboard/SoundboardButton";
+import Separator from "../components/misc/Separator";
+import Select from "../components/forms/Select";
+import Row from "../components/layout/Row";
+import Col from "../components/layout/Col";
+import ColorPicker from "../components/forms/ColorPicker";
 import {clsx} from "clsx";
-import Toggle from "../forms/Toggle";
-import {hexToHsl, hslToHex} from "../../utils/utils";
-import {Time} from "../../utils/time";
-import {usePlayer} from "../../context/PlayerContext";
+import Toggle from "../components/forms/Toggle";
+import {generateButtonId, hexToHsl, hslToHex} from "../utils/utils";
+import {Time} from "../utils/time";
+import {usePlayer} from "../context/PlayerContext";
+import {validateName} from "../../main/utils/validation";
 
 type Errors = {
     [key: string]: string;
@@ -36,12 +36,12 @@ const ButtonSettingsWin = () => {
     const {previewPlayer, previewStatus} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const [profile, setProfile] = useState<Profile | undefined>(undefined);
-    const [button, setButton] = useState<SbButton | undefined>(undefined);
+    const [button, setButton] = useState<SbBtn | undefined>(undefined);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     const [errors, setErrors] = useState<Errors>({});
-    const [newButton, setNewButton] = useState<Partial<SbButton>>({});
+    const [newButton, setNewButton] = useState<Partial<SbBtn>>({});
 
     useEffect(() => {
         if (!data || data.type !== 'button') return;
@@ -110,18 +110,18 @@ const ButtonSettingsWin = () => {
         );
     }
 
-    const performValidation = (currentPartial: Partial<SbButton>) => {
-        const fullButton = {...button, ...currentPartial} as SbButton;
+    const performValidation = (currentPartial: Partial<SbBtn>) => {
+        const fullButton = {...button, ...currentPartial} as SbBtn;
         const err: Errors = {};
 
         if (!fullButton.title) err.title = 'Title is required';
-        else if (!validateButtonTitle(fullButton.title)) err.title = 'Title contains invalid characters';
+        else if (!validateName(fullButton.title)) err.title = 'Title contains invalid characters';
 
         setErrors(err);
         return Object.keys(err).length === 0;
     }
 
-    const handleFieldChange = (field: keyof SbButton, value: unknown) => {
+    const handleFieldChange = (field: keyof SbBtn, value: unknown) => {
         if (!button) return;
 
         const originalValue = button[field];
@@ -140,7 +140,7 @@ const ButtonSettingsWin = () => {
         });
     };
 
-    const handleReset = (field: keyof SbButton) => {
+    const handleReset = (field: keyof SbBtn) => {
         setNewButton(prev => {
             const updated = {...prev};
             delete updated[field];
@@ -268,7 +268,7 @@ const ButtonSettingsWin = () => {
         });
     }
 
-    const handleStyleChange = (field: keyof SbButtonStyle, value: string | null) => {
+    const handleStyleChange = (field: keyof BtnStyle, value: string | null) => {
         if (!button) return;
 
         const originalValue = button.style?.[field];
@@ -300,7 +300,7 @@ const ButtonSettingsWin = () => {
         });
     }
 
-    const handleStyleReset = (field: keyof SbButtonStyle) => {
+    const handleStyleReset = (field: keyof BtnStyle) => {
         setNewButton(prev => {
             const currentStyle = prev.style || {};
             const updatedStyle = {...currentStyle};
@@ -317,7 +317,7 @@ const ButtonSettingsWin = () => {
         });
     }
 
-    const isModified = (field: keyof SbButton) => field in newButton;
+    const isModified = (field: keyof SbBtn) => field in newButton;
 
     const isCropModified = (field: keyof CropOptions) => newButton.cropOptions && field in newButton.cropOptions;
 
@@ -343,7 +343,7 @@ const ButtonSettingsWin = () => {
         }
     }
 
-    const previewButtonObj: SbButton | undefined = button ? {
+    const previewButtonObj: SbBtn | undefined = button ? {
         ...button,
         ...newButton,
         cropOptions: {...button.cropOptions, ...newButton.cropOptions},
@@ -530,10 +530,10 @@ const ButtonSettingsWin = () => {
 type ColorPickerRowProps = {
     label: string;
     propPrefix: 'text_color' | 'background_color' | 'border_color';
-    currentStyle?: SbButtonStyle;
-    originalStyle?: SbButtonStyle;
-    onChange: (field: keyof SbButtonStyle, value: string) => void;
-    onReset: (field: keyof SbButtonStyle) => void;
+    currentStyle?: BtnStyle;
+    originalStyle?: BtnStyle;
+    onChange: (field: keyof BtnStyle, value: string) => void;
+    onReset: (field: keyof BtnStyle) => void;
 }
 
 const ColorPickerRow = ({
@@ -545,9 +545,9 @@ const ColorPickerRow = ({
                             onReset
                         }: ColorPickerRowProps) => {
     const [autoMode, setAutoMode] = useState<boolean>(false);
-    const defaultKey = propPrefix as keyof SbButtonStyle;
-    const hoverKey = `${propPrefix}_hover` as keyof SbButtonStyle;
-    const activeKey = `${propPrefix}_active` as keyof SbButtonStyle;
+    const defaultKey = propPrefix as keyof BtnStyle;
+    const hoverKey = `${propPrefix}_hover` as keyof BtnStyle;
+    const activeKey = `${propPrefix}_active` as keyof BtnStyle;
 
     const getHoverColor = (color: string) => {
         const hsl = hexToHsl(color);

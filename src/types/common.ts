@@ -3,7 +3,6 @@ import {z} from "zod";
 export const RepeatModeSchema = z.enum(['none', 'one', 'all']);
 
 export type RepeatMode = z.infer<typeof RepeatModeSchema>;
-export type TrackSource = 'list' | 'youtube' | 'file' | 'url';
 export type MediaSelectorAction = 'update_button' | 'play_now';
 
 export type IpcResponse<T> = {
@@ -14,7 +13,6 @@ export type IpcResponse<T> = {
 
 export type MediaSelectorWin = {
     action: MediaSelectorAction;
-    parent?: number;
     profileId?: string;
     buttonId?: string;
 }

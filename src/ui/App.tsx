@@ -1,12 +1,11 @@
 import './App.css';
 import {ReactElement, useEffect, useState} from "react";
-import SoundboardWin from "./components/windows/SoundboardWin";
+import SoundboardWin from "./windows/SoundboardWin";
 import {useWindow} from "./context/WindowContext";
 import {useNavigation} from "./context/NavigationContext";
-import SettingsWin from "./components/windows/SettingsWin";
-import ButtonSettingsWin from "./components/windows/ButtonSettingsWin";
 import {PlayerProvider} from "./context/PlayerContext";
-import MediaSelectorWin from "./components/windows/MediaSelectorWin";
+import MediaSelectorWin from "./windows/MediaSelectorWin";
+import ButtonSettingsWin from "./windows/ButtonSettingsWin";
 
 const PAGES: {
     name: string;
@@ -14,7 +13,7 @@ const PAGES: {
     usePlayer: boolean;
 }[] = [
     {name: 'main', component: <SoundboardWin/>, usePlayer: true},
-    {name: 'settings', component: <SettingsWin/>, usePlayer: false},
+    // {name: 'settings', component: <SettingsWin/>, usePlayer: false},
     {name: 'button_settings', component: <ButtonSettingsWin/>, usePlayer: true},
     {name: 'media_selector', component: <MediaSelectorWin/>, usePlayer: true},
 ];

@@ -5,9 +5,9 @@ import {YTSearchResult} from "../../types/music-api";
 import {profilesStore, tracksStore} from "../utils/store";
 import {broadcastProfiles, downloadTrack, getYoutubeStream} from "../utils";
 import {getPosFromButtonId} from "../utils/data";
-import {generateUUID} from "../utils/utils";
-import {fetchTitle} from "../utils/ffmpeg";
+import {generateUUID, getPlayerTrack} from "../utils/utils";
 import {state} from "../state";
+import {getBestThumbnail} from "../utils/music-api";
 
 export const setupTracksHandlers = () => {
     ipcMain.handle('get_tracks', (): Track[] => tracksStore.get('tracks'));
@@ -17,69 +17,109 @@ export const setupTracksHandlers = () => {
         return tracks.find(t => t.id === trackId) || null;
     });
 
-    ipcMain.handle('add_track', async (_, source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string): Promise<IpcResponse<void>> => {
+    ipcMain.handle('add_track', (_, source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string): IpcResponse<void> => {
         if (!source || !media || !profileId || !buttonId) return {success: false, error: 'invalid_parameters'};
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
 
-        let track: Track;
+        const initialProfiles = profilesStore.get('profiles');
+        if (initialProfiles.findIndex(p => p.id === profileId) === -1) return {success: false, error: 'profile_not_found'};
 
-        if (source === 'list') {
-            track = tracksStore.get('tracks').find(t => t.id === media);
-            if (!track) return {success: false, error: 'track_not_found'};
-        } else {
-            let uri = typeof media === 'string' ? media : null;
+        const buttonPos = getPosFromButtonId(buttonId);
+        if (!buttonPos) return {success: false, error: 'invalid_button_id'};
 
-            if (source === 'youtube') {
-                try {
-                    const stream = await getYoutubeStream((media as YTSearchResult).id);
-                    if (!stream) return {success: false, error: 'stream_not_found'};
-                    uri = stream;
-                } catch (e) {
-                    return {success: false, error: e.message || 'unknown_error'};
-                }
+        const updateButtonInStore = (modifier: (btn: Btn | undefined) => Btn | null) => {
+            const currentProfiles = profilesStore.get('profiles');
+            const pIdx = currentProfiles.findIndex(p => p.id === profileId);
+            if (pIdx === -1) return;
+
+            const profile = currentProfiles[pIdx];
+            const btnIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
+
+            const existingBtn = btnIdx !== -1 ? profile.buttons[btnIdx] : undefined;
+
+            const newBtn = modifier(existingBtn);
+
+            if (newBtn === null) {
+                if (btnIdx !== -1) profile.buttons.splice(btnIdx, 1);
+            } else {
+                if (btnIdx !== -1) profile.buttons[btnIdx] = newBtn;
+                else profile.buttons.push(newBtn);
             }
 
+            currentProfiles[pIdx] = profile;
+            profilesStore.set('profiles', currentProfiles);
+            broadcastProfiles(currentProfiles);
+        };
+
+        if (source === 'list') {
+            const track = tracksStore.get('tracks').find(t => t.id === media);
+            if (!track) return {success: false, error: 'track_not_found'};
+
+            updateButtonInStore(() => ({
+                row: buttonPos.row,
+                col: buttonPos.col,
+                track: track.id
+            } as Btn));
+
+            return {success: true};
+        }
+
+        const downloadAsync = async () => {
+            const trackId = generateUUID();
+            let previousButtonState: Btn | undefined = undefined;
+
+            updateButtonInStore((existing) => {
+                previousButtonState = existing ? { ...existing } : undefined;
+                return {
+                    row: buttonPos.row,
+                    col: buttonPos.col,
+                    track: trackId,
+                    title: 'Downloading...'
+                } as Btn;
+            });
+
             try {
-                track = await downloadTrack(
+                let uri = typeof media === 'string' ? media : null;
+
+                if (source === 'youtube') {
+                    const stream = await getYoutubeStream((media as YTSearchResult).id);
+                    if (!stream) throw new Error('stream_not_found');
+                    uri = stream;
+                }
+
+                const track = await downloadTrack(
+                    trackId,
                     uri,
                     {
                         type: source,
                         src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
                     },
-                    source === 'youtube' ? (media as YTSearchResult).name : undefined
+                    source === 'youtube' ? (media as YTSearchResult).name : undefined,
+                    source === 'youtube' ? getBestThumbnail((media as YTSearchResult).thumbnails) : undefined
                 );
 
                 if (!track) throw new Error('download_failed');
+
+                console.log(`Track ${track.id} downloaded.`);
+                updateButtonInStore((existing) => {
+                    if (!existing) return null;
+                    const finalBtn = { ...existing };
+                    finalBtn.track = track.id;
+                    delete finalBtn.title;
+                    return finalBtn;
+                });
+
             } catch (e) {
-                return {success: false, error: e.message || 'download_error'};
+                console.warn(`Failed to download track: ${e.message}`);
+
+                updateButtonInStore(() => {
+                    return previousButtonState || null;
+                });
             }
         }
 
-        const profiles = profilesStore.get('profiles');
-        const profileIdx = profiles.findIndex(p => p.id === profileId);
-        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
-
-        const profile = profiles[profileIdx];
-        const buttonPos = getPosFromButtonId(buttonId);
-        if (!buttonPos) return {success: false, error: 'invalid_button_id'};
-
-        const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
-        if (existingButtonIdx === -1) {
-            profile.buttons.push({
-                row: buttonPos.row,
-                col: buttonPos.col,
-                track: track.id
-            } as Btn);
-        } else {
-            const existingButton = {...profile.buttons[existingButtonIdx]};
-            existingButton.track = track.id;
-            profile.buttons[existingButtonIdx] = existingButton;
-        }
-
-        profiles[profileIdx] = profile;
-        profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
+        downloadAsync();
 
         return {success: true};
     });
@@ -89,36 +129,18 @@ export const setupTracksHandlers = () => {
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return;
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return;
 
-        let track: PlayerTrack;
+        const track = await getPlayerTrack(source, media);
+        if (!track) return;
+        state.mainWindow.webContents.send('play_now', track);
+    });
 
-        if (source === 'list') {
-            track = tracksStore.get('tracks').find(t => t.id === media);
-            if (!track) return {success: false, error: 'track_not_found'};
-        } else {
-            let uri = typeof media === 'string' ? media : null;
+    ipcMain.handle('get_volatile_track', async (_, source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => {
+        if (!source || !media) return {success: false, error: 'invalid_parameters'};
+        if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_parameters'};
+        if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_parameters'};
 
-            if (source === 'youtube') {
-                try {
-                    const stream = await getYoutubeStream((media as YTSearchResult).id);
-                    if (!stream) return {success: false, error: 'stream_not_found'};
-                    uri = stream;
-                } catch (e) {
-                    return {success: false, error: e.message || 'unknown_error'};
-                }
-            }
-
-            track = {
-                id: generateUUID(),
-                source: {
-                    type: source,
-                    src: uri
-                },
-                title: source === 'youtube' ? (media as YTSearchResult).name : await fetchTitle(uri) || 'Unknown Title', // TODO Check for better methods
-                duration: source === 'youtube' ? (media as YTSearchResult).duration * 1000 : 0,
-                directStream: true
-            }
-
-            state.mainWindow.webContents.send('play_now', track);
-        }
+        const track = await getPlayerTrack(source, media);
+        if (!track) return {success: false, error: 'track_not_found'};
+        return {success: true, data: track};
     });
 };

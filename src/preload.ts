@@ -1,9 +1,9 @@
 import {contextBridge, ipcRenderer} from "electron";
-import {IpcResponse, TrackSource} from "./types/common";
+import {IpcResponse} from "./types/common";
 import {Settings} from "./types/settings";
-import {PlayerTrack, Profile, SbBtn, Track} from "./types/data";
+import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
 import {WindowId, WindowInfo} from "./types/window";
-import {YTSearchResult, YTStream} from "./types/music-api";
+import {YTSearchResult} from "./types/music-api";
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -13,8 +13,8 @@ const api = {
         ipcRenderer.on('settings', sub);
         return () => ipcRenderer.removeListener('settings', sub);
     },
-    onProfilesChanged: (func: (profiles: Profile[]) => void) => {
-        const sub = (_: unknown, val: Profile[]) => func(val);
+    onProfilesChanged: (func: (profiles: SbProfile[]) => void) => {
+        const sub = (_: unknown, val: SbProfile[]) => func(val);
         ipcRenderer.on('profiles', sub);
         return () => ipcRenderer.removeListener('profiles', sub);
     },
@@ -50,10 +50,10 @@ const api = {
     updateSettings: (settings: Partial<Settings>) => ipcRenderer.send('update_settings', settings),
 
     // Profiles
-    getProfiles: (): Promise<Profile[]> => ipcRenderer.invoke('get_profiles'),
-    getProfile: (id: string): Promise<Profile | null> => ipcRenderer.invoke('get_profile', id),
-    createProfile: (profile: Partial<Profile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('create_profile', profile),
-    updateProfile: (id: string, profile: Partial<Profile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_profile', id, profile),
+    getProfiles: (): Promise<SbProfile[]> => ipcRenderer.invoke('get_profiles'),
+    getProfile: (id: string): Promise<SbProfile | null> => ipcRenderer.invoke('get_profile', id),
+    createProfile: (profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('create_profile', profile),
+    updateProfile: (id: string, profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_profile', id, profile),
     deleteProfile: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_profile', id),
     importProfile: () => ipcRenderer.send('import_profile'),
     exportProfile: (id: string) => ipcRenderer.send('export_profile', id),
@@ -67,6 +67,7 @@ const api = {
     getTrack: (trackId: string): Promise<Track | null> => ipcRenderer.invoke('get_track', trackId),
     addTrack: (source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, profileId, buttonId),
     playNow: (source: TrackSource, media: YTSearchResult | string) => ipcRenderer.send('play_now', source, media),
+    getVolatileTrack: (source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('get_volatile_track', source, media),
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),
@@ -75,7 +76,7 @@ const api = {
     // Music API
     useMusicApi: (): Promise<boolean> => ipcRenderer.invoke('use_music_api'),
     searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
-    getVideoStream: (videoId: string): Promise<IpcResponse<YTStream>> => ipcRenderer.invoke('get_video_stream', videoId),
+    getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
 }
 
 contextBridge.exposeInMainWorld('electron', api);

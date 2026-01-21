@@ -15,7 +15,6 @@ export const getPosFromButtonId = (buttonId: string): { row: number, col: number
 
 export const convertBtnToSbBtn = (profileBtn: Btn, tracks: Track[]): SbBtn | null => {
     const track = tracks.find(t => t.id === profileBtn.track);
-    if (!track) return null;
 
     return {
         id: generateButtonId(profileBtn.row, profileBtn.col),
@@ -30,7 +29,7 @@ export const convertBtnToSbBtn = (profileBtn: Btn, tracks: Track[]): SbBtn | nul
 
 export const convertBtnsToSbBtns = (profileBtns: Btn[]): SbBtn[] => {
     const tracks = tracksStore.get('tracks');
-    return profileBtns.map(pb => convertBtnToSbBtn(pb, tracks)).filter((btn) => btn !== null);
+    return profileBtns.map(pb => convertBtnToSbBtn(pb, tracks));
 }
 
 export const convertSbBtnToBtn = (sbBtn: SbBtn): Btn => {

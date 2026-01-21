@@ -9,25 +9,26 @@ import {useContextMenu} from "../../context/ContextMenuContext";
 import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
 import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlaylistBold, PiStopBold, PiTrashBold} from "react-icons/pi";
 import {FaRegPaste} from "react-icons/fa6";
-import {SbButton, SbButtonStyle} from "../../../types/data";
+import {BtnStyle, SbBtn} from "../../../types/data";
+import {generateButtonId} from "../../utils/utils";
 
 const Soundboard = () => {
     const {activeProfile} = useWindow();
     const {showContextMenu} = useContextMenu();
     const {player, previewPlayer} = usePlayer();
 
-    const [copiedButton, setCopiedButton] = useState<SbButton | null>(null);
-    const [copiedStyle, setCopiedStyle] = useState<SbButtonStyle | null>(null);
+    const [copiedButton, setCopiedButton] = useState<SbBtn | null>(null);
+    const [copiedStyle, setCopiedStyle] = useState<BtnStyle | null>(null);
 
     const rows = activeProfile?.rows || 8;
     const cols = activeProfile?.cols || 10;
 
-    const onClick = (_: MouseEvent, button: SbButton) => {
+    const onClick = (_: MouseEvent, button: SbBtn) => {
         if (!button || !button.track) return
         player.playNow({...button.track, title: button.title || button.track.title});
     }
 
-    const onContextMenu = (event: MouseEvent, button: SbButton, row: number, col: number) => {
+    const onContextMenu = (event: MouseEvent, button: SbBtn, row: number, col: number) => {
         const playPreview = () => {
             if (!button || !button.track) return;
             previewPlayer.playNow({...button.track, title: button.title || button.track.title});
@@ -51,21 +52,21 @@ const Soundboard = () => {
         const pasteButton = () => {
             if (!copiedButton) return;
 
-            window.electron.saveButton(activeProfile.id, {row: row, col: col, ...copiedButton});
+            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {row: row, col: col, ...copiedButton});
         }
 
         const pasteStyle = () => {
             if (!copiedStyle) return;
-            window.electron.saveButton(activeProfile.id, {...button, style: {...copiedStyle}});
+            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {...button, style: {...copiedStyle}});
         }
 
         const clearStyle = () => {
-            window.electron.saveButton(activeProfile.id, {...button, style: undefined});
+            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {...button, style: undefined});
         }
 
         const deleteButton = () => {
             if (!button) return;
-            window.electron.deleteButton(activeProfile.id, row, col);
+            window.electron.deleteButton(activeProfile.id, generateButtonId(row, col));
         }
 
         const isButtonNotSet = !button || !button.track;
@@ -104,12 +105,19 @@ const Soundboard = () => {
             {
                 label: 'Chose track',
                 icon: <PiFileBold/>,
-                onClick: () => window.electron.openMediaSelectorWin(row, col)
+                onClick: () => window.electron.openWindow('media_selector', {
+                    action: 'update_button',
+                    profileId: activeProfile.id,
+                    buttonId: generateButtonId(row, col)
+                })
             },
             {
                 label: 'Settings',
                 icon: <PiGearSixBold/>,
-                onClick: () => window.electron.openButtonSettingsWin(row, col)
+                onClick: () => window.electron.openWindow('button_settings', {
+                    profileId: activeProfile.id,
+                    buttonId: generateButtonId(row, col)
+                })
             },
             {separator: true},
             {
@@ -172,7 +180,7 @@ const Soundboard = () => {
             toButton.col = fromCol;
         }
 
-        window.electron.saveProfile(activeProfile);
+        window.electron.updateProfile(activeProfile.id, activeProfile);
     };
 
     return (
@@ -186,7 +194,7 @@ const Soundboard = () => {
             >
                 {Array.from({length: rows}).map((_, row) =>
                     Array.from({length: cols}).map((_, col) => {
-                        const button = activeProfile.buttons.find(b => b.row === row && b.col === col) || null;
+                        const button: SbBtn = activeProfile.buttons.find(b => b.row === row && b.col === col) || null;
                         return (
                             <DraggableButton
                                 key={`btn-${row}-${col}`}

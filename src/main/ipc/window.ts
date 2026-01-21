@@ -6,12 +6,12 @@ import {createButtonSettingsWindow, createMediaSelectorWindow} from "../windows"
 
 export const setupWindowHandlers = () => {
     ipcMain.on('minimize', (e: IpcMainInvokeEvent) => {
-        const win = BrowserWindow.fromId(e.frameId);
+        const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.minimize();
     });
 
     ipcMain.on('maximize', (e: IpcMainInvokeEvent) => {
-        const win = BrowserWindow.fromId(e.frameId);
+        const win = BrowserWindow.fromWebContents(e.sender);
         if (!win || !win.isResizable()) return;
 
         if (win.isMaximized()) win.restore();
@@ -19,7 +19,7 @@ export const setupWindowHandlers = () => {
     });
 
     ipcMain.on('close', (e: IpcMainInvokeEvent) => {
-        const win = BrowserWindow.fromId(e.frameId);
+        const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.close();
     });
 
@@ -38,11 +38,11 @@ export const setupWindowHandlers = () => {
         };
     });
 
-    ipcMain.on('open_window', (_, winId: WindowId, args?: unknown) => {
+    ipcMain.on('open_window', (e: IpcMainInvokeEvent, winId: WindowId, args?: unknown) => {
         switch (winId) {
             case 'media_selector': {
                 const safeArgs = (args || {}) as MediaSelectorWin;
-                createMediaSelectorWindow(safeArgs.action, safeArgs.parent, safeArgs.profileId, safeArgs.buttonId);
+                createMediaSelectorWindow(safeArgs.action, e.frameId, safeArgs.profileId, safeArgs.buttonId);
                 break;
             }
             case 'button_settings': {

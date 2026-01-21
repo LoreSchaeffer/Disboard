@@ -1,22 +1,22 @@
 import {Player, PlayerStatus} from "../utils/player";
 import {createContext, PropsWithChildren, useContext, useEffect, useState} from "react";
-import {Track} from "../../types/track";
 import {Time} from "../utils/time";
 import {RepeatMode} from "../../types/common";
+import {PlayerTrack} from "../../types/data";
 
 type PlayerContextType = {
     player: Player;
     status: PlayerStatus;
     repeat: RepeatMode;
-    queue: Track[];
+    queue: PlayerTrack[];
     index: number;
-    currentTrack: Track | null;
+    currentTrack: PlayerTrack | null;
     duration: Time;
     currentTime: Time;
 
     previewPlayer: Player;
     previewStatus: PlayerStatus;
-    previewCurrentTrack: Track | null;
+    previewCurrentTrack: PlayerTrack | null;
     previewDuration: Time;
     previewCurrentTime: Time;
 }
@@ -29,14 +29,14 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
     const [status, setStatus] = useState<PlayerStatus>(player.getStatus());
     const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
-    const [queue, setQueue] = useState<Track[]>(player.getQueue());
+    const [queue, setQueue] = useState<PlayerTrack[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
-    const [currentTrack, setCurrentTrack] = useState<Track | null>(player.getCurrentTrack());
+    const [currentPlayerTrack, setCurrentPlayerTrack] = useState<PlayerTrack | null>(player.getCurrentPlayerTrack());
     const [duration, setDuration] = useState<Time>(new Time(0, 'ms'));
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     const [previewStatus, setPreviewStatus] = useState<PlayerStatus>(previewPlayer.getStatus());
-    const [previewCurrentTrack, setPreviewCurrentTrack] = useState<Track | null>(previewPlayer.getCurrentTrack());
+    const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentPlayerTrack());
     const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
     const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
@@ -46,7 +46,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setRepeat(player.getRepeatMode());
             setQueue(player.getQueue());
             setIndex(player.getIndex());
-            setCurrentTrack(player.getCurrentTrack());
+            setCurrentPlayerTrack(player.getCurrentPlayerTrack());
 
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
@@ -70,7 +70,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         player.on('timeupdate', handleTimeUpdate);
 
         player.on('trackchange', (track) => {
-            setCurrentTrack(track);
+            setCurrentPlayerTrack(track);
             setCurrentTime(new Time(0, 'ms'));
             setDuration(new Time(0, 'ms'));
         });
@@ -107,7 +107,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     useEffect(() => {
         const syncPreviewState = () => {
             setPreviewStatus(previewPlayer.getStatus());
-            setPreviewCurrentTrack(previewPlayer.getCurrentTrack());
+            setPreviewCurrentPlayerTrack(previewPlayer.getCurrentPlayerTrack());
 
             const dur = previewPlayer.getDuration();
             setPreviewDuration(dur ? dur : new Time(0, 'ms'));
@@ -131,7 +131,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         previewPlayer.on('timeupdate', handlePreviewTimeUpdate);
 
         previewPlayer.on('trackchange', (track) => {
-            setPreviewCurrentTrack(track);
+            setPreviewCurrentPlayerTrack(track);
             setPreviewCurrentTime(new Time(0, 'ms'));
             setPreviewDuration(new Time(0, 'ms'));
         });
@@ -167,13 +167,13 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             repeat,
             queue,
             index,
-            currentTrack,
+            currentTrack: currentPlayerTrack,
             duration,
             currentTime,
 
             previewPlayer,
             previewStatus,
-            previewCurrentTrack,
+            previewCurrentTrack: previewCurrentPlayerTrack,
             previewDuration,
             previewCurrentTime
         }}>

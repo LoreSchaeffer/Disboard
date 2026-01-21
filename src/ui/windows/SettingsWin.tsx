@@ -1,4 +1,4 @@
-import {useNavigation} from "../../context/NavigationContext";
+import {useNavigation} from "../context/NavigationContext";
 
 const SettingsWin = () => {
     const {back} = useNavigation();

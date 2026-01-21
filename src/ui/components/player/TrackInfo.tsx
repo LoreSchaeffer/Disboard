@@ -1,9 +1,9 @@
 import styles from './TrackInfo.module.css';
-import {Track} from "../../../types/track";
 import React from "react";
+import {PlayerTrack} from "../../../types/data";
 
 type TrackInfoProps = {
-    track: Track
+    track: PlayerTrack
     className?: string
 }
 

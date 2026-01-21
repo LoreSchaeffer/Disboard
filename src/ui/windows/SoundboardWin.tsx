@@ -1,23 +1,22 @@
 import styles from './SoundboardWin.module.css';
-import {useWindow} from "../../context/WindowContext";
 import React, {useEffect, useRef, useState} from "react";
-import Soundboard from "../soundboard/Soundboard";
-import Player from "../player/Player";
-import {useTitlebar} from "../../context/TitlebarContext";
-import {useContextMenu} from "../../context/ContextMenuContext";
 import {FaChevronDown} from "react-icons/fa6";
-import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
 import {PiArrowSquareInBold, PiArrowSquareOutBold, PiPlusBold, PiTrashBold} from "react-icons/pi";
 import {IoMdRadioButtonOff, IoMdRadioButtonOn} from "react-icons/io";
 import {FaChevronUp} from "react-icons/fa";
-import {PlayerProvider} from "../../context/PlayerContext";
+import {ContextMenuItemData} from "../components/context_menu/ContextMenuItem";
+import {useWindow} from "../context/WindowContext";
+import {useTitlebar} from "../context/TitlebarContext";
+import {useContextMenu} from "../context/ContextMenuContext";
+import Soundboard from "../components/soundboard/Soundboard";
+import Player from "../components/player/Player";
 
 const defProfileSelectorItems: ContextMenuItemData[] = [
     {separator: true},
     {
         label: 'New profile',
         icon: <PiPlusBold/>,
-        onClick: () => window.electron.openNewProfileWin(),
+        onClick: () => console.log('Create new profile'), // TODO create new profile logic (use modal)
     },
     {separator: true},
     {

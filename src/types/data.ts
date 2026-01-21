@@ -35,6 +35,7 @@ export const BtnSchema = z.object({
     col: z.number().int().min(0).max(49),
     track: z.uuid(),
     title: z.string().optional(),
+    volumeOverride: z.number().min(0).max(100).optional(),
     style: BtnStyleSchema.optional(),
     cropOptions: CropOptionsSchema.optional()
 });
@@ -62,7 +63,8 @@ export const TrackSchema = z.object({
     id: z.string(),
     source: SourceSchema,
     title: z.string(),
-    duration: z.number()
+    duration: z.number(),
+    downloading: z.boolean().optional()
 });
 
 export const SbBtnSchema = z.object({
@@ -71,6 +73,7 @@ export const SbBtnSchema = z.object({
     col: z.number().int().min(0).max(49),
     track: TrackSchema,
     title: z.string(),
+    volumeOverride: z.number().min(0).max(100).optional(),
     style: BtnStyleSchema.optional(),
     cropOptions: CropOptionsSchema.optional()
 });
@@ -89,7 +92,8 @@ export const TracksSchema = z.object({
 
 export const PlayerTrackSchema = TrackSchema.extend({
     cropOptions: CropOptionsSchema.optional(),
-    directStream: z.boolean().default(false).optional()
+    directStream: z.boolean().default(false).optional(),
+    volumeOverride: z.number().min(0).max(100).optional()
 });
 
 export type TimeUnit = z.infer<typeof TimeUnitSchema>;

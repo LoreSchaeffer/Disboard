@@ -3,18 +3,18 @@ import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {useWindow} from "../../context/WindowContext";
 import {clamp} from "../../../common/utils";
 import {clsx} from "clsx";
-import {SbButton} from "../../../types/data";
+import {SbBtn} from "../../../types/data";
 
 export type SoundboardButtonProps = {
     row: number;
     col: number;
-    button?: SbButton;
+    button?: SbBtn;
     active?: boolean;
     className?: string;
     isDragging?: boolean;
     isDropping?: boolean;
-    onClick?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
-    onContextMenu?: (e: React.MouseEvent, btn: SbButton, row: number, col: number) => void;
+    onClick?: (e: React.MouseEvent, btn: SbBtn, row: number, col: number) => void;
+    onContextMenu?: (e: React.MouseEvent, btn: SbBtn, row: number, col: number) => void;
 };
 
 type CustomCSSProperties = CSSProperties & {
@@ -62,17 +62,17 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
         const zoomFactor = Math.pow(clamp((settings.zoom || 1), 0.1, 2), 0.8);
 
         return ({
-            '--sb-bg': btn.style?.background_color || undefined,
-            '--sb-bg-hover': btn.style?.background_color_hover || btn.style?.background_color || undefined,
-            '--sb-bg-active': btn.style?.background_color_active || btn.style?.background_color || undefined,
+            '--sb-bg': btn.style?.backgroundColor || undefined,
+            '--sb-bg-hover': btn.style?.backgroundColorHover || btn.style?.backgroundColor || undefined,
+            '--sb-bg-active': btn.style?.backgroundColorActive || btn.style?.backgroundColor || undefined,
 
-            '--sb-text': btn.style?.text_color || undefined,
-            '--sb-text-hover': btn.style?.text_color_hover || btn.style?.text_color || undefined,
-            '--sb-text-active': btn.style?.text_color_active || btn.style?.text_color || undefined,
+            '--sb-text': btn.style?.textColor || undefined,
+            '--sb-text-hover': btn.style?.textColorHover || btn.style?.textColor || undefined,
+            '--sb-text-active': btn.style?.textColorActive || btn.style?.textColor || undefined,
 
-            '--sb-border': btn.style?.border_color || undefined,
-            '--sb-border-hover': btn.style?.border_color_hover || btn.style?.border_color || undefined,
-            '--sb-border-active': btn.style?.border_color_active || btn.style?.border_color || undefined,
+            '--sb-border': btn.style?.borderColor || undefined,
+            '--sb-border-hover': btn.style?.borderColorHover || btn.style?.borderColor || undefined,
+            '--sb-border-active': btn.style?.borderColorActive || btn.style?.borderColor || undefined,
 
             '--sb-font-size': `${11 * zoomFactor}pt`,
             '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,

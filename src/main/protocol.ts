@@ -2,6 +2,7 @@ import {net, protocol} from "electron";
 import {AUDIO_DIR, IMAGES_DIR} from "./constants";
 import path from "path";
 import {pathToFileURL} from "url";
+import fs from "node:fs";
 
 export const registerProtocols = () => {
     protocol.registerSchemesAsPrivileged([
@@ -27,6 +28,7 @@ export const setupProtocolHandlers = () => {
             const resName = decodeURIComponent(parsedUrl.pathname.slice(1));
 
             let targetPath = '';
+
             if (type === 'audio') {
                 targetPath = path.join(AUDIO_DIR, `${resName}.mp3`);
             } else if (type === 'images') {
@@ -34,12 +36,18 @@ export const setupProtocolHandlers = () => {
             } else if (type === 'file') {
                 targetPath = resName;
             } else {
-                return new Response('Invalid resource type', {status: 400});
+                console.warn(`[Protocol] 400 Bad Request: Unknown resource type ${type}`);
+                return new Response('Invalid resource type', { status: 400 });
+            }
+
+            if (!fs.existsSync(targetPath)) {
+                return new Response('File not found', { status: 404 });
             }
 
             return net.fetch(pathToFileURL(targetPath).toString());
-        } catch {
-            return new Response('File not found', {status: 404});
+        } catch (error) {
+            console.error('[Protocol] Error handling request:', error);
+            return new Response('Internal Server Error', { status: 500 });
         }
     });
 };

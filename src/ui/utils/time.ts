@@ -23,7 +23,7 @@ export class Time {
 
     constructor(time: number, unit: TimeUnit) {
         if (time === undefined || unit === undefined) throw new Error('Time and unit must be defined');
-        if (time < 0) throw Error('Time cannot be negative');
+        if (time < 0) time = 0;
 
         this.time = time;
         this.unit = unit;

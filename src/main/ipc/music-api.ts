@@ -6,14 +6,15 @@ import {getVideoId} from "../utils/music-api";
 import {getYoutubeStream} from "../utils";
 
 export const setupMusicApiHandlers = () => {
-    const musicApi = state.musicApi;
 
     ipcMain.handle('use_music_api', (): boolean => {
+        const musicApi = state.musicApi;
         return !(!musicApi || !musicApi.isAuthenticated());
-
     });
 
     ipcMain.handle('search_music', async (_, query: string): Promise<IpcResponse<YTSearchResult[]>> => {
+        const musicApi = state.musicApi;
+
         try {
             if (!musicApi) throw new Error('not_initialized');
             if (!musicApi.isAuthenticated()) throw new Error('not_authenticated');

@@ -121,3 +121,7 @@ export const applyUpdates = (target: any, source: any) => {
         else if (value !== undefined) target[key] = value;
     });
 }
+
+export const generateButtonId = (row: number, col: number): string => {
+    return `btn_${row}_${col}`;
+}

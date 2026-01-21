@@ -1,6 +1,6 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
 import {Settings} from "../../types/settings";
-import {Profile} from "../../types/data";
+import {SbProfile} from "../../types/data";
 import {WindowData} from "../../types/window";
 
 type WindowContextType = {
@@ -10,8 +10,8 @@ type WindowContextType = {
     page: string | null;
     settings: Settings | null;
     updateSettings?: (settings: Partial<Settings>) => void;
-    profiles: Profile[] | null;
-    activeProfile: Profile | null;
+    profiles: SbProfile[] | null;
+    activeProfile: SbProfile | null;
     data: WindowData<unknown> | null;
 }
 
@@ -23,7 +23,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [resizable, setResizable] = useState<boolean>(false);
     const [page, setPage] = useState<string | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
-    const [profiles, setProfiles] = useState<Profile[] | null>(null);
+    const [profiles, setProfiles] = useState<SbProfile[] | null>(null);
     const [data, setData] = useState<WindowData<unknown> | null>(null);
 
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);

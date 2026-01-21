@@ -1,7 +1,7 @@
-import {Track} from "../../types/track";
 import {Time} from "./time";
 import {clamp} from "../../common/utils";
 import {RepeatMode} from "../../types/common";
+import {PlayerTrack} from "../../types/data";
 
 export type PlayerStatus = {
     playing: boolean;
@@ -17,11 +17,11 @@ type EventHandlerMap = {
     pause?: () => void;
     resume?: () => void;
     play?: () => void;
-    trackchange?: (track: Track) => void;
+    trackchange?: (track: PlayerTrack) => void;
     seeked?: () => void;
     timeupdate?: (currentTime: Time, duration: Time) => void;
     repeatupdate?: (mode: RepeatMode) => void;
-    queueupdate?: (queue: Track[]) => void;
+    queueupdate?: (queue: PlayerTrack[]) => void;
     reset?: () => void;
     loading?: (isLoading: boolean) => void;
 };
@@ -32,10 +32,10 @@ export class Player {
     private readonly status: PlayerStatus;
 
     private repeat: RepeatMode = 'none';
-    private queue: Track[] = [];
+    private queue: PlayerTrack[] = [];
     private index: number = 0;
 
-    private currentTrack: Track | null = null;
+    private currentPlayerTrack: PlayerTrack | null = null;
 
     private startTime: Time | null = null;
     private endTime: Time | null = null;
@@ -123,10 +123,10 @@ export class Player {
     }
 
 
-    public addToQueue(track: Track) {
+    public addToQueue(track: PlayerTrack) {
         this.queue.push(track);
         this.eventHandlers['queueupdate']?.([...this.queue]);
-        if (this.queue.length === 1 && !this.currentTrack) {
+        if (this.queue.length === 1 && !this.currentPlayerTrack) {
             this.index = 0;
         }
     }
@@ -150,7 +150,7 @@ export class Player {
 
 
     public play() {
-        if (this.status.paused && this.currentTrack) {
+        if (this.status.paused && this.currentPlayerTrack) {
             this.resume();
             return;
         }
@@ -158,13 +158,13 @@ export class Player {
         if (this.queue.length === 0) return;
         if (this.index >= this.queue.length) this.index = 0;
 
-        this.currentTrack = this.queue[this.index];
+        this.currentPlayerTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
-    public playNow(track: Track) {
+    public playNow(track: PlayerTrack) {
         if (this.status.playing) this.stop();
-        this.currentTrack = track;
+        this.currentPlayerTrack = track;
         this._loadAndPlay();
     }
 
@@ -172,12 +172,12 @@ export class Player {
         if (index < 0 || index >= this.queue.length) return;
         this.stop();
         this.index = index;
-        this.currentTrack = this.queue[this.index];
+        this.currentPlayerTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
     public playPause() {
-        if (this.status.playing || (this.status.paused && this.currentTrack)) {
+        if (this.status.playing || (this.status.paused && this.currentPlayerTrack)) {
             if (this.status.paused) this.resume();
             else this.pause();
         } else {
@@ -209,7 +209,7 @@ export class Player {
             }
         }
         this.index = nextIndex;
-        this.currentTrack = this.queue[this.index];
+        this.currentPlayerTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
@@ -226,13 +226,12 @@ export class Player {
         }
 
         this.index = prevIndex;
-        this.currentTrack = this.queue[this.index];
+        this.currentPlayerTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
-
     public seek(timeMs: number) {
-        if (!this.currentTrack) return;
+        if (!this.currentPlayerTrack) return;
         this.status.seeking = true;
 
         let absoluteTimeS = timeMs / 1000;
@@ -257,16 +256,15 @@ export class Player {
         this.eventHandlers['repeatupdate']?.(mode);
     }
 
-
     public getStatus(): PlayerStatus {
         return {...this.status};
     }
 
-    public getCurrentTrack(): Track | null {
-        return this.currentTrack;
+    public getCurrentPlayerTrack(): PlayerTrack | null {
+        return this.currentPlayerTrack;
     }
 
-    public getQueue(): Track[] {
+    public getQueue(): PlayerTrack[] {
         return [...this.queue];
     }
 
@@ -284,17 +282,16 @@ export class Player {
 
 
     private _loadAndPlay() {
-        if (!this.currentTrack) return;
+        if (!this.currentPlayerTrack) return;
 
-        this.eventHandlers['trackchange']?.(this.currentTrack);
+        this.eventHandlers['trackchange']?.(this.currentPlayerTrack);
         this._calculateCropsAndDuration();
 
-        if (this.currentTrack.id.startsWith('yt_') || this.currentTrack.id.startsWith('url_')) {
-            this.audio.src = this.currentTrack.source.url;
-        } else if (this.currentTrack.id.startsWith('file_')) {
-            this.audio.src = `music://file/${encodeURIComponent(this.currentTrack.source.originalPath)}`;
+        if (this.currentPlayerTrack.directStream) {
+            if (this.currentPlayerTrack.source.type === 'youtube' || this.currentPlayerTrack.source.type === 'url') this.audio.src = this.currentPlayerTrack.source.src;
+            else this.audio.src = `music://file/${encodeURIComponent(this.currentPlayerTrack.source.src)}`;
         } else {
-            this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
+            this.audio.src = `music://audio/${encodeURIComponent(this.currentPlayerTrack.id)}`;
         }
 
         this.audio.load();
@@ -305,9 +302,9 @@ export class Player {
         this.endTime = null;
         this.duration = null;
 
-        if (!this.currentTrack) return;
+        if (!this.currentPlayerTrack) return;
 
-        const crops = this.currentTrack.cropOptions;
+        const crops = this.currentPlayerTrack.cropOptions;
 
         if (crops?.startTime && crops?.startTimeUnit && crops.startTime > 0) this.startTime = new Time(crops.startTime, crops.startTimeUnit);
 
@@ -323,7 +320,7 @@ export class Player {
 
         let totalFileDuration: Time;
         if (this.endTime) totalFileDuration = this.endTime.copy();
-        else totalFileDuration = Time.fromMs(this.currentTrack.duration || 0);
+        else totalFileDuration = Time.fromMs(this.currentPlayerTrack.duration || 0);
 
         this.duration = totalFileDuration.copy();
 
@@ -383,7 +380,7 @@ export class Player {
     private _applyVolume() {
         let finalVolume: number;
 
-        if (this.currentTrack && this.currentTrack.volume !== undefined && this.currentTrack.volume !== null) finalVolume = this.currentTrack.volume;
+        if (this.currentPlayerTrack && this.currentPlayerTrack.volumeOverride !== undefined && this.currentPlayerTrack.volumeOverride !== null) finalVolume = this.currentPlayerTrack.volumeOverride;
         else finalVolume = this.masterVolume;
 
         this.audio.volume = clamp(finalVolume, 0, 100) / 100;
@@ -393,13 +390,14 @@ export class Player {
         this.audio.pause();
         this.audio.currentTime = 0;
         this.audio.removeAttribute('src');
+        this.audio.volume = (clamp(this.masterVolume, 0, 100) / 100);
 
         this.status.playing = false;
         this.status.paused = false;
         this.status.seeking = false;
         this.status.loading = false;
 
-        this.currentTrack = null;
+        this.currentPlayerTrack = null;
         this.startTime = null;
         this.endTime = null;
         this.duration = null;

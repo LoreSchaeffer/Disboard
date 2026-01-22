@@ -58,21 +58,6 @@
     margin-bottom: 10px;
 }
 
-.colorPickerBlock {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-}
-
-.colorPickerIcons {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.colorPickerIcon {
-    width: 13px;
-    height: 13px;
-    cursor: pointer;
+.previewBtn {
+    margin-right: auto;
 }

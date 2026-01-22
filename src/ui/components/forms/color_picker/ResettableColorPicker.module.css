@@ -1,0 +1,18 @@
+.colorPickerBlock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.icons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.icon {
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+}

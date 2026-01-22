@@ -93,6 +93,7 @@ export const TracksSchema = z.object({
 export const PlayerTrackSchema = TrackSchema.extend({
     cropOptions: CropOptionsSchema.optional(),
     directStream: z.boolean().default(false).optional(),
+    titleOverride: z.string().optional(),
     volumeOverride: z.number().min(0).max(100).optional()
 });
 

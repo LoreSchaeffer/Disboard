@@ -9,6 +9,7 @@ import {generateUUID} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import {generateButtonId} from "./main/utils/data";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -74,7 +75,7 @@ const initApp = async () => {
     createMainWindow();
 
     // TODO Only for development purposes
-    //createButtonSettingsWindow(settingsStore.get('activeProfile'), generateButtonId(0, 0));
+    createButtonSettingsWindow(settingsStore.get('activeProfile'), generateButtonId(0, 1));
     //createMediaSelectorWindow('play_now');
 };
 

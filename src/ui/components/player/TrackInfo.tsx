@@ -13,7 +13,7 @@ const TrackInfo = ({track, className}: TrackInfoProps) => {
             <img
                 className={styles.image}
                 src={track ? `music://images/${track.id}` : '/images/track.png'}
-                alt={track.title || ''}
+                alt={track.titleOverride || track.title || ''}
                 onError={(e) => {
                     const img = e.currentTarget;
                     img.onerror = null;

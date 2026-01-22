@@ -10,7 +10,7 @@ import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
 import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlaylistBold, PiStopBold, PiTrashBold} from "react-icons/pi";
 import {FaRegPaste} from "react-icons/fa6";
 import {BtnStyle, SbBtn} from "../../../types/data";
-import {generateButtonId} from "../../utils/utils";
+import {generateButtonId, playerTrackFromBtn} from "../../utils/utils";
 
 const Soundboard = () => {
     const {activeProfile} = useWindow();
@@ -25,13 +25,13 @@ const Soundboard = () => {
 
     const onClick = (_: MouseEvent, button: SbBtn) => {
         if (!button || !button.track) return
-        player.playNow({...button.track, title: button.title || button.track.title});
+        player.playNow(playerTrackFromBtn(button));
     }
 
     const onContextMenu = (event: MouseEvent, button: SbBtn, row: number, col: number) => {
         const playPreview = () => {
             if (!button || !button.track) return;
-            previewPlayer.playNow({...button.track, title: button.title || button.track.title});
+            previewPlayer.playNow(playerTrackFromBtn(button));
         }
 
         const stopPreview = () => {
@@ -75,13 +75,17 @@ const Soundboard = () => {
             {
                 label: 'Play Now',
                 icon: <PiPlayBold/>,
-                onClick: () => player.playNow({...button.track, title: button.title || button.track.title}),
+                onClick: () => {
+                    if (button.track) player.playNow(playerTrackFromBtn(button));
+                },
                 disabled: isButtonNotSet
             },
             {
                 label: 'Add to queue',
                 icon: <PiPlaylistBold/>,
-                onClick: () => player.addToQueue({...button.track, title: button.title || button.track.title}),
+                onClick: () => {
+                    if (button.track) player.addToQueue(playerTrackFromBtn(button));
+                },
                 disabled: isButtonNotSet
             }
         ];
@@ -195,14 +199,17 @@ const Soundboard = () => {
                 {Array.from({length: rows}).map((_, row) =>
                     Array.from({length: cols}).map((_, col) => {
                         const button: SbBtn = activeProfile.buttons.find(b => b.row === row && b.col === col) || null;
+                        const hasTrack = button && button.track;
+                        const isDownloading = hasTrack && button.track.downloading;
+
                         return (
                             <DraggableButton
                                 key={`btn-${row}-${col}`}
                                 row={row}
                                 col={col}
                                 button={button || undefined}
-                                onClick={onClick}
-                                onContextMenu={onContextMenu}
+                                onClick={hasTrack && !isDownloading ? onClick : undefined}
+                                onContextMenu={!isDownloading || !hasTrack ? onContextMenu : undefined}
                                 swapButtons={swapButtons}
                             />
                         );

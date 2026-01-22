@@ -1,5 +1,6 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
+import {PlayerTrack, SbBtn} from "../../types/data";
 
 export const validateHexColor = (color: string): boolean => {
     return /^#[0-9A-F]{6}$/i.test(color) || /^#[0-9A-F]{3}$/i.test(color);
@@ -124,4 +125,13 @@ export const applyUpdates = (target: any, source: any) => {
 
 export const generateButtonId = (row: number, col: number): string => {
     return `btn_${row}_${col}`;
+}
+
+export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
+    return {
+        ...btn.track,
+        cropOptions: btn.cropOptions || undefined,
+        titleOverride: btn.title || undefined,
+        volumeOverride: btn.volumeOverride || undefined
+    }
 }

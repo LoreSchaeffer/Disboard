@@ -150,12 +150,9 @@ export class Time {
 
     subtract(time: Time): Time {
         const result = this.time - time.getTime(this.unit);
-        if (result < 0) {
-            console.warn("Time subtraction resulted in negative value, clamping to 0");
-            this.time = 0;
-        } else {
-            this.time = result;
-        }
+        if (result < 0) this.time = 0;
+        else this.time = result;
+
         return this;
     }
 

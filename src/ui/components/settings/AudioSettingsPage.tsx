@@ -34,7 +34,7 @@ const AudioSettingsPage = () => {
     const [previewOutput, setPreviewOutput] = useState<string>();
     const [previewVolume, setPreviewVolume] = useState<number>(settings.previewVolume || 50);
 
-    const previewDebuounceRef = useRef<NodeJS.Timeout | null>(null);
+    const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         getAudioDevices().then(devices => {
@@ -71,12 +71,12 @@ const AudioSettingsPage = () => {
     }
 
     const changeVolume = (_: number, newValue: number) => {
-        if (previewDebuounceRef.current) clearTimeout(previewDebuounceRef.current);
+        if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
 
         setPreviewVolume(newValue);
         previewPlayer.setVolume(newValue);
 
-        previewDebuounceRef.current = setTimeout(() => {
+        previewDebounceRef.current = setTimeout(() => {
             window.electron.updateSettings({previewVolume: newValue});
         }, 500);
     }

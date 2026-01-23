@@ -1,11 +1,97 @@
+import styles from './SettingsWin.module.css';
 import {useNavigation} from "../context/NavigationContext";
+import Row from "../components/layout/Row";
+import Col from "../components/layout/Col";
+import {ElementType, ReactElement, useState} from "react";
+import {PiCaretRightBold, PiDiscordLogoBold, PiHeadsetBold, PiXBold} from "react-icons/pi";
+import Sidebar from "../components/settings/Sidebar";
+
+export type Page = {
+    id: string;
+    label: string;
+    icon: ElementType;
+    content?: ReactElement;
+}
+
+export type Category = {
+    id: string;
+    label: string;
+    pages: Page[];
+};
+
+const SETTINGS: Category[] = [
+    {
+        id: 'app_settings',
+        label: 'App settings',
+        pages: [
+            {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <div>Audio 1</div>},
+        ]
+    },
+    {
+        id: 'discord',
+        label: 'Discord integration',
+        pages: [
+            {id: 'bot', label: 'Bot settings', icon: PiDiscordLogoBold, content: <div>Bot Settings</div>},
+            {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <div>Audio 2</div>},
+        ]
+    }
+];
 
 const SettingsWin = () => {
-    const {back} = useNavigation();
+    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'audio'});
+
+    const activePageContent = SETTINGS.find(c => c.id === activePage.categoryId)?.pages
+        .find(p => p.id === activePage.pageId)?.content;
 
     return (
-        <div onClick={back}>Go Back!</div>
+        <div className={styles.wrapper}>
+            <div className={styles.settings}>
+                <Row noGap>
+                    <Col size={3} className={styles.sidebar}>
+                        <Sidebar
+                            categories={SETTINGS}
+                            activePage={activePage}
+                            onPageSelected={(categoryId: string, pageId: string) => setActivePage({categoryId: categoryId, pageId: pageId})}
+                        />
+                    </Col>
+                    <Col size={9} className={styles.contentWrapper}>
+                        <Header activePage={activePage}/>
+                        <div className={styles.content}>
+                            {activePageContent || <div>No content available.</div>}
+                        </div>
+                    </Col>
+                </Row>
+            </div>
+        </div>
     )
 }
+
+type HeaderProps = {
+    activePage: { categoryId: string, pageId: string };
+}
+
+const Header = ({activePage}: HeaderProps) => {
+    const {back} = useNavigation();
+
+    const isSingleCategory = SETTINGS.length === 1;
+    const categoryLabel = SETTINGS.find(c => c.id === activePage.categoryId)?.label || '';
+    const pageLabel = SETTINGS.find(c => c.id === activePage.categoryId)?.pages.find(p => p.id === activePage.pageId)?.label || '';
+
+    return (
+        <div className={styles.header}>
+            <PiXBold className={styles.closeBtn} onClick={back}/>
+            <div className={styles.titleBlock}>
+                {!isSingleCategory && (
+                    <>
+                        <span className={styles.title}>{categoryLabel}</span>
+                        <PiCaretRightBold className={styles.titleCaret}/>
+                    </>
+                )}
+                <span className={styles.title}>{pageLabel}</span>
+            </div>
+        </div>
+    )
+}
+
 
 export default SettingsWin;

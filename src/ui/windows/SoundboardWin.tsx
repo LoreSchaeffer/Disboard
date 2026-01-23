@@ -11,6 +11,7 @@ import {useContextMenu} from "../context/ContextMenuContext";
 import Soundboard from "../components/soundboard/Soundboard";
 import Player from "../components/player/Player";
 import ProfileSettings from "../components/soundboard/ProfileSettings";
+import {useNavigation} from "../context/NavigationContext";
 
 const defProfileSelectorItems: ContextMenuItemData[] = [
     {separator: true},
@@ -36,11 +37,17 @@ const SoundboardWin = () => {
     const {settings, updateSettings, profiles, activeProfile} = useWindow();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();
+    const {navigate} = useNavigation();
 
     const [profileSelectorOpen, setProfileSelectorOpen] = useState<boolean>(false);
     const [profileSettingsOpen, setProfileSettingsOpen] = useState<boolean>(false);
 
     const zoomRef = useRef<number>(settings.zoom || 1);
+
+    // TODO only for development, remove later
+    useEffect(() => {
+        navigate('settings', false);
+    }, []);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {

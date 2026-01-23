@@ -3,13 +3,12 @@ import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
 import {broadcastProfiles, broadcastSettings} from "./main/utils";
 import {state} from "./main/state";
-import {createButtonSettingsWindow, createMainWindow, createMediaSelectorWindow} from "./main/windows";
+import {createMainWindow} from "./main/windows";
 import {profilesStore, settingsStore} from "./main/utils/store";
 import {generateUUID} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import {generateButtonId} from "./main/utils/data";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -73,10 +72,6 @@ const initApp = async () => {
     // 7. Launch main window
     console.log('Launching renderer...');
     createMainWindow();
-
-    // TODO Only for development purposes
-    createButtonSettingsWindow(settingsStore.get('activeProfile'), generateButtonId(0, 1));
-    //createMediaSelectorWindow('play_now');
 };
 
 // Lifecycle events

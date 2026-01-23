@@ -85,8 +85,6 @@ const ButtonSettingsWin = () => {
     }, [data]);
 
     const previewBtnData: SbBtn | null = useMemo(() => {
-        console.log('Calculating preview button data');
-
         if (!button) return null;
 
         const mergedStyle = {...(button.style || {}), ...(newButton.style || {})};

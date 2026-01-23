@@ -84,13 +84,6 @@ const ButtonSettingsWin = () => {
         });
     }, [data]);
 
-
-    // TODO To remove after tests (This is used only for debugging purposes)
-    useEffect(() => {
-        if (!newButton || loading) return;
-        console.log(JSON.stringify(newButton));
-    }, [newButton]);
-
     const previewBtnData: SbBtn | null = useMemo(() => {
         console.log('Calculating preview button data');
 

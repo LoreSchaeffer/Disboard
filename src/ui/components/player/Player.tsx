@@ -10,7 +10,11 @@ import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBo
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
 
-const Player = () => {
+type PlayerProps = {
+    showProfileSettings?: () => void;
+};
+
+const Player = ({showProfileSettings}: PlayerProps) => {
     const {settings, updateSettings} = useWindow();
     const {player, status, currentTrack, duration, currentTime, queue} = usePlayer();
 
@@ -118,11 +122,12 @@ const Player = () => {
                     <PlayerBtn
                         icon={<PiPlaylistBold/>}
                         disabled={!queueExists}
-                        title={'Queue'}
+                        title={queueExists ? 'Queue' : undefined}
                     />
                     <PlayerBtn
                         icon={<PiSlidersHorizontalBold/>}
                         title={'Profile settings'}
+                        onClick={showProfileSettings}
                     />
 
                     <div className={styles.volumeBlock}>

@@ -7,7 +7,7 @@
 }
 
 .settings {
-    width: clamp(900px, 90vw, 1500px);
+    width: clamp(900px, 90vw, 1000px);
     height: clamp(500px, 90vh, 90vh);
     background-color: var(--background-primary);
     border: 1px solid var(--border-on-primary);
@@ -72,6 +72,9 @@
 }
 
 .content {
+    flex: 1;
+    display: grid;
+    min-height: 0;
     overflow-y: auto;
     margin-top: var(--padding);
 }

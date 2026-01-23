@@ -96,14 +96,8 @@ export const getAudioDevices = async (): Promise<MediaDeviceInfo[]> => {
     return devices.filter(d =>
         d.kind === 'audiooutput' &&
         d.label !== '' &&
-        d.deviceId !== 'default' &&
         d.deviceId !== 'communications'
     );
-}
-
-export const getDefaultAudioDevice = async (): Promise<MediaDeviceInfo | undefined> => {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.find(d => d.kind === 'audiooutput' && d.deviceId === 'default');
 }
 
 export const getVolumeIcon = (volume: number): ElementType => {

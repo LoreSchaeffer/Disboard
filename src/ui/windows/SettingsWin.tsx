@@ -3,8 +3,9 @@ import {useNavigation} from "../context/NavigationContext";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
 import {ElementType, ReactElement, useState} from "react";
-import {PiCaretRightBold, PiDiscordLogoBold, PiHeadsetBold, PiXBold} from "react-icons/pi";
+import {PiCaretRightBold, PiHeadsetBold, PiXBold} from "react-icons/pi";
 import Sidebar from "../components/settings/Sidebar";
+import AudioSettingsPage from "../components/settings/AudioSettingsPage";
 
 export type Page = {
     id: string;
@@ -24,17 +25,9 @@ const SETTINGS: Category[] = [
         id: 'app_settings',
         label: 'App settings',
         pages: [
-            {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <div>Audio 1</div>},
+            {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <AudioSettingsPage/>},
         ]
     },
-    {
-        id: 'discord',
-        label: 'Discord integration',
-        pages: [
-            {id: 'bot', label: 'Bot settings', icon: PiDiscordLogoBold, content: <div>Bot Settings</div>},
-            {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <div>Audio 2</div>},
-        ]
-    }
 ];
 
 const SettingsWin = () => {
@@ -43,15 +36,22 @@ const SettingsWin = () => {
     const activePageContent = SETTINGS.find(c => c.id === activePage.categoryId)?.pages
         .find(p => p.id === activePage.pageId)?.content;
 
+    const handlePageActivation = (categoryId: string, pageId: string) => {
+        setActivePage(prev => {
+            if (prev.categoryId !== categoryId || prev.pageId !== pageId) return {categoryId, pageId};
+            return prev;
+        });
+    }
+
     return (
         <div className={styles.wrapper}>
             <div className={styles.settings}>
-                <Row noGap>
+                <Row noGap stretch>
                     <Col size={3} className={styles.sidebar}>
                         <Sidebar
                             categories={SETTINGS}
                             activePage={activePage}
-                            onPageSelected={(categoryId: string, pageId: string) => setActivePage({categoryId: categoryId, pageId: pageId})}
+                            onPageSelected={handlePageActivation}
                         />
                     </Col>
                     <Col size={9} className={styles.contentWrapper}>
@@ -92,6 +92,5 @@ const Header = ({activePage}: HeaderProps) => {
         </div>
     )
 }
-
 
 export default SettingsWin;

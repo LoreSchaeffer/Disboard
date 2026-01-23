@@ -14,7 +14,7 @@ const PAGES: {
     usePlayer: boolean;
 }[] = [
     {name: 'main', component: <SoundboardWin/>, usePlayer: true},
-    {name: 'settings', component: <SettingsWin/>, usePlayer: false},
+    {name: 'settings', component: <SettingsWin/>, usePlayer: true},
     {name: 'button_settings', component: <ButtonSettingsWin/>, usePlayer: true},
     {name: 'media_selector', component: <MediaSelectorWin/>, usePlayer: true},
 ];

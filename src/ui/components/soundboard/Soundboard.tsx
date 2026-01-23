@@ -7,7 +7,7 @@ import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
 import {useContextMenu} from "../../context/ContextMenuContext";
 import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
-import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlaylistBold, PiStopBold, PiTrashBold} from "react-icons/pi";
+import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopBold, PiStopFill, PiTrashBold} from "react-icons/pi";
 import {FaRegPaste} from "react-icons/fa6";
 import {BtnStyle, SbBtn} from "../../../types/data";
 import {generateButtonId, playerTrackFromBtn} from "../../utils/utils";
@@ -74,7 +74,7 @@ const Soundboard = () => {
         const items: ContextMenuItemData[] = [
             {
                 label: 'Play Now',
-                icon: <PiPlayBold/>,
+                icon: <PiPlayFill/>,
                 onClick: () => {
                     if (button.track) player.playNow(playerTrackFromBtn(button));
                 },
@@ -93,7 +93,7 @@ const Soundboard = () => {
         if (button && button.track) {
             items.push({
                 label: previewPlayer.getStatus().playing ? 'Stop Preview' : 'Preview',
-                icon: previewPlayer.getStatus().playing ? <PiPlayBold/> : <PiPlayBold/>,
+                icon: previewPlayer.getStatus().playing ? <PiStopFill/> : <PiPlayFill/>,
                 onClick: () => previewPlayer.getStatus().playing ? stopPreview() : playPreview()
             });
         } else if (previewPlayer.getStatus().playing) {

@@ -19,23 +19,42 @@ const api = {
         return () => ipcRenderer.removeListener('profiles', sub);
     },
 
-    // Main Window
+    // Player
     onPlayNow: (func: (track: PlayerTrack) => void) => {
         const sub = (_: unknown, track: PlayerTrack) => func(track);
         ipcRenderer.on('play_now', sub);
         return () => ipcRenderer.removeListener('play_now', sub);
     },
-
-    // SoundboardWin
-    handlePause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-    handlePlay: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-    handleMediaPlayPause: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-    handleMediaStop: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-    handleMediaNext: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-    handleMediaPrev: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
-
-    // ButtonWin
-    handleTrack: (channel: string, func: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
+    onPause: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('pause', sub);
+        return () => ipcRenderer.removeListener('pause', sub);
+    },
+    onPlay: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('play', sub);
+        return () => ipcRenderer.removeListener('play', sub);
+    },
+    onPlayPause: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('play_pause', sub);
+        return () => ipcRenderer.removeListener('play_pause', sub);
+    },
+    onStop: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('stop', sub);
+        return () => ipcRenderer.removeListener('stop', sub);
+    },
+    onNext: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('next', sub);
+        return () => ipcRenderer.removeListener('next', sub);
+    },
+    onPrev: (func: () => void) => {
+        const sub = () => func();
+        ipcRenderer.on('prev', sub);
+        return () => ipcRenderer.removeListener('prev', sub);
+    },
 
     /* === TO MAIN PROCESS === */
     // Window

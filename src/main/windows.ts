@@ -4,6 +4,7 @@ import path from "path";
 import {state} from "./state";
 import {MediaSelectorAction} from "../types/common";
 import {settingsStore} from "./utils/store";
+import {registerMediaShortcuts} from "./media";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -88,6 +89,8 @@ export const createMainWindow = () => {
             }, 250);
         }
     });
+
+    registerMediaShortcuts();
 }
 
 // TODO Data should be updated manually from the main process when it's changed

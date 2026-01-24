@@ -22,6 +22,26 @@ const Player = ({showProfileSettings}: PlayerProps) => {
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
+        const unsubPlayNow = window.electron.onPlayNow((track) => player.playNow(track));
+        const unsubPause = window.electron.onPause(() => player.pause());
+        const unsubPlay = window.electron.onPlay(() => player.play());
+        const unsubPlayPause = window.electron.onPlayPause(() => player.playPause());
+        const unsubStop = window.electron.onStop(() => player.stop());
+        const unsubNext = window.electron.onNext(() => player.next());
+        const unsubPrev = window.electron.onPrev(() => player.previous());
+
+        return () => {
+            unsubPlayNow();
+            unsubPause();
+            unsubPlay();
+            unsubPlayPause();
+            unsubStop();
+            unsubNext();
+            unsubPrev();
+        }
+    }, []);
+
+    useEffect(() => {
         setVolume(settings.volume);
     }, [settings.volume]);
 

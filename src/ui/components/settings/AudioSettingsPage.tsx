@@ -132,7 +132,7 @@ const AudioSettingsPage = () => {
                     <label>Preview Volume</label>
                 </Col>
                 <Col size={6}>
-                    <ProgressBar className={styles.volumeSlider} min={0} max={100} val={previewVolume} seekable onChange={changeVolume}/>
+                    <ProgressBar min={0} max={100} val={previewVolume} seekable onChange={changeVolume}/>
                 </Col>
             </Row>
         </div>

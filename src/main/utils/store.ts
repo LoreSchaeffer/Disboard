@@ -13,25 +13,39 @@ function createValidatedStore<T>(name: string, schema: z.Schema<T>, defaults: T)
         defaults
     });
 
-    const validate = (source: string) => {
-        const data = store.store;
-        const result = schema.safeParse(data);
+    let lastKnownGoodState: T = defaults;
 
-        if (!result.success) {
-            console.error(`[Store: ${name}] Detected corruption (${source}):`, result.error);
+    const validate = (source: 'startup' | 'external-change') => {
+        try {
+            const data = store.store;
 
-            try {
-                const backupPath = `${store.path}.corrupted-${Date.now()}.json`;
-                fs.copyFileSync(store.path, backupPath);
-                console.warn(`[Store: ${name}] Backup created at: ${backupPath}`);
-            } catch (e) {
-                console.error(`[Store: ${name}] Backup creation failed:`, e);
+            const result = schema.safeParse(data);
+            if (!result.success) throw new Error(`Schema mismatch: ${result.error.message}`);
+
+            lastKnownGoodState = result.data;
+
+            if (source === 'startup') store.store = result.data;
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            console.warn(`[Store: ${name}] Validation failed during '${source}': ${errorMessage}`);
+
+            if (source === 'startup') {
+                try {
+                    const backupPath = `${store.path}.corrupted-${Date.now()}.json`;
+                    fs.copyFileSync(store.path, backupPath);
+                    console.error(`[Store: ${name}] CRITICAL: Config corrupted on startup. Backup created at: ${backupPath}`);
+                } catch (backupErr) {
+                    console.error(`[Store: ${name}] Backup creation failed:`, backupErr);
+                }
+
+                store.store = defaults;
+                lastKnownGoodState = defaults;
+                console.info(`[Store: ${name}] Recovered default value.`);
+
+            } else {
+                console.warn(`[Store: ${name}] Ignoring invalid external change. Reverting in-memory store to last known good state.`);
+                store.store = lastKnownGoodState;
             }
-
-            store.store = defaults;
-            console.info(`[Store: ${name}] Recovered default value.`);
-        } else {
-            store.store = result.data;
         }
     };
 
@@ -58,6 +72,10 @@ export const settingsStore = createValidatedStore<Settings>(
         activeProfile: null,
         musicApi: 'https://ma.lycoris.it',
         musicApiCredentials: null,
+        discord: {
+            enabled: false,
+            joinAutomatically: false,
+        },
         debug: false
     }
 );

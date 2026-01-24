@@ -96,6 +96,11 @@ const api = {
     useMusicApi: (): Promise<boolean> => ipcRenderer.invoke('use_music_api'),
     searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
     getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
+
+    // Discord Stream
+    startAudioStream: () => ipcRenderer.send('audio_stream_start'),
+    stopAudioStream: () => ipcRenderer.send('audio_stream_end'),
+    sendAudioStreamData: (buffer: ArrayBuffer) => ipcRenderer.send('audio_stream_data', buffer),
 }
 
 contextBridge.exposeInMainWorld('electron', api);

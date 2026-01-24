@@ -89,6 +89,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setDuration(new Time(0, 'ms'));
         });
 
+        player.setBotMode(true);
+
         return () => {
             player.off('play');
             player.off('pause');

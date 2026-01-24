@@ -45,9 +45,9 @@ const SoundboardWin = () => {
     const zoomRef = useRef<number>(settings.zoom || 1);
 
     // TODO only for development, remove later
-    useEffect(() => {
-        navigate('settings', false);
-    }, []);
+    // useEffect(() => {
+    //     navigate('settings', false);
+    // }, []);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {

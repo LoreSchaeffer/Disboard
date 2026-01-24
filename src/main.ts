@@ -9,6 +9,8 @@ import {generateUUID} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import {DiscordStreamManager} from "./main/discord/stream-manager";
+import {DiscordBotController} from "./main/discord/discord";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -69,7 +71,27 @@ const initApp = async () => {
     console.log('Initializing FFMpeg...');
     ffmpeg.setFfmpegPath(ffmpegPath.path.replace('app.asar', 'app.asar.unpacked'));
 
-    // 7. Launch main window
+    // 7. Init discord
+    if (settingsStore.get('discord.enabled')) {
+        console.log('Discord integration is enabled, initializing...');
+
+        const streamManager = new DiscordStreamManager();
+        state.discordBot = new DiscordBotController(streamManager);
+        state.discordBot.login().then(success => {
+            setTimeout(() => {
+                if (success && settingsStore.get('discord.joinAutomatically')) {
+                    console.log('Automatically joining default channel...');
+                    state.discordBot.joinDefaultChannel().then(res => {
+                        console.log(res);
+                    }).catch(e => {
+                        console.error('Failed to join default channel:', e);
+                    });
+                }
+            }, 200);
+        });
+    }
+
+    // 8. Launch main window
     console.log('Launching renderer...');
     createMainWindow();
 };
@@ -85,4 +107,8 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 });
+
+app.on('will-quit', () => {
+    if (state.discordBot) state.discordBot.shutdown();
+})
 

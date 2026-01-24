@@ -9,6 +9,12 @@ export default defineConfig({
                 '@ffprobe-installer/ffprobe',
                 'fluent-ffmpeg',
                 'electron-squirrel-startup',
+                'discord.js',
+                '@discordjs/voice',
+                'libsodium-wrappers',
+                'sodium-native',
+                '@snazzah/davey',
+                'zod',
             ],
         }
     }

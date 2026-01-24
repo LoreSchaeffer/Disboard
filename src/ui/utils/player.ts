@@ -43,6 +43,16 @@ export class Player {
 
     private masterVolume: number = 50;
 
+    private botMode: boolean = false;
+
+    // Web Audio API Components
+    private audioContext: AudioContext;
+    private sourceNode: MediaElementAudioSourceNode;
+    private masterGainNode: GainNode;
+    private localGateNode: GainNode;
+    private streamDestNode: MediaStreamAudioDestinationNode;
+    private mediaRecorder: MediaRecorder | null = null;
+
     constructor() {
         this.status = {
             playing: false,
@@ -52,7 +62,33 @@ export class Player {
         };
 
         this.audio.preload = 'auto';
+        this.audio.volume = 1.0;
+
+        this._initializeWebAudioAPI();
         this._bindEvents();
+    }
+
+    private _initializeWebAudioAPI() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        this.audioContext = new AudioContextClass();
+
+        this.sourceNode = this.audioContext.createMediaElementSource(this.audio);
+        this.masterGainNode = this.audioContext.createGain();
+        this.localGateNode = this.audioContext.createGain();
+        this.streamDestNode = this.audioContext.createMediaStreamDestination();
+
+        // Source -> Master Gain
+        this.sourceNode.connect(this.masterGainNode);
+        // Master Gain -> Stream Destination
+        this.masterGainNode.connect(this.streamDestNode);
+        // Master Gain -> Local Gate -> Speakers
+        this.masterGainNode.connect(this.localGateNode);
+        this.localGateNode.connect(this.audioContext.destination);
+
+        this.masterGainNode.gain.value = clamp(this.masterVolume, 0, 100) / 100;
+        this.localGateNode.gain.value = 1.0;
+        this.audio.crossOrigin = 'anonymous';
     }
 
     private _bindEvents() {
@@ -123,6 +159,22 @@ export class Player {
     }
 
 
+    public setBotMode(enabled: boolean) {
+        if (this.botMode === enabled) return;
+        this.botMode = enabled;
+
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+
+        if (enabled) {
+            this.localGateNode.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.1);
+            this._startRecording();
+        } else {
+            this._stopRecording();
+            this.localGateNode.gain.setTargetAtTime(1, this.audioContext.currentTime, 0.1);
+        }
+    }
+
+
     public addToQueue(track: PlayerTrack) {
         this.queue.push(track);
         this.eventHandlers['queueupdate']?.([...this.queue]);
@@ -150,6 +202,8 @@ export class Player {
 
 
     public play() {
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+
         if (this.status.paused && this.currentPlayerTrack) {
             this.resume();
             return;
@@ -190,6 +244,7 @@ export class Player {
     }
 
     public resume() {
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
         this.audio.play().catch(console.error);
     }
 
@@ -242,13 +297,24 @@ export class Player {
         this.audio.currentTime = absoluteTimeS;
     }
 
+
     public setVolume(volume: number) {
         this.masterVolume = clamp(volume, 0, 100);
-        this.audio.volume = this.masterVolume / 100;
+        this.masterGainNode.gain.setTargetAtTime(this.masterVolume / 100, this.audioContext.currentTime, 0.1);
     }
 
-    public setOutputDevice(deviceId: string) {
-        this.audio.setSinkId?.(deviceId).catch((e) => console.error("Sink ID Error", e));
+    public async setOutputDevice(deviceId: string) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (this.audioContext as any).setSinkId === 'function') {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (this.audioContext as any).setSinkId(deviceId);
+            } catch (e) {
+                console.error('Failed to set output device on AudioContext', e);
+            }
+        } else {
+            console.warn('setSinkId not supported on AudioContext. Default device will be used instead.');
+        }
     }
 
     public setRepeatMode(mode: RepeatMode) {
@@ -380,17 +446,21 @@ export class Player {
     private _applyVolume() {
         let finalVolume: number;
 
-        if (this.currentPlayerTrack && this.currentPlayerTrack.volumeOverride !== undefined && this.currentPlayerTrack.volumeOverride !== null) finalVolume = this.currentPlayerTrack.volumeOverride;
-        else finalVolume = this.masterVolume;
+        if (this.currentPlayerTrack && this.currentPlayerTrack.volumeOverride !== undefined && this.currentPlayerTrack.volumeOverride !== null) {
+            finalVolume = this.currentPlayerTrack.volumeOverride;
+        } else {
+            finalVolume = this.masterVolume;
+        }
 
-        this.audio.volume = clamp(finalVolume, 0, 100) / 100;
+        this.masterGainNode.gain.setTargetAtTime(clamp(finalVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
     }
 
     private _resetPlayer() {
         this.audio.pause();
         this.audio.currentTime = 0;
         this.audio.removeAttribute('src');
-        this.audio.volume = (clamp(this.masterVolume, 0, 100) / 100);
+
+        this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 
         this.status.playing = false;
         this.status.paused = false;
@@ -405,5 +475,36 @@ export class Player {
         this.eventHandlers['trackchange']?.(null);
         this.eventHandlers['reset']?.();
         this.eventHandlers['timeupdate']?.(Time.fromMs(0), Time.fromMs(0));
+    }
+
+
+    private _startRecording() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') return;
+
+        window.electron.startAudioStream();
+
+        const stream = this.streamDestNode.stream;
+        const options = {mimeType: 'audio/webm;codecs=opus'};
+
+        try {
+            this.mediaRecorder = new MediaRecorder(stream, options);
+        } catch (e) {
+            console.error('MediaRecorder error (codec might be not supported):', e);
+            return;
+        }
+
+        this.mediaRecorder.ondataavailable = async (e) => {
+            if (e.data.size <= 0) return;
+
+            const buffer = await e.data.arrayBuffer();
+            window.electron.sendAudioStreamData(buffer);
+        }
+
+        this.mediaRecorder.start(50);
+    }
+
+    private _stopRecording() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
+        window.electron.stopAudioStream();
     }
 }

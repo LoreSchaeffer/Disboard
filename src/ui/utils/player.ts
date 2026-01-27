@@ -50,8 +50,8 @@ export class Player {
     private sourceNode: MediaElementAudioSourceNode;
     private masterGainNode: GainNode;
     private localGateNode: GainNode;
-    private streamDestNode: MediaStreamAudioDestinationNode;
-    private mediaRecorder: MediaRecorder | null = null;
+    private workletNode: AudioWorkletNode | null = null;
+    private workletInitPromise: Promise<void> | null = null;
 
     constructor() {
         this.status = {
@@ -68,20 +68,17 @@ export class Player {
         this._bindEvents();
     }
 
-    private _initializeWebAudioAPI() {
+    private async _initializeWebAudioAPI() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        this.audioContext = new AudioContextClass();
+        this.audioContext = new AudioContextClass({sampleRate: 48000});
 
         this.sourceNode = this.audioContext.createMediaElementSource(this.audio);
         this.masterGainNode = this.audioContext.createGain();
         this.localGateNode = this.audioContext.createGain();
-        this.streamDestNode = this.audioContext.createMediaStreamDestination();
 
         // Source -> Master Gain
         this.sourceNode.connect(this.masterGainNode);
-        // Master Gain -> Stream Destination
-        this.masterGainNode.connect(this.streamDestNode);
         // Master Gain -> Local Gate -> Speakers
         this.masterGainNode.connect(this.localGateNode);
         this.localGateNode.connect(this.audioContext.destination);
@@ -89,6 +86,13 @@ export class Player {
         this.masterGainNode.gain.value = clamp(this.masterVolume, 0, 100) / 100;
         this.localGateNode.gain.value = 1.0;
         this.audio.crossOrigin = 'anonymous';
+
+        try {
+            this.workletInitPromise = this.audioContext.audioWorklet.addModule('/audioProcessor.js');
+            await this.workletInitPromise;
+        } catch (e) {
+            console.error('Failed to load AudioWorklet module:', e);
+        }
     }
 
     private _bindEvents() {
@@ -167,7 +171,7 @@ export class Player {
 
         if (enabled) {
             this.localGateNode.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.1);
-            this._startRecording();
+            this._startRecording().catch(e => console.error('Failed to start recording:', e));
         } else {
             this._stopRecording();
             this.localGateNode.gain.setTargetAtTime(1, this.audioContext.currentTime, 0.1);
@@ -477,34 +481,41 @@ export class Player {
         this.eventHandlers['timeupdate']?.(Time.fromMs(0), Time.fromMs(0));
     }
 
-
-    private _startRecording() {
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') return;
-
-        window.electron.startAudioStream();
-
-        const stream = this.streamDestNode.stream;
-        const options = {mimeType: 'audio/webm;codecs=opus'};
+    private async _startRecording() {
+        if (this.workletNode) return;
 
         try {
-            this.mediaRecorder = new MediaRecorder(stream, options);
-        } catch (e) {
-            console.error('MediaRecorder error (codec might be not supported):', e);
-            return;
+            if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+            if (this.workletInitPromise) await this.workletInitPromise;
+
+            this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor', {
+                outputChannelCount: [2],
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                processorOptions: {}
+            });
+
+            this.workletNode.port.onmessage = (event) => {
+                window.electron.sendAudioPacket(event.data);
+            };
+
+            this.workletNode.onprocessorerror = (err) => console.error("Worklet Error:", err);
+            this.masterGainNode.connect(this.workletNode);
+
+            console.log("Stereo Streaming to Go Sidecar started.");
+        } catch (error) {
+            console.error("Error starting sidecar stream:", error);
         }
-
-        this.mediaRecorder.ondataavailable = async (e) => {
-            if (e.data.size <= 0) return;
-
-            const buffer = await e.data.arrayBuffer();
-            window.electron.sendAudioStreamData(buffer);
-        }
-
-        this.mediaRecorder.start(50);
     }
 
     private _stopRecording() {
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
-        window.electron.stopAudioStream();
+        if (!this.workletNode) return;
+
+        this.masterGainNode.disconnect(this.workletNode);
+        this.workletNode.disconnect();
+        this.workletNode.port.close();
+        this.workletNode = null;
+
+        console.log("Streaming to Discord stopped.");
     }
 }

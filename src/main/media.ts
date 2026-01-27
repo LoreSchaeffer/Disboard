@@ -19,6 +19,6 @@ export const registerMediaShortcuts = () => {
             }
         });
 
-        if (!success) console.warn(`Registration of shortcut ${key} failed.`);
+        if (!success) console.warn(`[Main] Registration of shortcut ${key} failed.`);
     });
 }

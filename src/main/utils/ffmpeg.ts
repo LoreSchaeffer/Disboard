@@ -25,9 +25,9 @@ export const saveAsMp3 = async (inputSource: string, outputDir: string, trackId:
             .audioCodec('libmp3lame')
             .format('mp3')
             .audioBitrate(256)
-            .on('start', () => console.log(`Starting download of track ${trackId}...`))
+            .on('start', () => console.log(`[FFmpeg] Starting download of track ${trackId}...`))
             .on('error', (err) => {
-                console.error(`Download of track ${trackId} failed...`, err);
+                console.error(`[FFmpeg] Download of track ${trackId} failed...`, err);
                 reject(err);
             })
             .on('end', () => {
@@ -48,7 +48,7 @@ export const fetchTitle = (inputSource: string): Promise<string | null> => {
     return new Promise((resolve) => {
         ffmpeg.ffprobe(inputSource, (err, data) => {
             if (err) {
-                console.warn(`An error occurred fetching ${inputSource} title:`, err.message);
+                console.warn(`[FFmpeg] An error occurred fetching ${inputSource} title:`, err.message);
                 resolve(null);
             } else {
                 const tags = data?.format?.tags || {};
@@ -74,7 +74,7 @@ export const extractCoverImage = (inputSource: string, outputDir: string, trackI
             ])
             .format('image2')
             .on('error', (err) => {
-                console.log(`No cover found or extraction error for track ${trackId}:`, err.message);
+                console.log(`[FFmpeg] No cover found or extraction error for track ${trackId}:`, err.message);
                 resolve(false);
             })
             .on('end', () => resolve(true))

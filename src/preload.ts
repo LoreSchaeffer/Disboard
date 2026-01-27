@@ -4,6 +4,9 @@ import {Settings} from "./types/settings";
 import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
 import {WindowId, WindowInfo} from "./types/window";
 import {YTSearchResult} from "./types/music-api";
+import * as dgram from "node:dgram";
+
+const udpClient = dgram.createSocket('udp4');
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -97,10 +100,14 @@ const api = {
     searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
     getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
 
-    // Discord Stream
-    startAudioStream: () => ipcRenderer.send('audio_stream_start'),
-    stopAudioStream: () => ipcRenderer.send('audio_stream_end'),
-    sendAudioStreamData: (buffer: ArrayBuffer) => ipcRenderer.send('audio_stream_data', buffer),
+    // Discord
+    // This should be only on main
+    sendAudioPacket: (buffer: ArrayBuffer) => {
+        const packet = Buffer.from(buffer);
+        udpClient.send(packet, 24455, '127.0.0.1', (e) => {
+            if (e) console.error('UDP Error:', e);
+        });
+    },
 }
 
 contextBridge.exposeInMainWorld('electron', api);

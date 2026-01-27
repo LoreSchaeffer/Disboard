@@ -101,7 +101,7 @@ export const setupTracksHandlers = () => {
 
                 if (!track) throw new Error('download_failed');
 
-                console.log(`Track ${track.id} downloaded.`);
+                console.log(`[Main] Track ${track.id} downloaded.`);
                 updateButtonInStore((existing) => {
                     if (!existing) return null;
                     const finalBtn = { ...existing };
@@ -111,7 +111,7 @@ export const setupTracksHandlers = () => {
                 });
 
             } catch (e) {
-                console.warn(`Failed to download track: ${e.message}`);
+                console.warn(`[Main] Failed to download track: ${e.message}`);
 
                 updateButtonInStore(() => {
                     return previousButtonState || null;

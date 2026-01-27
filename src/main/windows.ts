@@ -11,8 +11,8 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 const loadWindowUrl = (win: BrowserWindow, pageName: string, queryParams: string = '') => {
     const search = pageName !== 'main' ? `?page=${pageName}${queryParams}` : queryParams;
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`).catch(e => console.log(`Failed to load URL: ${e}`));
-    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search}).catch(e => console.log(`Failed to load file: ${e}`));
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`).catch(e => console.log(`[Main] Failed to load URL: ${e}`));
+    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search}).catch(e => console.log(`[Main] Failed to load file: ${e}`));
 };
 
 const createWindow = (options: WindowOptions): BrowserWindow => {
@@ -38,7 +38,8 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false,
-            webSecurity: true
+            webSecurity: true,
+            backgroundThrottling: false,
         },
     };
 

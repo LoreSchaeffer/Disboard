@@ -50,12 +50,12 @@ export const setupWindowHandlers = () => {
                     const {profileId, buttonId} = args as ButtonSettingsWin;
                     createButtonSettingsWindow(profileId, buttonId);
                 } else {
-                    console.error('Invalid arguments for button_settings window');
+                    console.error('[Main] Invalid arguments for button_settings window');
                 }
                 break;
             }
             default:
-                console.error('Unknown window ID:', winId);
+                console.error('[Main] Unknown window ID:', winId);
                 break;
         }
     });

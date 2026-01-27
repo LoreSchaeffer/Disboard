@@ -74,7 +74,8 @@ export const settingsStore = createValidatedStore<Settings>(
         musicApiCredentials: null,
         discord: {
             enabled: false,
-            joinAutomatically: false,
+            restPort: 24454,
+            udpPort: 24455,
         },
         debug: false
     }

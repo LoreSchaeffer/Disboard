@@ -35,7 +35,7 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
 
         return true;
     } catch (error) {
-        console.warn(`Failed to download cover for ${trackId}:`, error instanceof Error ? error.message : error);
+        console.warn(`[Main] Failed to download cover for ${trackId}:`, error instanceof Error ? error.message : error);
 
         const outputPath = path.join(outputDir, `${trackId}.jpg`);
         if (fs.existsSync(outputPath)) {

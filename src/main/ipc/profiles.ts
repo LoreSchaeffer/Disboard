@@ -168,13 +168,13 @@ export const setupProfilesHandlers = () => {
         try {
             jsonContent = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
         } catch (e) {
-            console.error('JSON Parse Exception:', e);
+            console.error('[Main] JSON Parse Exception:', e);
             return;
         }
 
         const result = SbProfileSchema.safeParse(jsonContent);
         if (!result.success) {
-            console.error('Profile validation failed:', result.error);
+            console.error('[Main] Profile validation failed:', result.error);
             return;
         }
 
@@ -208,7 +208,7 @@ export const setupProfilesHandlers = () => {
     ipcMain.on('export_profile', async (_, id: string) => {
         const profile = profilesStore.get('profiles').find(p => p.id === id);
         if (!profile) {
-            console.error('Profile not found');
+            console.error('[Main] Profile not found');
             return;
         }
 
@@ -232,7 +232,7 @@ export const setupProfilesHandlers = () => {
         try {
             fs.writeFileSync(filePath, JSON.stringify(convertProfileToSbProfile(profile), null, 2));
         } catch (e) {
-            console.error('Error exporting profile:', e.message);
+            console.error('[Main] Error exporting profile:', e.message);
         }
     });
 
@@ -267,13 +267,13 @@ export const setupProfilesHandlers = () => {
 
                 await fs.promises.writeFile(path.join(exportDir, finalFileName), JSON.stringify(convertProfileToSbProfile(profile), null, 2));
             } catch (e) {
-                console.error(`Error during profile ${profile.name} export:`, e);
+                console.error(`[Main] Error during profile ${profile.name} export:`, e);
             }
         });
 
         await Promise.all(exportPromises);
 
-        console.log(`Esportati ${profiles.length} profili.`);
+        console.log(`[Main] Esportati ${profiles.length} profili.`);
     });
 
     ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbBtn | null => {

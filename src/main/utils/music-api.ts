@@ -33,9 +33,9 @@ export class MusicApi {
 
         this.setupInterceptors();
         this.authenticate().then(() => {
-            console.log('MusicApi initialized and authenticated!');
+            console.log('[Main] MusicApi initialized and authenticated!');
         }).catch((e) => {
-            console.error('Failed to initialize MusicApi:', e);
+            console.error('[Main] Failed to initialize MusicApi:', e);
         });
     }
 
@@ -90,7 +90,7 @@ export class MusicApi {
             this.accessToken = accessToken;
             this.tokenExpiration = Date.now() + ((expiresIn - 10) * 1000);
 
-            console.log('Music API authenticated successfully, token expires in', expiresIn, 'seconds');
+            console.log('[Main] Music API authenticated successfully, token expires in', expiresIn, 'seconds');
 
             return accessToken;
         } catch (e) {

@@ -9,9 +9,10 @@ export const ApiCredentialsSchema = z.object({
 export const DiscordSettingsSchema = z.object({
     enabled: z.boolean().default(false),
     token: z.string().optional(),
-    defaultGuild: z.string().optional(),
-    defaultChannel: z.string().optional(),
-    joinAutomatically: z.boolean().default(false)
+    restPort: z.number().min(1).max(65535).default(24454),
+    udpPort: z.number().min(1).max(65535).default(24455),
+    lastGuild: z.string().optional(),
+    lastChannel: z.string().optional(),
 });
 
 export const SettingsSchema = z.object({
@@ -27,7 +28,7 @@ export const SettingsSchema = z.object({
     showImages: z.boolean().default(true),
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
     musicApiCredentials: ApiCredentialsSchema.optional().default(null),
-    discord: DiscordSettingsSchema.default({enabled: false, joinAutomatically: false}),
+    discord: DiscordSettingsSchema.default({enabled: false, restPort: 24454, udpPort: 24455}),
     debug: z.boolean().default(false)
 });
 

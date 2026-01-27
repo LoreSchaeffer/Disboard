@@ -9,8 +9,7 @@ import {generateUUID} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import {DiscordStreamManager} from "./main/discord/stream-manager";
-import {DiscordBotController} from "./main/discord/discord";
+import {DiscordBridge} from "./main/components/discord-bridge";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -19,22 +18,22 @@ registerProtocols();
 
 const initApp = async () => {
     // 1. Setup protocol handlers
-    console.log('Setting up protocol handlers...');
+    console.log('[Main] Setting up protocol handlers...');
     setupProtocolHandlers();
 
     // 2. Register IPC Handlers
-    console.log('Registering IPC handlers...');
+    console.log('[Main] Registering IPC handlers...');
     registerIpcHandlers();
 
     // 3. Setup sore change listeners
-    console.log('Setting up store listeners...');
+    console.log('[Main] Setting up store listeners...');
     settingsStore.onDidAnyChange((newValue) => broadcastSettings(newValue));
     profilesStore.onDidAnyChange((newValue) => broadcastProfiles(newValue.profiles));
 
     // 4. Data validation / Initialization
-    console.log('Validating data stores...');
+    console.log('[Main] Validating data stores...');
     if (profilesStore.get('profiles').length === 0) {
-        console.log('No profiles found, creating default profile...');
+        console.log('[Main] No profiles found, creating default profile...');
         profilesStore.set('store', [
             {
                 id: generateUUID(),
@@ -47,13 +46,13 @@ const initApp = async () => {
     }
 
     if (!settingsStore.get('activeProfile') || !profilesStore.get('profiles').find(p => p.id === settingsStore.get('activeProfile'))) {
-        console.log('Active profile not set or invalid, setting to first profile...');
+        console.log('[Main] Active profile not set or invalid, setting to first profile...');
 
         if (profilesStore.get('profiles').length > 0) {
-            console.log(`Setting active profile to: ${profilesStore.get('profiles')[0].name}`);
+            console.log(`[Main] Setting active profile to: ${profilesStore.get('profiles')[0].name}`);
             settingsStore.set('activeProfile', profilesStore.get('profiles')[0].id);
         } else {
-            console.error('No profile found');
+            console.error('[Main] No profile found');
         }
     }
 
@@ -61,38 +60,49 @@ const initApp = async () => {
     const musicApiEndpoint = settingsStore.get('musicApi');
     const musicApiCredentials = settingsStore.get('musicApiCredentials');
     if (musicApiEndpoint && musicApiCredentials && musicApiCredentials.clientId && musicApiCredentials.clientSecret) {
-        console.log('Initializing Music API...');
+        console.log('[Main] Initializing Music API...');
         setTimeout(() => state.musicApi = new MusicApi(musicApiEndpoint, musicApiCredentials), 0);
     } else {
-        console.log('Music API not configured.');
+        console.log('[Main] Music API not configured.');
     }
 
     // 6. Init FFMpeg
-    console.log('Initializing FFMpeg...');
+    console.log('[Main] Initializing FFMpeg...');
     ffmpeg.setFfmpegPath(ffmpegPath.path.replace('app.asar', 'app.asar.unpacked'));
 
     // 7. Init discord
-    if (settingsStore.get('discord.enabled')) {
-        console.log('Discord integration is enabled, initializing...');
+    if (settingsStore.get('discord.enabled') && settingsStore.get('discord.token')) {
+        console.log('[Main] Discord integration is enabled, initializing...');
 
-        const streamManager = new DiscordStreamManager();
-        state.discordBot = new DiscordBotController(streamManager);
-        state.discordBot.login().then(success => {
-            setTimeout(() => {
-                if (success && settingsStore.get('discord.joinAutomatically')) {
-                    console.log('Automatically joining default channel...');
-                    state.discordBot.joinDefaultChannel().then(res => {
-                        console.log(res);
-                    }).catch(e => {
-                        console.error('Failed to join default channel:', e);
-                    });
+        state.discordBridge = new DiscordBridge();
+
+        state.discordBridge.start();
+        state.discordBridge.waitForReady().then((isReady) => {
+            if (!isReady) {
+                console.error('[Main] Discord Bridge is not ready, cannot join voice channel.');
+                return;
+            }
+
+            state.discordBridge.connect(settingsStore.get('discord.token'));
+            state.discordBridge.waitForConnected().then((isConnected) => {
+                if (!isConnected) {
+                    console.error('[Main] Discord bot is not connected to Discord.');
+                    return;
                 }
-            }, 200);
+
+                const guildId = settingsStore.get('discord.lastGuild');
+                const channelId = settingsStore.get('discord.lastChannel');
+
+                if (guildId && channelId) {
+                    console.log('[Main] Joining last voice channel...');
+                    state.discordBridge!.joinChannel(guildId, channelId);
+                }
+            });
         });
     }
 
     // 8. Launch main window
-    console.log('Launching renderer...');
+    console.log('[Main] Launching renderer...');
     createMainWindow();
 };
 
@@ -108,7 +118,15 @@ app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 });
 
-app.on('will-quit', () => {
-    if (state.discordBot) state.discordBot.shutdown();
-})
-
+app.on('will-quit', async () => {
+    if (state.discordBridge) {
+        const pong = await state.discordBridge.ping();
+        if (pong) {
+            state.discordBridge.leaveChannel().then(() => {
+                state.discordBridge.stop();
+            });
+        } else {
+            state.discordBridge.stop();
+        }
+    }
+});

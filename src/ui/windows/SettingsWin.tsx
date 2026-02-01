@@ -6,6 +6,8 @@ import {ElementType, ReactElement, useState} from "react";
 import {PiCaretRightBold, PiHeadsetBold, PiXBold} from "react-icons/pi";
 import Sidebar from "../components/settings/Sidebar";
 import AudioSettingsPage from "../components/settings/AudioSettingsPage";
+import DiscordSettingsPage from "../components/settings/DiscordSettingsPage";
+import {FaDiscord} from "react-icons/fa6";
 
 export type Page = {
     id: string;
@@ -26,12 +28,13 @@ const SETTINGS: Category[] = [
         label: 'App settings',
         pages: [
             {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <AudioSettingsPage/>},
+            {id: 'discord', label: 'Discord', icon: FaDiscord, content: <DiscordSettingsPage/>}
         ]
     },
 ];
 
 const SettingsWin = () => {
-    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'audio'});
+    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'discord'});
 
     const activePageContent = SETTINGS.find(c => c.id === activePage.categoryId)?.pages
         .find(p => p.id === activePage.pageId)?.content;

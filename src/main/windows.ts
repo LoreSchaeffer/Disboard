@@ -5,6 +5,7 @@ import {state} from "./state";
 import {MediaSelectorAction} from "../types/common";
 import {settingsStore} from "./utils/store";
 import {registerMediaShortcuts} from "./media";
+import os from "node:os";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -57,7 +58,7 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
 
     win.once('ready-to-show', () => {
         if (options.onReady) options.onReady(win);
-        else win.show();
+        win.show();
     });
 
     win.on('closed', () => {
@@ -88,6 +89,17 @@ export const createMainWindow = () => {
                 settingsStore.set('height', size[1]);
                 win.webContents.send('settings', settingsStore.store);
             }, 250);
+        },
+        onReady: (win) => {
+            const pid = win.webContents.getOSProcessId();
+            if (pid) {
+                try {
+                    os.setPriority(pid, os.constants.priority.PRIORITY_HIGH);
+                    console.log(`[Main] Priority set to HIGH for main window renderer process (PID: ${pid}).`);
+                } catch (e) {
+                    console.error(`[Main] Failed to set priority for main window renderer process (PID: ${pid}):`, e);
+                }
+            }
         }
     });
 

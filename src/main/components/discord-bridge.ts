@@ -5,6 +5,7 @@ import {settingsStore} from "../utils/store";
 import os from "node:os";
 import axios, {isAxiosError} from "axios";
 import {DiscordData} from "../../types/discord";
+import {state} from "../state";
 
 export class DiscordBridge {
     private readonly MAX_RETRIES = 10;
@@ -70,10 +71,7 @@ export class DiscordBridge {
             this.restartTimer = null;
         }
 
-        if (!this.process) {
-            console.log('[Discord-Bridge] Process is not running.');
-            return;
-        }
+        if (!this.process) return;
 
         console.log('[Discord-Bridge] Stopping Discord Bridge process...');
         this.process.kill('SIGINT');
@@ -86,7 +84,7 @@ export class DiscordBridge {
         this._setRestPort(port);
     }
 
-    public UpdateUdpPort(port: number) {
+    public updateUdpPort(port: number) {
         if (this.udpPort === port) return;
         this._setUdpPort(port);
     }
@@ -105,7 +103,7 @@ export class DiscordBridge {
     public async waitForConnected(maxRetries: number = 20, intervalMs: number = 500): Promise<boolean> {
         for (let i = 0; i < maxRetries; i++) {
             const isConnected = await this.getStatus();
-            if (isConnected && isConnected.connected) return true;
+            if (isConnected) return true;
 
             await new Promise(resolve => setTimeout(resolve, intervalMs));
         }
@@ -191,19 +189,19 @@ export class DiscordBridge {
         }
     }
 
-    public async getStatus(): Promise<{ connected: boolean }> {
+    public async getStatus(): Promise<boolean> {
         if (!this.process) {
             console.log('[Discord-Bridge] Process is not running.');
-            return;
+            return false;
         }
 
         try {
             const res = await this.net.get('/status');
-            return res.data;
+            return (res.data as { connected: boolean }).connected;
         } catch (e) {
             if (isAxiosError(e) && e.response) console.warn(`[Discord-Bridge] Connection failed with code ${e.response.status}. Method: status, Error:`, e.response.data);
             else console.warn(`[Discord-Bridge] Connection failed.`);
-            return {connected: false};
+            return false;
         }
     }
 
@@ -331,4 +329,30 @@ export class DiscordBridge {
             this.start();
         }, delay);
     }
+}
+
+export const initDiscord = () => {
+    state.discordBridge.start();
+    state.discordBridge.waitForReady().then((isReady) => {
+        if (!isReady) {
+            console.error('[Main] Discord Bridge is not ready, cannot join voice channel.');
+            return;
+        }
+
+        state.discordBridge.connect(settingsStore.get('discord.token'));
+        state.discordBridge.waitForConnected().then((isConnected) => {
+            if (!isConnected) {
+                console.error('[Main] Discord bot is not connected to Discord.');
+                return;
+            }
+
+            const guildId = settingsStore.get('discord.lastGuild');
+            const channelId = settingsStore.get('discord.lastChannel');
+
+            if (guildId && channelId) {
+                console.log('[Main] Joining last voice channel...');
+                state.discordBridge!.joinChannel(guildId, channelId);
+            }
+        });
+    });
 }

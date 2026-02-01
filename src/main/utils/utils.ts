@@ -3,6 +3,7 @@ import {PlayerTrack, TrackSource} from "../../types/data";
 import {YTSearchResult} from "../../types/music-api";
 import {tracksStore} from "./store";
 import {state} from "../state";
+import os from "node:os";
 
 export const generateUUID = (): string => {
     return crypto.randomUUID();
@@ -71,4 +72,13 @@ export const getPlayerTrack = async (source: TrackSource, media: YTSearchResult 
     }
 
     return track;
+}
+
+export const setAppPriority = () => {
+    try {
+        os.setPriority(process.pid, os.constants.priority.PRIORITY_HIGH);
+        console.log(`[Main] Priority set to HIGH for main process (PID: ${process.pid}).`);
+    } catch (e) {
+        console.warn(`[Main] Failed to set priority for main process (PID: ${process.pid}):`, e);
+    }
 }

@@ -1,5 +1,5 @@
 import {contextBridge, ipcRenderer} from "electron";
-import {IpcResponse} from "./types/common";
+import {DiscordStatus, IpcResponse} from "./types/common";
 import {Settings} from "./types/settings";
 import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
 import {WindowId, WindowInfo} from "./types/window";
@@ -101,7 +101,8 @@ const api = {
     getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
 
     // Discord
-    // This should be only on main
+    getDsStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('ds_status'),
+
     sendAudioPacket: (buffer: ArrayBuffer) => {
         const packet = Buffer.from(buffer);
         udpClient.send(packet, 24455, '127.0.0.1', (e) => {

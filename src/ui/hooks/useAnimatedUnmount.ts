@@ -42,7 +42,7 @@ export const useAnimatedUnmount = (show: boolean, config: AnimationConfig = {}) 
     } : {};
 
     return {
-        shouldRender,
+        shouldRender: shouldRender,
         transitionProps: {
             style,
             onAnimationEnd: handleAnimationEnd

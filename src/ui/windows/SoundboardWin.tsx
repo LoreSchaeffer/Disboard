@@ -12,6 +12,7 @@ import Soundboard from "../components/soundboard/Soundboard";
 import Player from "../components/player/Player";
 import ProfileSettings from "../components/soundboard/ProfileSettings";
 import {useNavigation} from "../context/NavigationContext";
+import {usePlayer} from "../context/PlayerContext";
 
 const defProfileSelectorItems: ContextMenuItemData[] = [
     {separator: true},
@@ -35,6 +36,7 @@ const defProfileSelectorItems: ContextMenuItemData[] = [
 
 const SoundboardWin = () => {
     const {settings, updateSettings, profiles, activeProfile} = useWindow();
+    const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();
     const {navigate} = useNavigation();
@@ -45,9 +47,9 @@ const SoundboardWin = () => {
     const zoomRef = useRef<number>(settings.zoom || 1);
 
     // TODO only for development, remove later
-    // useEffect(() => {
-    //     navigate('settings', false);
-    // }, []);
+    useEffect(() => {
+        navigate('settings', false);
+    }, []);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {
@@ -71,6 +73,7 @@ const SoundboardWin = () => {
 
     useEffect(() => {
         if (settings) zoomRef.current = settings.zoom || 1;
+        if (settings && settings.discord) player.setBotMode(settings.discord.enabled);
     }, [settings]);
 
     useEffect(() => {

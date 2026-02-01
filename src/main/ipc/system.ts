@@ -1,7 +1,7 @@
 import {app, dialog, ipcMain, shell} from "electron";
 import {IpcResponse} from "../../types/common";
-import {cacheStore} from "./store";
 import path from "path";
+import {cacheStore} from "../utils/store";
 
 export const setupSystemHandlers = () => {
     ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));

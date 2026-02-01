@@ -5,11 +5,11 @@ import {broadcastProfiles, broadcastSettings} from "./main/utils";
 import {state} from "./main/state";
 import {createMainWindow} from "./main/windows";
 import {profilesStore, settingsStore} from "./main/utils/store";
-import {generateUUID} from "./main/utils/utils";
+import {generateUUID, setAppPriority} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import {DiscordBridge} from "./main/components/discord-bridge";
+import {DiscordBridge, initDiscord} from "./main/components/discord-bridge";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -17,6 +17,9 @@ if (require('electron-squirrel-startup')) app.quit();
 registerProtocols();
 
 const initApp = async () => {
+    console.log('[Main] Running initialization sequence...');
+    setAppPriority();
+
     // 1. Setup protocol handlers
     console.log('[Main] Setting up protocol handlers...');
     setupProtocolHandlers();
@@ -71,34 +74,10 @@ const initApp = async () => {
     ffmpeg.setFfmpegPath(ffmpegPath.path.replace('app.asar', 'app.asar.unpacked'));
 
     // 7. Init discord
+    state.discordBridge = new DiscordBridge();
     if (settingsStore.get('discord.enabled') && settingsStore.get('discord.token')) {
         console.log('[Main] Discord integration is enabled, initializing...');
-
-        state.discordBridge = new DiscordBridge();
-
-        state.discordBridge.start();
-        state.discordBridge.waitForReady().then((isReady) => {
-            if (!isReady) {
-                console.error('[Main] Discord Bridge is not ready, cannot join voice channel.');
-                return;
-            }
-
-            state.discordBridge.connect(settingsStore.get('discord.token'));
-            state.discordBridge.waitForConnected().then((isConnected) => {
-                if (!isConnected) {
-                    console.error('[Main] Discord bot is not connected to Discord.');
-                    return;
-                }
-
-                const guildId = settingsStore.get('discord.lastGuild');
-                const channelId = settingsStore.get('discord.lastChannel');
-
-                if (guildId && channelId) {
-                    console.log('[Main] Joining last voice channel...');
-                    state.discordBridge!.joinChannel(guildId, channelId);
-                }
-            });
-        });
+        initDiscord();
     }
 
     // 8. Launch main window
@@ -119,14 +98,5 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', async () => {
-    if (state.discordBridge) {
-        const pong = await state.discordBridge.ping();
-        if (pong) {
-            state.discordBridge.leaveChannel().then(() => {
-                state.discordBridge.stop();
-            });
-        } else {
-            state.discordBridge.stop();
-        }
-    }
+    if (state.discordBridge) state.discordBridge.stop();
 });

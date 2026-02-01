@@ -1,5 +1,5 @@
 import styles from './Row.module.css';
-import {HTMLAttributes, PropsWithChildren} from "react";
+import {CSSProperties, HTMLAttributes, PropsWithChildren} from "react";
 import {clsx} from "clsx";
 
 type RowProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>> & {
@@ -7,11 +7,14 @@ type RowProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>> & {
     noGap?: boolean;
 }
 
-const Row = ({stretch = false, noGap, className, children}: RowProps) => {
+const Row = ({stretch = false, noGap, className, style, children}: RowProps) => {
+    const styleCombined: CSSProperties = {...style};
+    if (noGap) styleCombined.gap = 'unset';
+
     return (
         <div
             className={clsx(styles.row, stretch && styles.stretch, className)}
-            style={noGap ? {gap: 'unset'}: undefined}
+            style={styleCombined}
         >
             {children}
         </div>

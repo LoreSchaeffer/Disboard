@@ -1,28 +1,22 @@
 import {ipcMain} from "electron";
 import {state} from "../state";
-import {settingsStore} from "../utils/store";
-import {DiscordStatus} from "../../types/common";
-import {DiscordData} from "../../types/discord";
 
 export const setupDiscordBridgeHandlers = () => {
 
-    ipcMain.handle('ds_status', async (): Promise<DiscordStatus> => {
-        if (!state.discordBridge) return 'stopped';
-        if (!await state.discordBridge.ping()) return 'stopped';
-        if (!await state.discordBridge.getStatus()) return 'offline';
-
-        const guild = settingsStore.get('discord.lastGuild');
-        if (guild && await state.discordBridge.getVoiceStatus(guild)) return 'connected';
-        return 'offline';
+    ipcMain.on('discord_stream_packet', (_, buffer: ArrayBuffer) => {
+        const nodeBuffer = Buffer.from(buffer);
+        state.discordBot.writeAudioPacket(nodeBuffer);
     });
 
-    ipcMain.handle('ds_guilds', async (): Promise<DiscordData[]> => {
-        if (!state.discordBridge) return [];
-        return state.discordBridge.getGuilds();
+    ipcMain.handle('discord_status', () => {
+        return state.discordBot.getStatus();
     });
 
-    ipcMain.handle('ds_channels', async (_, guildId: string): Promise<DiscordData[]> => {
-        if (!state.discordBridge) return [];
-        return state.discordBridge.getVoiceChannels(guildId);
+    ipcMain.handle('discord_guilds', () => {
+        return state.discordBot.getGuilds();
+    });
+
+    ipcMain.handle('discord_channels', (_, guildId: string) => {
+        return state.discordBot.getChannels(guildId);
     });
 }

@@ -9,7 +9,7 @@ import {generateUUID, setAppPriority} from "./main/utils/utils";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import {DiscordBridge, initDiscord} from "./main/components/discord-bridge";
+import {DiscordBot} from "./main/utils/discord-bot";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -74,11 +74,8 @@ const initApp = async () => {
     ffmpeg.setFfmpegPath(ffmpegPath.path.replace('app.asar', 'app.asar.unpacked'));
 
     // 7. Init discord
-    state.discordBridge = new DiscordBridge();
-    if (settingsStore.get('discord.enabled') && settingsStore.get('discord.token')) {
-        console.log('[Main] Discord integration is enabled, initializing...');
-        initDiscord();
-    }
+    state.discordBot = new DiscordBot();
+    state.discordBot.init();
 
     // 8. Launch main window
     console.log('[Main] Launching renderer...');
@@ -98,5 +95,5 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', async () => {
-    if (state.discordBridge) state.discordBridge.stop();
+    if (state.discordBot) state.discordBot.disconnect();
 });

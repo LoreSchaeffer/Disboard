@@ -502,9 +502,9 @@ export class Player {
             this.workletNode.onprocessorerror = (err) => console.error("Worklet Error:", err);
             this.masterGainNode.connect(this.workletNode);
 
-            console.log("Stereo Streaming to Go Sidecar started.");
+            console.log("Sending audio stream to Discord.");
         } catch (error) {
-            console.error("Error starting sidecar stream:", error);
+            console.error("Error starting Discord audio stream:", error);
         }
     }
 
@@ -516,6 +516,6 @@ export class Player {
         this.workletNode.port.close();
         this.workletNode = null;
 
-        console.log("Streaming to Discord stopped.");
+        console.log("Audio stream to Discord stopped.");
     }
 }

@@ -1,12 +1,10 @@
 import {contextBridge, ipcRenderer} from "electron";
-import {DiscordStatus, IpcResponse} from "./types/common";
+import {IpcResponse} from "./types/common";
 import {Settings} from "./types/settings";
 import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
 import {WindowId, WindowInfo} from "./types/window";
 import {YTSearchResult} from "./types/music-api";
-import * as dgram from "node:dgram";
-
-const udpClient = dgram.createSocket('udp4');
+import {DiscordData, DiscordStatus} from "./types/discord";
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -101,14 +99,10 @@ const api = {
     getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
 
     // Discord
-    getDsStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('ds_status'),
-
-    sendAudioPacket: (buffer: ArrayBuffer) => {
-        const packet = Buffer.from(buffer);
-        udpClient.send(packet, 24455, '127.0.0.1', (e) => {
-            if (e) console.error('UDP Error:', e);
-        });
-    },
+    sendAudioPacket: (buffer: ArrayBuffer) => ipcRenderer.send('discord_stream_packet', buffer),
+    getDiscordStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('discord_status'),
+    getDiscordGuilds: (): Promise<DiscordData[]> => ipcRenderer.invoke('discord_guilds'),
+    getDiscordChannels: (guildId: string): Promise<DiscordData[]> => ipcRenderer.invoke('discord_channels', guildId),
 }
 
 contextBridge.exposeInMainWorld('electron', api);

@@ -3,7 +3,6 @@ import {Settings} from "../../types/settings";
 import {broadcastSettings} from "../utils";
 import {settingsStore} from "../utils/store";
 import {state} from "../state";
-import {initDiscord} from "../components/discord-bridge";
 
 export const setupSettingsHandlers = () => {
     ipcMain.handle('get_settings', (): Settings => {
@@ -14,28 +13,39 @@ export const setupSettingsHandlers = () => {
         const currentSettings = settingsStore.store;
         const newSettings = {...currentSettings, ...settings};
         settingsStore.set(newSettings);
+        broadcastSettings(newSettings);
 
-        if (state.discordBridge) {
-            if (currentSettings.discord.restPort !== newSettings.discord.restPort) state.discordBridge.updateRestPort(newSettings.discord.restPort);
-            if (currentSettings.discord.udpPort !== newSettings.discord.udpPort) state.discordBridge.updateUdpPort(newSettings.discord.udpPort);
+        if (state.discordBot && state.discordBot.getStatus().ready) {
+            const currentDiscordSettings = currentSettings.discord;
+            const newDiscordSettings = newSettings.discord;
 
-            if (currentSettings.discord.enabled !== newSettings.discord.enabled) {
-                if (newSettings.discord.enabled) {
-                    initDiscord();
-                } else {
-                    state.discordBridge.disconnect().then(() => {
-                        state.discordBridge.stop();
-                    });
+            if (currentDiscordSettings.token !== newDiscordSettings.token) {
+                console.log('[Main] Discord token changed, restarting bot...');
+                state.discordBot.disconnect();
+
+                if (newDiscordSettings.token && newDiscordSettings.token.length > 1) {
+                    state.discordBot.init();
+                    return;
                 }
             }
 
-            if (currentSettings.discord.token !== newSettings.discord.token) {
-                state.discordBridge.disconnect().then(() => {
-                    state.discordBridge.connect(newSettings.discord.token || '');
-                });
+            if (currentDiscordSettings.enabled !== newDiscordSettings.enabled) {
+                if (newDiscordSettings.enabled) state.discordBot.init();
+                else state.discordBot.disconnect();
+                return;
+            }
+
+            if (newDiscordSettings.enabled && state.discordBot.getStatus().ready) {
+                const guildChanged = currentDiscordSettings.lastGuild !== newDiscordSettings.lastGuild;
+                const channelChanged = currentDiscordSettings.lastChannel !== newDiscordSettings.lastChannel;
+
+                if (guildChanged || channelChanged) {
+                    console.log('[Main] Discord guild/channel changed, switching...');
+                    if (newDiscordSettings.lastGuild && newDiscordSettings.lastChannel) {
+                        state.discordBot.joinChannel(newDiscordSettings.lastGuild, newDiscordSettings.lastChannel);
+                    }
+                }
             }
         }
-
-        broadcastSettings(newSettings);
     });
 }

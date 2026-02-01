@@ -4,7 +4,6 @@ export const RepeatModeSchema = z.enum(['none', 'one', 'all']);
 
 export type RepeatMode = z.infer<typeof RepeatModeSchema>;
 export type MediaSelectorAction = 'update_button' | 'play_now';
-export type DiscordStatus = 'stopped' | 'offline' | 'online' | 'connected';
 
 export type IpcResponse<T> = {
     success: boolean;

@@ -11,6 +11,8 @@ export default defineConfig({
                 'electron-squirrel-startup',
                 'discord.js',
                 '@discordjs/voice',
+                '@discordjs/opus',
+                'opusscript',
                 'libsodium-wrappers',
                 'sodium-native',
                 '@snazzah/davey',

@@ -1,13 +1,12 @@
 import {BrowserWindow} from "electron";
 import {WindowData, WindowOptions} from "../types/window";
 import {MusicApi} from "./utils/music-api";
-import {DiscordBridge} from "./components/discord-bridge";
+import {DiscordBot} from "./utils/discord-bot";
 
 class StateManager {
     public mainWindow: BrowserWindow | undefined;
     public musicApi: MusicApi | null = null;
-
-    public discordBridge: DiscordBridge | null = null;
+    public discordBot: DiscordBot | null = null;
 
     // Window management maps
     public winOptions = new Map<number, WindowOptions>();

@@ -34,7 +34,7 @@ const SETTINGS: Category[] = [
 ];
 
 const SettingsWin = () => {
-    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'discord'});
+    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'audio'});
 
     const activePageContent = SETTINGS.find(c => c.id === activePage.categoryId)?.pages
         .find(p => p.id === activePage.pageId)?.content;

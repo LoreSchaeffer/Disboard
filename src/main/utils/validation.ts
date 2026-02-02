@@ -1,4 +1,4 @@
-const nameRegex = /^[a-zA-Z0-9 \-_/]+$/;
+const nameRegex = /^[\p{L}\p{N}\s]+$/u;
 export const validateName = (name: string, ignoreSize: boolean = false) => {
     if (!ignoreSize) {
         if (!name || name.trim().length === 0) return false;
@@ -8,7 +8,7 @@ export const validateName = (name: string, ignoreSize: boolean = false) => {
 }
 
 export const removeNameInvalidChars = (name: string) => {
-    return name.replace(/[^a-zA-Z0-9 \-_/]/g, '');
+    return name.replace(/[^\p{L}\p{N}\s\-_()]/gu, '');
 }
 
 // eslint-disable-next-line no-control-regex

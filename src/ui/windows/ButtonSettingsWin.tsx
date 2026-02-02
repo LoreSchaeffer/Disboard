@@ -1,6 +1,6 @@
 import styles from './ButtonSettingsWin.module.css';
 import React, {useEffect, useMemo, useState} from "react";
-import {BtnStyle, CropOptions, EndTimeType, SbBtn, SbProfile, TimeUnit} from "../../types/data";
+import {BtnStyle, CropOptions, EndTimeType, PlayerTrack, SbBtn, SbProfile, TimeUnit} from "../../types/data";
 import {useWindow} from "../context/WindowContext";
 import {ButtonWindowData} from "../../types/window";
 import Spinner from "../components/misc/Spinner";
@@ -134,7 +134,8 @@ const ButtonSettingsWin = () => {
     }
 
     const getCropValue = (field: keyof CropOptions): unknown => {
-        return newButton.cropOptions?.[field] ?? button.cropOptions?.[field];
+        const newVal = newButton.cropOptions?.[field];
+        return newVal !== undefined ? newVal : button.cropOptions?.[field];
     }
 
     const getTimeUnit = (unitField: 'startTimeUnit' | 'endTimeUnit'): TimeUnit => {
@@ -172,27 +173,52 @@ const ButtonSettingsWin = () => {
         });
     }
 
-
-    const handleStartTimeChange = (value: number | undefined) => {
+    const handleStartTimeChange = (inputValue: string) => {
         if (!button) return;
 
-        if (value !== undefined && value < 0) value = 0;
-        if (value === 0) value = undefined;
+        const numericVal = Number(inputValue);
 
-        const track = newButton.track || button.track;
-        if (track && value !== undefined) {
-            const startTime = new Time(value, getTimeUnit('startTimeUnit'));
-            const trackDuration = new Time(track.duration, 'ms');
+        if (inputValue === '' || numericVal === 0) {
+            setNewButton(prev => {
+                const currentCrop = prev.cropOptions || {};
+                const newCropOptions = { ...currentCrop };
 
-            if (startTime.isGraterThan(trackDuration)) value = Math.floor(trackDuration.getTime(getTimeUnit('startTimeUnit')));
+                newCropOptions.startTime = null;
+                newCropOptions.startTimeUnit = null;
+
+                if (button.cropOptions?.startTime === undefined) {
+                    delete newCropOptions.startTime;
+                    delete newCropOptions.startTimeUnit;
+                }
+
+                const updatedBtn = { ...prev };
+                const hasKeys = Object.values(newCropOptions).some(v => v !== undefined);
+
+                if (!hasKeys) delete updatedBtn.cropOptions;
+                else updatedBtn.cropOptions = newCropOptions;
+
+                return updatedBtn;
+            });
+            return;
         }
 
-        if (value !== undefined && getCropValue('endTime') !== undefined) {
-            const endTimeType = getCropValue('endTimeType') || 'after';
+        if (isNaN(numericVal)) return;
 
+        let value = numericVal;
+
+        const track = newButton.track || button.track;
+        if (track) {
+            const startTime = new Time(value, getTimeUnit('startTimeUnit'));
+            const trackDuration = new Time(track.duration, 'ms');
+            if (startTime.isGraterThan(trackDuration)) {
+                value = Math.floor(trackDuration.getTime(getTimeUnit('startTimeUnit')));
+            }
+        }
+
+        if (getCropValue('endTime') !== undefined) {
+            const endTimeType = getCropValue('endTimeType') || 'after';
             const startUnit = getTimeUnit('startTimeUnit');
             const endUnit = getTimeUnit('endTimeUnit');
-
             const startTime = new Time(value, startUnit);
             const endTime = new Time(getCropValue('endTime') as number, endUnit);
 
@@ -202,7 +228,6 @@ const ButtonSettingsWin = () => {
                 if (track) {
                     const trackDuration = new Time(track.duration, 'ms');
                     startTime.add(endTime);
-
                     if (startTime.isGraterThan(trackDuration)) {
                         const clampedDuration = trackDuration.copy().subtract(endTime);
                         value = Math.floor(clampedDuration.getTime(startUnit));
@@ -211,47 +236,70 @@ const ButtonSettingsWin = () => {
             }
         }
 
-        if (value === button.cropOptions?.startTime) {
-            setNewButton(prev => {
-                const updated = {...prev};
-                if (updated.cropOptions) {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const {startTime, ...restCrop} = updated.cropOptions;
-                    if (Object.keys(restCrop).length === 0) delete updated.cropOptions;
-                    else updated.cropOptions = restCrop;
-                }
-                return updated;
-            });
-        } else {
-            setNewButton(prev => {
-                const currentCrop = prev.cropOptions || {};
-                if (!currentCrop.startTimeUnit && !button?.cropOptions?.startTimeUnit) currentCrop.startTimeUnit = 's';
-
-                return {
-                    ...prev,
-                    cropOptions: {
-                        ...currentCrop,
-                        startTime: value || null
-                    }
-                };
-            });
+        if (value <= 0) {
+            handleStartTimeChange('');
+            return;
         }
+
+        setNewButton(prev => {
+            const currentCrop = prev.cropOptions || {};
+            const newCropOptions = { ...currentCrop };
+
+            if (value === button.cropOptions?.startTime) delete newCropOptions.startTime;
+            else newCropOptions.startTime = value;
+
+            if (!newCropOptions.startTimeUnit && !button.cropOptions?.startTimeUnit) newCropOptions.startTimeUnit = 's';
+
+            const updatedBtn = { ...prev };
+            if (Object.keys(newCropOptions).length === 0) delete updatedBtn.cropOptions;
+            else updatedBtn.cropOptions = newCropOptions;
+
+            return updatedBtn;
+        });
     }
 
-    const handleEndTimeChange = (value: number | undefined) => {
+    const handleEndTimeChange = (inputValue: string) => {
         if (!button) return;
 
-        if (value !== undefined && value < 0) value = 0;
-        if (value === 0) value = undefined;
+        const numericVal = Number(inputValue);
+
+        if (inputValue === '' || numericVal === 0) {
+            setNewButton(prev => {
+                const currentCrop = prev.cropOptions || {};
+                const newCropOptions = { ...currentCrop };
+
+                newCropOptions.endTime = null;
+                newCropOptions.endTimeUnit = null;
+                newCropOptions.endTimeType = null;
+
+                if (button.cropOptions?.endTime === undefined) {
+                    delete newCropOptions.endTime;
+                    delete newCropOptions.endTimeUnit;
+                    delete newCropOptions.endTimeType;
+                }
+
+                const updatedBtn = { ...prev };
+                const hasKeys = Object.values(newCropOptions).some(v => v !== undefined);
+
+                if (!hasKeys) delete updatedBtn.cropOptions;
+                else updatedBtn.cropOptions = newCropOptions;
+
+                return updatedBtn;
+            });
+            return;
+        }
+
+        if (isNaN(numericVal)) return;
+
+        let value = numericVal;
 
         const track = newButton.track || button.track;
-        if (track && value !== undefined) {
+        if (track) {
             const endTime = new Time(value, getTimeUnit('endTimeUnit'));
             const trackDuration = new Time(track.duration, 'ms');
-
             const endTimeType = getCropValue('endTimeType') || 'after';
             const startVal = getCropValue('startTime') as number;
-            const startTime = startVal ? new Time(startVal, getTimeUnit('startTimeUnit')) : undefined;
+            const startTime = startVal !== undefined ? new Time(startVal, getTimeUnit('startTimeUnit')) : undefined;
 
             if (endTimeType === 'at') {
                 if (endTime.isGraterThan(trackDuration)) value = Math.floor(trackDuration.getTime(getTimeUnit('endTimeUnit')));
@@ -269,30 +317,27 @@ const ButtonSettingsWin = () => {
             }
         }
 
-        if (value === button.cropOptions?.endTime) {
-            setNewButton(prev => {
-                const updated = {...prev};
-                if (updated.cropOptions) {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const {endTime, ...restCrop} = updated.cropOptions;
-                    if (Object.keys(restCrop).length === 0) delete updated.cropOptions;
-                    else updated.cropOptions = restCrop;
-                }
-                return updated;
-            });
-        } else {
-            setNewButton(prev => {
-                const currentCrop = prev.cropOptions || {};
-                if (!currentCrop.endTimeUnit && !button?.cropOptions?.endTimeUnit) currentCrop.endTimeUnit = 's';
-                return {
-                    ...prev,
-                    cropOptions: {
-                        ...currentCrop,
-                        endTime: value || null
-                    }
-                };
-            });
+        if (value <= 0) {
+            handleEndTimeChange('');
+            return;
         }
+
+        setNewButton(prev => {
+            const currentCrop = prev.cropOptions || {};
+            const newCropOptions = { ...currentCrop };
+
+            if (value === button.cropOptions?.endTime) delete newCropOptions.endTime;
+            else newCropOptions.endTime = value;
+
+            if (!newCropOptions.endTimeUnit && !button.cropOptions?.endTimeUnit) newCropOptions.endTimeUnit = 's';
+            if (!newCropOptions.endTimeType && !button.cropOptions?.endTimeType) newCropOptions.endTimeType = 'after';
+
+            const updatedBtn = { ...prev };
+            if (Object.keys(newCropOptions).length === 0) delete updatedBtn.cropOptions;
+            else updatedBtn.cropOptions = newCropOptions;
+
+            return updatedBtn;
+        });
     }
 
     const handleStartTimeUnitChange = (value: TimeUnit) => {
@@ -478,7 +523,16 @@ const ButtonSettingsWin = () => {
             previewPlayer.stop();
         } else {
             if (!button) return;
-            previewPlayer.playNow(button.track);
+
+            const playerTrack: PlayerTrack = {
+                ...button.track,
+                cropOptions: {
+                    ...button?.cropOptions,
+                    ...newButton?.cropOptions
+                }
+            }
+
+            previewPlayer.playNow(playerTrack);
         }
     }
 
@@ -518,12 +572,12 @@ const ButtonSettingsWin = () => {
                         <Input
                             type={'number'}
                             placeholder={'Time'}
-                            value={getCropValue('startTime') as number ?? ''}
-                            onChange={(e) => handleStartTimeChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                            value={getCropValue('startTime') as number || ''}
+                            onChange={(e) => handleStartTimeChange(e.target.value)}
                             min={0}
                             icon={<PiArrowCounterClockwiseBold/>}
                             iconSettings={{
-                                onClick: () => handleStartTimeChange(button.cropOptions?.startTime),
+                                onClick: () => handleStartTimeChange(button.cropOptions?.startTime?.toString() || ''),
                                 customStyles: {
                                     opacity: isCropModified('startTime') ? 1 : 0.5,
                                     cursor: isCropModified('startTime') ? 'pointer' : 'default',
@@ -555,12 +609,12 @@ const ButtonSettingsWin = () => {
                         <Input
                             type={'number'}
                             placeholder={'Time'}
-                            value={getCropValue('endTime') as number ?? ''}
-                            onChange={(e) => handleEndTimeChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                            value={getCropValue('endTime') as number || ''}
+                            onChange={(e) => handleEndTimeChange(e.target.value)}
                             min={0}
                             icon={<PiArrowCounterClockwiseBold/>}
                             iconSettings={{
-                                onClick: () => handleEndTimeChange(button.cropOptions?.endTime),
+                                onClick: () => handleEndTimeChange(button.cropOptions?.endTime?.toString() || ''),
                                 customStyles: {
                                     opacity: isCropModified('endTime') ? 1 : 0.5,
                                     cursor: isCropModified('endTime') ? 'pointer' : 'default',

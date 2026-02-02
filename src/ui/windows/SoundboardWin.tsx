@@ -39,17 +39,17 @@ const SoundboardWin = () => {
     const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();
-    const {navigate} = useNavigation();
+    // const {navigate} = useNavigation();
 
     const [profileSelectorOpen, setProfileSelectorOpen] = useState<boolean>(false);
     const [profileSettingsOpen, setProfileSettingsOpen] = useState<boolean>(false);
 
     const zoomRef = useRef<number>(settings.zoom || 1);
 
-    // TODO only for development, remove later
-    useEffect(() => {
-        navigate('settings', false);
-    }, []);
+    // // TODO only for development, remove later
+    // useEffect(() => {
+    //     navigate('settings', false);
+    // }, []);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {

@@ -17,7 +17,7 @@ export const setupTracksHandlers = () => {
         return tracks.find(t => t.id === trackId) || null;
     });
 
-    ipcMain.handle('add_track', (_, source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string): IpcResponse<void> => {
+    ipcMain.handle('add_track', (_, source: TrackSource, media: YTSearchResult | string, customTitle: string, profileId: string, buttonId: string): IpcResponse<void> => {
         if (!source || !media || !profileId || !buttonId) return {success: false, error: 'invalid_parameters'};
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
@@ -75,7 +75,7 @@ export const setupTracksHandlers = () => {
                     row: buttonPos.row,
                     col: buttonPos.col,
                     track: trackId,
-                    title: 'Downloading...'
+                    title: 'Importing...'
                 } as Btn;
             });
 
@@ -88,6 +88,8 @@ export const setupTracksHandlers = () => {
                     uri = stream;
                 }
 
+                const title = customTitle !== '' ? customTitle : (source === 'youtube' ? (media as YTSearchResult).name : undefined)
+
                 const track = await downloadTrack(
                     trackId,
                     uri,
@@ -95,7 +97,7 @@ export const setupTracksHandlers = () => {
                         type: source,
                         src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
                     },
-                    source === 'youtube' ? (media as YTSearchResult).name : undefined,
+                    title,
                     source === 'youtube' ? getBestThumbnail((media as YTSearchResult).thumbnails) : undefined
                 );
 
@@ -124,13 +126,14 @@ export const setupTracksHandlers = () => {
         return {success: true};
     });
 
-    ipcMain.on('play_now', async (_, source: TrackSource, media: YTSearchResult | string) => {
+    ipcMain.on('play_now', async (_, source: TrackSource, media: YTSearchResult | string, customTitle: string) => {
         if (!source || !media) return;
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return;
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return;
 
         const track = await getPlayerTrack(source, media);
         if (!track) return;
+        track.titleOverride = customTitle !== '' ? customTitle : undefined;
         state.mainWindow.webContents.send('play_now', track);
     });
 

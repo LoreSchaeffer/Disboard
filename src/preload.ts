@@ -85,8 +85,8 @@ const api = {
     // Tracks
     getTracks: (): Promise<Track[]> => ipcRenderer.invoke('get_tracks'),
     getTrack: (trackId: string): Promise<Track | null> => ipcRenderer.invoke('get_track', trackId),
-    addTrack: (source: TrackSource, media: YTSearchResult | string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, profileId, buttonId),
-    playNow: (source: TrackSource, media: YTSearchResult | string) => ipcRenderer.send('play_now', source, media),
+    addTrack: (source: TrackSource, media: YTSearchResult | string, customTitle: string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, customTitle, profileId, buttonId),
+    playNow: (source: TrackSource, media: YTSearchResult | string, customTitle: string) => ipcRenderer.send('play_now', source, media, customTitle),
     getVolatileTrack: (source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('get_volatile_track', source, media),
 
     // System

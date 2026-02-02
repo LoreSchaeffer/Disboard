@@ -4,6 +4,7 @@ import {GAP} from "../../hooks/useContextMenuPosition";
 import {FaCaretRight} from "react-icons/fa6";
 import ContextMenu from "./ContextMenu";
 import {Variant} from "../../types/common";
+import {clsx} from "clsx";
 
 export type ContextMenuItemData = {
     label?: string,
@@ -33,7 +34,7 @@ const ContextMenuItem = ({item, onCloseRoot}: ContextMenuItemProps) => {
         }
     }, []);
 
-    if (item.separator) return <li className={`${styles.item} ${styles.separator}`}/>;
+    if (item.separator) return <li className={clsx(styles.item, styles.separator)}/>;
 
     const handleClick = () => {
         if (item.disabled || item.children) return;
@@ -72,7 +73,7 @@ const ContextMenuItem = ({item, onCloseRoot}: ContextMenuItemProps) => {
     return (
         <li
             ref={itemRef}
-            className={`${styles.item} ${item.disabled ? styles.disabled : ''} ${item.variant ? styles[item.variant] : ''}`}
+            className={clsx(styles.item, item.disabled && styles.disabled, item.variant && styles[item.variant])}
             onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}

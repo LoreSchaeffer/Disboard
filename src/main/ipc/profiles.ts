@@ -10,24 +10,35 @@ import path from "path";
 import fs from "node:fs";
 import {generateUUID} from "../utils/utils";
 
-const updateButton = (target: Btn, updates: Partial<SbBtn>) => {
-    if (updates.row !== undefined) target.row = clamp(Math.floor(updates.row), 0, 49);
-    if (updates.col !== undefined) target.col = clamp(Math.floor(updates.col), 0, 49);
+type NullablePartial<T> = {
+    [P in keyof T]?: T[P] | null;
+};
 
-    if ((updates.title) === null) delete target.title;
+type BtnUpdatePayload = NullablePartial<Omit<SbBtn, 'track'>> & {
+    track?: { id: string } | string | null;
+};
+
+const updateButton = (target: Btn, updates: BtnUpdatePayload) => {
+    if (typeof updates.row === 'number') target.row = clamp(Math.floor(updates.row), 0, 49);
+    if (typeof updates.col === 'number') target.col = clamp(Math.floor(updates.col), 0, 49);
+
+    if (updates.title === null) delete target.title;
     else if (updates.title !== undefined) target.title = removeNameInvalidChars(updates.title);
 
-    const applyNestedUpdates = <T extends object>(currentTarget: T | undefined, nestedUpdates: any): T | undefined => {
+    if (updates.track === null) delete target.track;
+    else if (updates.track !== undefined) target.track = typeof updates.track === 'object' ? updates.track.id : updates.track;
+
+    const applyNestedUpdates = <T extends object>(currentTarget: T | undefined, nestedUpdates: NullablePartial<T> | undefined | null): T | undefined => {
         if (nestedUpdates === null) return undefined;
-        if (!nestedUpdates) return currentTarget;
+        if (nestedUpdates === undefined) return currentTarget;
 
-        const nextObj: any = currentTarget ? {...currentTarget} : {};
+        const nextObj: Partial<T> = currentTarget ? {...currentTarget} : {};
 
-        Object.keys(nestedUpdates).forEach(key => {
+        (Object.keys(nestedUpdates) as Array<keyof T>).forEach((key) => {
             const val = nestedUpdates[key];
 
             if (val === null) delete nextObj[key];
-            else if (val !== undefined) nextObj[key] = val;
+            else if (val !== undefined) nextObj[key] = val as T[keyof T];
         });
 
         if (Object.keys(nextObj).length === 0) return undefined;
@@ -35,13 +46,13 @@ const updateButton = (target: Btn, updates: Partial<SbBtn>) => {
         return nextObj as T;
     };
 
-    if (updates.style !== undefined || (updates as any).style === null) {
+    if (updates.style !== undefined) {
         const newStyle = applyNestedUpdates<BtnStyle>(target.style, updates.style);
         if (newStyle) target.style = newStyle;
         else delete target.style;
     }
 
-    if (updates.cropOptions !== undefined || (updates as any).cropOptions === null) {
+    if (updates.cropOptions !== undefined) {
         const newCrop = applyNestedUpdates<CropOptions>(target.cropOptions, updates.cropOptions);
         if (newCrop) target.cropOptions = newCrop;
         else delete target.cropOptions;
@@ -299,17 +310,25 @@ export const setupProfilesHandlers = () => {
         const buttonPos = getPosFromButtonId(buttonId);
         if (!buttonPos) return {success: false, error: 'invalid_button_id'};
 
+        let button: Btn;
+
         const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
-        if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
+        if (existingButtonIdx !== -1) {
+            button = profile.buttons[existingButtonIdx];
+        } else {
+            button = {
+                row: buttonPos.row,
+                col: buttonPos.col,
+                track: null
+            };
 
-        const existingButton: Btn = {...profile.buttons[existingButtonIdx]};
+            profile.buttons.push(button);
+        }
 
-        updateButton(existingButton, updates);
+        updateButton(button, updates);
 
         // TODO If the track is changed, we might need to handle downloading
 
-        profile.buttons[existingButtonIdx] = existingButton;
-        profiles[profileIdx] = profile;
         profilesStore.set('profiles', profiles);
         broadcastProfiles(profiles);
 

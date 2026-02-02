@@ -59,7 +59,7 @@ const Player = ({showProfileSettings}: PlayerProps) => {
     };
 
     const search = () => {
-        window.electron.openWindow('media_selector');
+        window.electron.openWindow('media_selector', {action: 'play_now'});
     };
 
     const changeVolume = (_: number, newValue: number) => {

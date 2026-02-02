@@ -5,27 +5,30 @@ import fs from "node:fs";
 import {AUDIO_DIR, IMAGES_DIR} from "./constants";
 import {Settings} from "../types/settings";
 import {Profile, Source, Track} from "../types/data";
-import {extractCoverImage, fetchTitle, saveAsMp3} from "./utils/ffmpeg";
+import {determineTitle, extractCoverImage, processAudio} from "./utils/ffmpeg";
 import {tracksStore} from "./utils/store";
 import axios from "axios";
 import {pipeline} from 'stream/promises';
 import {convertProfileToSbProfile} from "./utils/data";
+
+export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 
 const ytStreamCache = new Map<string, string>();
 
 const downloadImageFromUrl = async (url: string, outputDir: string, trackId: string): Promise<boolean> => {
     if (!url || !url.startsWith('http')) return false;
 
-    try {
-        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, {recursive: true});
+    const outputPath = path.join(outputDir, `${trackId}.jpg`);
 
-        const outputPath = path.join(outputDir, `${trackId}.jpg`);
+    try {
+        fs.mkdirSync(outputDir, {recursive: true});
+
         const response = await axios({
             method: 'GET',
             url: url,
             responseType: 'stream',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+                'User-Agent': USER_AGENT
             },
             timeout: 20000
         });
@@ -37,13 +40,10 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
     } catch (error) {
         console.warn(`[Main] Failed to download cover for ${trackId}:`, error instanceof Error ? error.message : error);
 
-        const outputPath = path.join(outputDir, `${trackId}.jpg`);
-        if (fs.existsSync(outputPath)) {
-            try {
-                fs.unlinkSync(outputPath);
-            } catch {
-                // Ignore
-            }
+        try {
+            fs.unlinkSync(outputPath);
+        } catch {
+            // Ignored
         }
 
         return false;
@@ -74,61 +74,57 @@ export const getYoutubeStream = async (videoId: string): Promise<string> => {
 }
 
 export const downloadTrack = async (id: string, uri: string, source: Source, title?: string, cover?: string): Promise<Track> => {
-    let duration = 0;
+    const audioTask = processAudio(uri, AUDIO_DIR, id);
+    const titleTask = determineTitle(uri, title);
+
+    let coverTask: Promise<boolean>;
+    if (source.type === 'youtube' && cover) {
+        coverTask = downloadImageFromUrl(cover, IMAGES_DIR, id)
+            .catch(err => {
+                console.warn('[Downloader] Failed to download YT cover:', err);
+                return false;
+            });
+    } else {
+        coverTask = extractCoverImage(uri, IMAGES_DIR, id);
+    }
 
     try {
-        duration = await saveAsMp3(uri, AUDIO_DIR, id);
-    } catch (e) {
-        const file = path.join(AUDIO_DIR, `${id}.mp3`);
-        if (fs.existsSync(file)) fs.unlinkSync(file);
+        const [duration, finalTitle] = await Promise.all([
+            audioTask,
+            titleTask,
+            coverTask
+        ]);
 
-        const tracks = tracksStore.get('tracks');
-        if (tracks.findIndex(t => t.id === id) !== -1) tracksStore.set('tracks', tracks.filter(t => t.id !== id));
+        const track: Track = {
+            id: id,
+            source: source,
+            title: finalTitle,
+            duration: duration
+        };
 
-        throw new Error(e.message || 'download_error');
-    }
+        const tracks = tracksStore.get('tracks') || [];
+        tracks.push(track);
+        tracksStore.set('tracks', tracks);
 
-    if (source.type === 'youtube') {
-        if (cover) {
-            await downloadImageFromUrl(cover, IMAGES_DIR, id);
-        }
-    } else {
+        return track;
+    } catch (error) {
+        console.error(`[Downloader] Critical error for ${id}:`, error);
+
+        const audioFile = path.join(AUDIO_DIR, `${id}.mp3`);
         try {
-            await extractCoverImage(uri, IMAGES_DIR, id);
+            fs.unlinkSync(audioFile);
         } catch {
-            const file = path.join(IMAGES_DIR, `${id}.jpg`);
-            if (fs.existsSync(file)) {
-                try {
-                    fs.unlinkSync(file);
-                } catch {
-                    // Ignore
-                }
-            }
+            // Ignored
         }
-    }
 
-    if (!title) {
-        try {
-            title = await fetchTitle(uri);
-            if (!title) throw new Error();
-        } catch {
-            title = 'Unknown Title';
+        const tracks = tracksStore.get('tracks') || [];
+        if (tracks.some(t => t.id === id)) {
+            tracksStore.set('tracks', tracks.filter(t => t.id !== id));
         }
+
+        throw new Error(error.message || 'download_error');
     }
-
-    const track = {
-        id: id,
-        source: source,
-        title: title,
-        duration: duration
-    }
-
-    const tracks = tracksStore.get('tracks');
-    tracks.push(track);
-    tracksStore.set('tracks', tracks);
-
-    return track;
-}
+};
 
 export const broadcastSettings = (settings: Settings) => {
     BrowserWindow.getAllWindows().forEach(win => {
@@ -142,6 +138,3 @@ export const broadcastProfiles = (profiles: Profile[]) => {
         if (!win.isDestroyed()) win.webContents.send('profiles', sbProfiles);
     });
 }
-
-// TODO Broadcast profiles if tracks are changed
-

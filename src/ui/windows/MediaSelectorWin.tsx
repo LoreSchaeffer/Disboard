@@ -15,14 +15,16 @@ import {formatTime, Time} from "../utils/time";
 import {getBestThumbnail} from "../../main/utils/music-api";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
+import {removeNameInvalidChars} from "../../main/utils/validation";
 
 const MediaSelectorWin = () => {
         const {data} = useWindow();
         const {previewPlayer, previewStatus} = usePlayer();
         const [action, setAction] = useState<MediaSelectorAction>(null);
-        const [mode, setMode] = useState<TrackSource>('list');
+        const [mode, setMode] = useState<TrackSource>('youtube');
         const [useMusicApi, setUseMusicApi] = useState<boolean>(false);
         const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string>(null);
+        const [customTitle, setCustomTitle] = useState<string>('');
 
         useEffect(() => {
             window.electron.useMusicApi().then(setUseMusicApi);
@@ -36,6 +38,10 @@ const MediaSelectorWin = () => {
 
         const handleOnChange = (selected: YTSearchResult | string) => {
             setSelectedMedia(selected);
+        }
+
+        const handleCustomTitleChange = (val: string) => {
+            setCustomTitle(removeNameInvalidChars(val));
         }
 
         const playPausePreview = async () => {
@@ -63,10 +69,11 @@ const MediaSelectorWin = () => {
             if (!canSubmit) return;
 
             if (action === 'play_now') {
-                window.electron.playNow(mode, selectedMedia);
+                window.electron.playNow(mode, selectedMedia, customTitle);
                 window.electron.close();
             } else {
-                window.electron.addTrack(mode, selectedMedia, winData.profileId, winData.buttonId).then((res) => {
+                window.electron.addTrack(mode, selectedMedia, customTitle,  winData.profileId, winData.buttonId)
+                    .then((res) => {
                     if (res.success) window.electron.close();
                     else console.log('Failed to add track:', res.error);
                 });
@@ -76,13 +83,6 @@ const MediaSelectorWin = () => {
         return (
             <div className={'bordered'}>
                 <div className={styles.tabBar}>
-                    <Button
-                        variant={mode === 'list' ? 'primary' : 'secondary'}
-                        icon={<PiPlaylistBold/>}
-                        onClick={() => setMode('list')}
-                    >
-                        List
-                    </Button>
                     <Button
                         variant={mode === 'youtube' ? 'primary' : 'secondary'}
                         icon={<PiYoutubeLogoFill/>}
@@ -105,12 +105,39 @@ const MediaSelectorWin = () => {
                     >
                         URL
                     </Button>
+                    <Button
+                        variant={mode === 'list' ? 'primary' : 'secondary'}
+                        icon={<PiPlaylistBold/>}
+                        onClick={() => setMode('list')}
+                    >
+                        List
+                    </Button>
                 </div>
                 <Separator margin={'lg'}/>
-                {mode === 'list' && <ListSelector onChange={handleOnChange}/>}
+
+                {mode !== 'list' && (
+                    <div className={styles.mb}>
+                        <Input
+                            type={'text'}
+                            placeholder={'Custom title'}
+                            value={customTitle}
+                            onChange={(e) => handleCustomTitleChange(e.target.value)}
+                            icon={<PiXBold/>}
+                            iconSettings={{
+                                onClick: () => setCustomTitle(''),
+                                customStyles: {
+                                    opacity: customTitle.length > 0 ? 1 : 0.5,
+                                    cursor: customTitle.length > 0 ? 'pointer' : 'default',
+                                }
+                            }}
+                        />
+                    </div>
+                )}
+
                 {mode === 'youtube' && <YouTubeSelector onChange={handleOnChange}/>}
                 {mode === 'file' && <FileSelector onChange={handleOnChange}/>}
                 {mode === 'url' && <URLSelector onChange={handleOnChange}/>}
+                {mode === 'list' && <ListSelector onChange={handleOnChange}/>}
 
                 <div className={'windowButtons'}>
                     <Button

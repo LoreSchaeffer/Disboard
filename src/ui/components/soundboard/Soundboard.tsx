@@ -7,7 +7,7 @@ import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
 import {useContextMenu} from "../../context/ContextMenuContext";
 import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
-import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopBold, PiStopFill, PiTrashBold} from "react-icons/pi";
+import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayFill, PiPlaylistBold, PiStopBold, PiStopFill, PiTrashBold} from "react-icons/pi";
 import {FaRegPaste} from "react-icons/fa6";
 import {BtnStyle, SbBtn} from "../../../types/data";
 import {generateButtonId, playerTrackFromBtn} from "../../utils/utils";
@@ -52,7 +52,7 @@ const Soundboard = () => {
         const pasteButton = () => {
             if (!copiedButton) return;
 
-            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {row: row, col: col, ...copiedButton});
+            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {...copiedButton, row: row, col: col});
         }
 
         const pasteStyle = () => {
@@ -61,7 +61,7 @@ const Soundboard = () => {
         }
 
         const clearStyle = () => {
-            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {...button, style: undefined});
+            window.electron.updateButton(activeProfile.id, generateButtonId(row, col), {...button, style: null});
         }
 
         const deleteButton = () => {
@@ -71,101 +71,115 @@ const Soundboard = () => {
 
         const isButtonNotSet = !button || !button.track;
 
-        const items: ContextMenuItemData[] = [
-            {
-                label: 'Play Now',
-                icon: <PiPlayFill/>,
-                onClick: () => {
-                    if (button.track) player.playNow(playerTrackFromBtn(button));
-                },
-                disabled: isButtonNotSet
-            },
-            {
-                label: 'Add to queue',
-                icon: <PiPlaylistBold/>,
-                onClick: () => {
-                    if (button.track) player.addToQueue(playerTrackFromBtn(button));
-                },
-                disabled: isButtonNotSet
-            }
-        ];
+        const getItems = (): ContextMenuItemData[] => {
+            const items: ContextMenuItemData[] = [];
 
-        if (button && button.track) {
-            items.push({
-                label: previewPlayer.getStatus().playing ? 'Stop Preview' : 'Preview',
-                icon: previewPlayer.getStatus().playing ? <PiStopFill/> : <PiPlayFill/>,
-                onClick: () => previewPlayer.getStatus().playing ? stopPreview() : playPreview()
-            });
-        } else if (previewPlayer.getStatus().playing) {
-            items.push({
-                label: 'Stop Preview',
-                icon: <PiStopBold/>,
-                onClick: () => stopPreview()
-            });
+            if (button && button.track) {
+                items.push(
+                    {
+                        label: 'Play Now',
+                        icon: <PiPlayFill/>,
+                        onClick: () => {
+                            if (button.track) player.playNow(playerTrackFromBtn(button));
+                        },
+                        disabled: isButtonNotSet
+                    },
+                    {
+                        label: 'Add to queue',
+                        icon: <PiPlaylistBold/>,
+                        onClick: () => {
+                            if (button.track) player.addToQueue(playerTrackFromBtn(button));
+                        },
+                        disabled: isButtonNotSet
+                    }
+                );
+            }
+
+            if (button && button.track) {
+                items.push({
+                    label: previewPlayer.getStatus().playing ? 'Stop Preview' : 'Preview',
+                    icon: previewPlayer.getStatus().playing ? <PiStopFill/> : <PiPlayFill/>,
+                    onClick: () => previewPlayer.getStatus().playing ? stopPreview() : playPreview()
+                });
+            } else if (previewPlayer.getStatus().playing) {
+                items.push({
+                    label: 'Stop Preview',
+                    icon: <PiStopBold/>,
+                    onClick: () => stopPreview()
+                });
+            }
+
+            if (items.length > 0) items.push({separator: true});
+
+            items.push(
+                {
+                    label: 'Chose track',
+                    icon: <PiFileBold/>,
+                    onClick: () => window.electron.openWindow('media_selector', {
+                        action: 'update_button',
+                        profileId: activeProfile.id,
+                        buttonId: generateButtonId(row, col)
+                    })
+                }
+            );
+
+            if (button && button.track) {
+                items.push(
+                    {
+                        label: 'Settings',
+                        icon: <PiGearSixBold/>,
+                        onClick: () => window.electron.openWindow('button_settings', {
+                            profileId: activeProfile.id,
+                            buttonId: generateButtonId(row, col)
+                        })
+                    },
+                    {separator: true},
+                    {
+                        label: 'Copy button',
+                        icon: <PiCopyBold/>,
+                        onClick: () => copyButton(),
+                        disabled: isButtonNotSet
+                    },
+                    {
+                        label: 'Paste button',
+                        icon: <FaRegPaste/>,
+                        onClick: () => pasteButton(),
+                        disabled: !copiedButton
+                    },
+                    {separator: true},
+                    {
+                        label: 'Copy style',
+                        icon: <PiCopyBold/>,
+                        onClick: () => copyStyle(),
+                        disabled: !button || !button.style
+                    },
+                    {
+                        label: 'Paste style',
+                        icon: <FaRegPaste/>,
+                        onClick: () => pasteStyle(),
+                        disabled: !copiedStyle
+                    },
+                    {
+                        label: 'Clear style',
+                        icon: <PiBroomBold/>,
+                        onClick: () => clearStyle(),
+                        disabled: isButtonNotSet || !button.style
+                    },
+                    {separator: true},
+                    {
+                        label: 'Clear',
+                        icon: <PiTrashBold/>,
+                        variant: 'danger',
+                        onClick: () => deleteButton(),
+                        disabled: isButtonNotSet
+                    }
+                );
+            }
+
+            return items;
         }
 
-        items.push(
-            {separator: true},
-            {
-                label: 'Chose track',
-                icon: <PiFileBold/>,
-                onClick: () => window.electron.openWindow('media_selector', {
-                    action: 'update_button',
-                    profileId: activeProfile.id,
-                    buttonId: generateButtonId(row, col)
-                })
-            },
-            {
-                label: 'Settings',
-                icon: <PiGearSixBold/>,
-                onClick: () => window.electron.openWindow('button_settings', {
-                    profileId: activeProfile.id,
-                    buttonId: generateButtonId(row, col)
-                })
-            },
-            {separator: true},
-            {
-                label: 'Copy button',
-                icon: <PiCopyBold/>,
-                onClick: () => copyButton(),
-                disabled: isButtonNotSet
-            },
-            {
-                label: 'Paste button',
-                icon: <FaRegPaste/>,
-                onClick: () => pasteButton(),
-                disabled: !copiedButton
-            },
-            {separator: true},
-            {
-                label: 'Copy style',
-                icon: <PiCopyBold/>,
-                onClick: () => copyStyle(),
-                disabled: !button || !button.style
-            },
-            {
-                label: 'Paste style',
-                icon: <FaRegPaste/>,
-                onClick: () => pasteStyle(),
-                disabled: !copiedStyle
-            },
-            {
-                label: 'Clear style',
-                icon: <PiBroomBold/>,
-                onClick: () => clearStyle(),
-                disabled: isButtonNotSet || !button.style
-            },
-            {separator: true},
-            {
-                label: 'Clear',
-                icon: <PiTrashBold/>,
-                variant: 'danger',
-                onClick: () => deleteButton(),
-                disabled: isButtonNotSet
-            }
-        );
-
-        showContextMenu({items: items, event: event});
+        showContextMenu({items: getItems(), event: event});
     }
 
     const swapButtons = (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
@@ -184,7 +198,8 @@ const Soundboard = () => {
             toButton.col = fromCol;
         }
 
-        window.electron.updateProfile(activeProfile.id, activeProfile);
+        if (fromButton) window.electron.updateButton(activeProfile.id, fromButton.id, {row: fromButton.row, col: fromButton.col});
+        if (toButton) window.electron.updateButton(activeProfile.id, toButton.id, {row: toButton.row, col: toButton.col});
     };
 
     return (

@@ -1,6 +1,7 @@
 import styles from './TrackInfo.module.css';
 import React from "react";
 import {PlayerTrack} from "../../../types/data";
+import {clsx} from "clsx";
 
 type TrackInfoProps = {
     track: PlayerTrack
@@ -9,11 +10,11 @@ type TrackInfoProps = {
 
 const TrackInfo = ({track, className}: TrackInfoProps) => {
     return (
-        <div className={`${styles.trackInfo} ${className}`}>
+        <div className={clsx(styles.trackInfo, className)}>
             <img
                 className={styles.image}
                 src={track ? `music://images/${track.id}` : '/images/track.png'}
-                alt={track.titleOverride || track.title || ''}
+                alt={track.titleOverride || track.title || 'Unknown Title'}
                 onError={(e) => {
                     const img = e.currentTarget;
                     img.onerror = null;
@@ -21,7 +22,7 @@ const TrackInfo = ({track, className}: TrackInfoProps) => {
                 }}
             />
             <div className={styles.data}>
-                <span className={styles.title}>{track.title}</span>
+                <span className={styles.title}>{track.titleOverride || track.title || 'Unknown Title'}</span>
             </div>
         </div>
     );

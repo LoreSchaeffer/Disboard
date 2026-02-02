@@ -35,7 +35,7 @@ export class Player {
     private queue: PlayerTrack[] = [];
     private index: number = 0;
 
-    private currentPlayerTrack: PlayerTrack | null = null;
+    private currentTrack: PlayerTrack | null = null;
 
     private startTime: Time | null = null;
     private endTime: Time | null = null;
@@ -182,7 +182,7 @@ export class Player {
     public addToQueue(track: PlayerTrack) {
         this.queue.push(track);
         this.eventHandlers['queueupdate']?.([...this.queue]);
-        if (this.queue.length === 1 && !this.currentPlayerTrack) {
+        if (this.queue.length === 1 && !this.currentTrack) {
             this.index = 0;
         }
     }
@@ -208,7 +208,7 @@ export class Player {
     public play() {
         if (this.audioContext.state === 'suspended') this.audioContext.resume();
 
-        if (this.status.paused && this.currentPlayerTrack) {
+        if (this.status.paused && this.currentTrack) {
             this.resume();
             return;
         }
@@ -216,13 +216,13 @@ export class Player {
         if (this.queue.length === 0) return;
         if (this.index >= this.queue.length) this.index = 0;
 
-        this.currentPlayerTrack = this.queue[this.index];
+        this.currentTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
     public playNow(track: PlayerTrack) {
         if (this.status.playing) this.stop();
-        this.currentPlayerTrack = track;
+        this.currentTrack = track;
         this._loadAndPlay();
     }
 
@@ -230,12 +230,12 @@ export class Player {
         if (index < 0 || index >= this.queue.length) return;
         this.stop();
         this.index = index;
-        this.currentPlayerTrack = this.queue[this.index];
+        this.currentTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
     public playPause() {
-        if (this.status.playing || (this.status.paused && this.currentPlayerTrack)) {
+        if (this.status.playing || (this.status.paused && this.currentTrack)) {
             if (this.status.paused) this.resume();
             else this.pause();
         } else {
@@ -268,7 +268,7 @@ export class Player {
             }
         }
         this.index = nextIndex;
-        this.currentPlayerTrack = this.queue[this.index];
+        this.currentTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
@@ -285,12 +285,12 @@ export class Player {
         }
 
         this.index = prevIndex;
-        this.currentPlayerTrack = this.queue[this.index];
+        this.currentTrack = this.queue[this.index];
         this._loadAndPlay();
     }
 
     public seek(timeMs: number) {
-        if (!this.currentPlayerTrack) return;
+        if (!this.currentTrack) return;
         this.status.seeking = true;
 
         let absoluteTimeS = timeMs / 1000;
@@ -331,7 +331,7 @@ export class Player {
     }
 
     public getCurrentPlayerTrack(): PlayerTrack | null {
-        return this.currentPlayerTrack;
+        return this.currentTrack;
     }
 
     public getQueue(): PlayerTrack[] {
@@ -352,16 +352,16 @@ export class Player {
 
 
     private _loadAndPlay() {
-        if (!this.currentPlayerTrack) return;
+        if (!this.currentTrack) return;
 
-        this.eventHandlers['trackchange']?.(this.currentPlayerTrack);
+        this.eventHandlers['trackchange']?.(this.currentTrack);
         this._calculateCropsAndDuration();
 
-        if (this.currentPlayerTrack.directStream) {
-            if (this.currentPlayerTrack.source.type === 'youtube' || this.currentPlayerTrack.source.type === 'url') this.audio.src = this.currentPlayerTrack.source.src;
-            else this.audio.src = `music://file/${encodeURIComponent(this.currentPlayerTrack.source.src)}`;
+        if (this.currentTrack.directStream) {
+            if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
+            else this.audio.src = `music://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
-            this.audio.src = `music://audio/${encodeURIComponent(this.currentPlayerTrack.id)}`;
+            this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
         }
 
         this.audio.load();
@@ -372,9 +372,9 @@ export class Player {
         this.endTime = null;
         this.duration = null;
 
-        if (!this.currentPlayerTrack) return;
+        if (!this.currentTrack) return;
 
-        const crops = this.currentPlayerTrack.cropOptions;
+        const crops = this.currentTrack.cropOptions;
 
         if (crops?.startTime && crops?.startTimeUnit && crops.startTime > 0) this.startTime = new Time(crops.startTime, crops.startTimeUnit);
 
@@ -390,7 +390,7 @@ export class Player {
 
         let totalFileDuration: Time;
         if (this.endTime) totalFileDuration = this.endTime.copy();
-        else totalFileDuration = Time.fromMs(this.currentPlayerTrack.duration || 0);
+        else totalFileDuration = Time.fromMs(this.currentTrack.duration || 0);
 
         this.duration = totalFileDuration.copy();
 
@@ -430,28 +430,27 @@ export class Player {
         this.eventHandlers['ended']?.();
 
         if (this.queue.length === 0) {
-            if (this.repeat === 'one') {
+            if (this.repeat === 'one' || this.repeat === 'all') {
                 this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
                 this.audio.play().catch(console.error);
             } else {
                 this._resetPlayer();
             }
-            return;
-        }
-
-        if (this.repeat === 'one') {
-            this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
-            this.audio.play().catch(console.error);
         } else {
-            this.next();
+            if (this.repeat === 'one') {
+                this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
+                this.audio.play().catch(console.error);
+            } else {
+                this.next();
+            }
         }
     }
 
     private _applyVolume() {
         let finalVolume: number;
 
-        if (this.currentPlayerTrack && this.currentPlayerTrack.volumeOverride !== undefined && this.currentPlayerTrack.volumeOverride !== null) {
-            finalVolume = this.currentPlayerTrack.volumeOverride;
+        if (this.currentTrack && this.currentTrack.volumeOverride !== undefined && this.currentTrack.volumeOverride !== null) {
+            finalVolume = this.currentTrack.volumeOverride;
         } else {
             finalVolume = this.masterVolume;
         }
@@ -471,7 +470,7 @@ export class Player {
         this.status.seeking = false;
         this.status.loading = false;
 
-        this.currentPlayerTrack = null;
+        this.currentTrack = null;
         this.startTime = null;
         this.endTime = null;
         this.duration = null;

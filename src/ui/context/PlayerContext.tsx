@@ -3,6 +3,7 @@ import {createContext, PropsWithChildren, useContext, useEffect, useState} from 
 import {Time} from "../utils/time";
 import {RepeatMode} from "../../types/common";
 import {PlayerTrack} from "../../types/data";
+import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
     player: Player;
@@ -24,6 +25,7 @@ type PlayerContextType = {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider = ({children}: PropsWithChildren) => {
+    const {settings} = useWindow();
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 
@@ -159,6 +161,10 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             previewPlayer.off('reset');
         };
     }, [previewPlayer]);
+
+    useEffect(() => {
+        if (settings) player.setRepeatMode(settings.repeat);
+    }, [settings]);
 
     return (
         <PlayerContext.Provider value={{

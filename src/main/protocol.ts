@@ -1,8 +1,13 @@
-import {net, protocol} from "electron";
+import {app, net, protocol} from "electron";
 import {AUDIO_DIR, IMAGES_DIR} from "./constants";
 import path from "path";
 import {pathToFileURL} from "url";
 import fs from "node:fs";
+
+const getFallbackImagePath = (): string => {
+    if (app.isPackaged) return path.join(__dirname, '../renderer/images/track.png');
+    return path.join(process.cwd(), 'public', 'images', 'track.png');
+};
 
 export const registerProtocols = () => {
     protocol.registerSchemesAsPrivileged([
@@ -33,6 +38,12 @@ export const setupProtocolHandlers = () => {
                 targetPath = path.join(AUDIO_DIR, `${resName}.mp3`);
             } else if (type === 'images') {
                 targetPath = path.join(IMAGES_DIR, `${resName}.jpg`);
+
+                try {
+                    await fs.promises.access(targetPath);
+                } catch {
+                    return net.fetch(`file://${getFallbackImagePath()}`);
+                }
             } else if (type === 'file') {
                 targetPath = resName;
             } else {

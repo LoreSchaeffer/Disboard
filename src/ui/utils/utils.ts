@@ -2,10 +2,6 @@ import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
 import {PlayerTrack, SbBtn} from "../../types/data";
 
-export const validateHexColor = (color: string): boolean => {
-    return /^#[0-9A-F]{6}$/i.test(color) || /^#[0-9A-F]{3}$/i.test(color);
-}
-
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
     if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(char => char + char).join('');
@@ -104,17 +100,6 @@ export const getVolumeIcon = (volume: number): ElementType => {
     if (volume < 15) return PiSpeakerNoneBold;
     if (volume < 50) return PiSpeakerLowBold;
     return PiSpeakerHighBold;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const applyUpdates = (target: any, source: any) => {
-    Object.keys(source).forEach(key => {
-        if (key === 'style' || key === 'cropOptions') return;
-
-        const value = source[key];
-        if (value === null) delete target[key];
-        else if (value !== undefined) target[key] = value;
-    });
 }
 
 export const generateButtonId = (row: number, col: number): string => {

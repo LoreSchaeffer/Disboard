@@ -33,12 +33,12 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
     const [queue, setQueue] = useState<PlayerTrack[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
-    const [currentPlayerTrack, setCurrentPlayerTrack] = useState<PlayerTrack | null>(player.getCurrentPlayerTrack());
+    const [currentPlayerTrack, setCurrentPlayerTrack] = useState<PlayerTrack | null>(player.getCurrentTrack());
     const [duration, setDuration] = useState<Time>(new Time(0, 'ms'));
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     const [previewStatus, setPreviewStatus] = useState<PlayerStatus>(previewPlayer.getStatus());
-    const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentPlayerTrack());
+    const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentTrack());
     const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
     const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
@@ -48,7 +48,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setRepeat(player.getRepeatMode());
             setQueue(player.getQueue());
             setIndex(player.getIndex());
-            setCurrentPlayerTrack(player.getCurrentPlayerTrack());
+            setCurrentPlayerTrack(player.getCurrentTrack());
 
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
@@ -109,7 +109,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     useEffect(() => {
         const syncPreviewState = () => {
             setPreviewStatus(previewPlayer.getStatus());
-            setPreviewCurrentPlayerTrack(previewPlayer.getCurrentPlayerTrack());
+            setPreviewCurrentPlayerTrack(previewPlayer.getCurrentTrack());
 
             const dur = previewPlayer.getDuration();
             setPreviewDuration(dur ? dur : new Time(0, 'ms'));

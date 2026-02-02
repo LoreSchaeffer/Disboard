@@ -1,7 +1,7 @@
 .profileSettings {
     position: absolute;
     right: 8px;
-    bottom: calc(var(--player-height) + 33px);
+    bottom: calc(var(--player-height) + 10px);
     background-color: var(--background-tertiary);
     border: 1px solid var(--border-on-tertiary);
     border-radius: 8px;

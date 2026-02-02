@@ -85,7 +85,7 @@ const Soundboard = () => {
                         disabled: isButtonNotSet
                     },
                     {
-                        label: 'Add to queue',
+                        label: 'Add to playlist',
                         icon: <PiPlaylistBold/>,
                         onClick: () => {
                             if (button.track) player.addToQueue(playerTrackFromBtn(button));

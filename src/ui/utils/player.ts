@@ -354,7 +354,7 @@ export class Player {
         return {...this.status};
     }
 
-    public getCurrentPlayerTrack(): PlayerTrack | null {
+    public getCurrentTrack(): PlayerTrack | null {
         return this.currentTrack;
     }
 

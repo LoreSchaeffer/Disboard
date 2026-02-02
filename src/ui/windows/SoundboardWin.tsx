@@ -13,6 +13,7 @@ import Player from "../components/player/Player";
 import ProfileSettings from "../components/soundboard/ProfileSettings";
 import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
+import Playlist from "../components/player/Playlist";
 
 const defProfileSelectorItems: ContextMenuItemData[] = [
     {separator: true},
@@ -43,6 +44,7 @@ const SoundboardWin = () => {
 
     const [profileSelectorOpen, setProfileSelectorOpen] = useState<boolean>(false);
     const [profileSettingsOpen, setProfileSettingsOpen] = useState<boolean>(false);
+    const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);
 
     const zoomRef = useRef<number>(settings.zoom || 1);
 
@@ -120,11 +122,19 @@ const SoundboardWin = () => {
     return (
         <>
             <Soundboard/>
-            <Player showProfileSettings={() => setProfileSettingsOpen(true)}/>
+            <Player
+                showProfileSettings={() => setProfileSettingsOpen(true)}
+                showPlaylist={() => setPlaylistOpen(true)}
+            />
 
             <ProfileSettings
                 show={profileSettingsOpen}
                 onClose={() => setProfileSettingsOpen(false)}
+            />
+
+            <Playlist
+                show={playlistOpen}
+                onClose={() => setPlaylistOpen(false)}
             />
         </>
     )

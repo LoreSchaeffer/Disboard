@@ -12,9 +12,10 @@ import {clsx} from "clsx";
 
 type PlayerProps = {
     showProfileSettings?: () => void;
+    showPlaylist?: () => void;
 };
 
-const Player = ({showProfileSettings}: PlayerProps) => {
+const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const {settings, updateSettings} = useWindow();
     const {player, status, currentTrack, duration, currentTime, queue} = usePlayer();
 
@@ -145,7 +146,8 @@ const Player = ({showProfileSettings}: PlayerProps) => {
                     <PlayerBtn
                         icon={<PiPlaylistBold/>}
                         disabled={!queueExists}
-                        title={queueExists ? 'Queue' : undefined}
+                        title={queueExists ? 'Playlist' : undefined}
+                        onClick={showPlaylist}
                     />
                     <PlayerBtn
                         icon={<PiSlidersHorizontalBold/>}

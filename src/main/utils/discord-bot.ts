@@ -5,42 +5,28 @@ import {settingsStore} from "./store";
 import {DiscordData, DiscordStatus} from "../../types/discord";
 
 export class DiscordBot {
-    private readonly player: AudioPlayer;
-    private readonly audioStream: PassThrough;
-
     private client: Client;
-
+    private player: AudioPlayer;
+    private audioStream: PassThrough;
     private connection: VoiceConnection | null = null;
     private isReady: boolean = false;
     private isConnected: boolean = false;
 
     constructor() {
-        this.audioStream = new PassThrough({
-            highWaterMark: 1024 * 1024 // 1MB buffer
-        });
-
-        this.player = createAudioPlayer({
-            behaviors: {
-                noSubscriber: NoSubscriberBehavior.Play
-            }
-        });
-
-        this._setupPlayerEvents();
     }
 
     public async login(token: string): Promise<void> {
         if (this.isReady && this.client) return;
 
-        if (!this.client) {
-            this.client = new Client({
-                intents: [
-                    GatewayIntentBits.Guilds,
-                    GatewayIntentBits.GuildVoiceStates
-                ]
-            });
+        if (this.client) this.disconnect();
 
-            this._setupClientEvents();
-        }
+        this.client = new Client({
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildVoiceStates
+            ]
+        });
+        this._setupClientEvents();
 
         try {
             await this.client.login(token);
@@ -65,6 +51,10 @@ export class DiscordBot {
 
     public async joinChannel(guildId: string, channelId: string): Promise<void> {
         if (!this.client) throw new Error('Discord client not initialized');
+
+        this.leaveChannel();
+
+        this._initAudioResources();
 
         let guild = this.client.guilds.cache.get(guildId);
         if (!guild) {
@@ -95,7 +85,12 @@ export class DiscordBot {
         this.connection.on(VoiceConnectionStatus.Disconnected, () => {
             console.log('[Discord] Voice connection disconnected');
             this.isConnected = false;
+        });
+
+        this.connection.on(VoiceConnectionStatus.Destroyed, () => {
+            this.isConnected = false;
             this.connection = null;
+            this._cleanupAudioResources();
         });
     }
 
@@ -103,13 +98,21 @@ export class DiscordBot {
         if (this.connection) {
             this.connection.destroy();
             this.connection = null;
-            this.isConnected = false;
-            this.player.stop();
         }
+
+        this.isConnected = false;
+        this._cleanupAudioResources();
     }
 
     public writeAudioPacket(buffer: Buffer): void {
-        if (this.connection && this.connection.state.status === VoiceConnectionStatus.Ready) this.audioStream.write(buffer);
+        if (
+            this.isConnected &&
+            this.audioStream &&
+            !this.audioStream.destroyed &&
+            this.connection?.state.status === VoiceConnectionStatus.Ready
+        ) {
+            this.audioStream.write(buffer);
+        }
     }
 
     public getStatus(): DiscordStatus {
@@ -120,10 +123,13 @@ export class DiscordBot {
     }
 
     public getGuilds(): DiscordData[] {
+        if (!this.client) return [];
         return this.client.guilds.cache.map(g => ({id: g.id, name: g.name}));
     }
 
     public getChannels(guildId: string): DiscordData[] {
+        if (!this.client) return [];
+
         const guild = this.client.guilds.cache.get(guildId);
         if (!guild) return [];
 
@@ -179,6 +185,36 @@ export class DiscordBot {
     }
 
 
+    private _initAudioResources() {
+        this._cleanupAudioResources();
+
+        this.audioStream = new PassThrough({
+            highWaterMark: 1024 * 1024 // 1MB buffer
+        });
+
+        this.player = createAudioPlayer({
+            behaviors: {
+                noSubscriber: NoSubscriberBehavior.Play
+            }
+        });
+
+        this._setupPlayerEvents();
+    }
+
+    private _cleanupAudioResources() {
+        if (this.player) {
+            this.player.stop();
+            this.player.removeAllListeners();
+            this.player = null;
+        }
+
+        if (this.audioStream) {
+            this.audioStream.destroy();
+            this.audioStream.removeAllListeners();
+            this.audioStream = null;
+        }
+    }
+
     private _setupClientEvents() {
         this.client.on('clientReady', () => {
             console.log(`[Discord] Logged in as ${this.client.user?.tag}`);
@@ -205,7 +241,7 @@ export class DiscordBot {
     }
 
     private _startStreaming(): void {
-        if (!this.connection) return;
+        if (!this.connection || !this.player || !this.audioStream) return;
 
         const resource = createAudioResource(this.audioStream, {
             inputType: StreamType.Raw

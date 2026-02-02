@@ -15,9 +15,14 @@ export const setupSettingsHandlers = () => {
         settingsStore.set(newSettings);
         broadcastSettings(newSettings);
 
-        if (state.discordBot && state.discordBot.getStatus().ready) {
+        if (state.discordBot) {
             const currentDiscordSettings = currentSettings.discord;
             const newDiscordSettings = newSettings.discord;
+
+            if (currentDiscordSettings.enabled !== newDiscordSettings.enabled) {
+                if (newDiscordSettings.enabled) state.discordBot.init();
+                else state.discordBot.disconnect();
+            }
 
             if (currentDiscordSettings.token !== newDiscordSettings.token) {
                 console.log('[Main] Discord token changed, restarting bot...');
@@ -27,12 +32,6 @@ export const setupSettingsHandlers = () => {
                     state.discordBot.init();
                     return;
                 }
-            }
-
-            if (currentDiscordSettings.enabled !== newDiscordSettings.enabled) {
-                if (newDiscordSettings.enabled) state.discordBot.init();
-                else state.discordBot.disconnect();
-                return;
             }
 
             if (newDiscordSettings.enabled && state.discordBot.getStatus().ready) {

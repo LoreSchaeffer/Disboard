@@ -74,6 +74,9 @@ const Player = ({showProfileSettings}: PlayerProps) => {
     };
 
     const queueExists = queue && queue.length > 0;
+    const isFirstTrack = queueExists && currentTrack ? queue[0].id === currentTrack.id : false;
+    const isLastTrack = queueExists && currentTrack ? queue[queue.length - 1].id === currentTrack.id : false;
+    const repeatModeAll = settings.repeat === 'all';
     const VolumeIcon = muted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
 
     return (
@@ -93,7 +96,7 @@ const Player = ({showProfileSettings}: PlayerProps) => {
                         />
                         <PlayerBtn
                             icon={<PiSkipBackFill/>}
-                            disabled={!queueExists}
+                            disabled={!queueExists || (isFirstTrack && !repeatModeAll)}
                             onClick={() => player.previous()}
                             title={'Previous'}
                         />
@@ -106,7 +109,7 @@ const Player = ({showProfileSettings}: PlayerProps) => {
                         />
                         <PlayerBtn
                             icon={<PiSkipForwardFill/>}
-                            disabled={!queueExists}
+                            disabled={!queueExists || (isLastTrack && !repeatModeAll)}
                             onClick={() => player.next()}
                             title={'Next'}
                         />

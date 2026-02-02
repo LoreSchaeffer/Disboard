@@ -35,6 +35,7 @@ export class Player {
     private queue: PlayerTrack[] = [];
     private index: number = 0;
 
+    private priorityTrack: PlayerTrack | null = null;
     private currentTrack: PlayerTrack | null = null;
 
     private startTime: Time | null = null;
@@ -180,11 +181,15 @@ export class Player {
 
 
     public addToQueue(track: PlayerTrack) {
-        this.queue.push(track);
-        this.eventHandlers['queueupdate']?.([...this.queue]);
-        if (this.queue.length === 1 && !this.currentTrack) {
+        if (this.queue.length === 0 && this.currentTrack) {
+            this.queue.push(this.currentTrack);
             this.index = 0;
         }
+
+        this.queue.push(track);
+
+        if (this.queue.length === 1 && !this.currentTrack) this.index = 0;
+        this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
     public removeFromQueue(index: number) {
@@ -205,6 +210,19 @@ export class Player {
     }
 
 
+    public playNow(track: PlayerTrack) {
+        if (this.status.playing) this.audio.pause();
+
+        this.priorityTrack = track;
+        this.currentTrack = this.priorityTrack;
+
+        this._loadAndPlay();
+    }
+
+    public playFromQueue(index: number) {
+        this._skipTo(index);
+    }
+
     public play() {
         if (this.audioContext.state === 'suspended') this.audioContext.resume();
 
@@ -220,20 +238,6 @@ export class Player {
         this._loadAndPlay();
     }
 
-    public playNow(track: PlayerTrack) {
-        if (this.status.playing) this.stop();
-        this.currentTrack = track;
-        this._loadAndPlay();
-    }
-
-    public playFromQueue(index: number) {
-        if (index < 0 || index >= this.queue.length) return;
-        this.stop();
-        this.index = index;
-        this.currentTrack = this.queue[this.index];
-        this._loadAndPlay();
-    }
-
     public playPause() {
         if (this.status.playing || (this.status.paused && this.currentTrack)) {
             if (this.status.paused) this.resume();
@@ -244,12 +248,31 @@ export class Player {
     }
 
     public pause() {
-        this.audio.pause();
+        const currentTime = this.audioContext.currentTime;
+        const currentVol = this.masterGainNode.gain.value;
+
+        this.masterGainNode.gain.cancelScheduledValues(currentTime);
+        this.masterGainNode.gain.setValueAtTime(currentVol, currentTime);
+        this.masterGainNode.gain.linearRampToValueAtTime(0, currentTime + 0.2);
+
+        setTimeout(() => {
+            this.audio.pause();
+            this.masterGainNode.gain.setValueAtTime(currentVol, this.audioContext.currentTime);
+        }, 200);
     }
 
     public resume() {
         if (this.audioContext.state === 'suspended') this.audioContext.resume();
-        this.audio.play().catch(console.error);
+
+        this.masterGainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+        this.audio.play().then(() => {
+            let targetVol = this.masterVolume;
+            if (this.currentTrack && this.currentTrack.volumeOverride !== undefined && this.currentTrack.volumeOverride !== null) targetVol = this.currentTrack.volumeOverride;
+
+            const normalizedVol = clamp(targetVol, 0, 100) / 100;
+            this.masterGainNode.gain.linearRampToValueAtTime(normalizedVol, this.audioContext.currentTime + 0.2);
+        }).catch(console.error);
     }
 
     public stop() {
@@ -260,33 +283,34 @@ export class Player {
         if (this.queue.length === 0) return;
 
         let nextIndex = this.index + 1;
+
         if (nextIndex >= this.queue.length) {
-            if (this.repeat === 'all') nextIndex = 0;
-            else {
+            if (this.repeat === 'all') {
+                nextIndex = 0;
+            } else {
                 this.stop();
                 return;
             }
         }
-        this.index = nextIndex;
-        this.currentTrack = this.queue[this.index];
-        this._loadAndPlay();
+
+        this._skipTo(nextIndex);
     }
 
     public previous() {
         if (this.queue.length === 0) return;
 
         let prevIndex = this.index - 1;
+
         if (prevIndex < 0) {
-            if (this.repeat === 'all') prevIndex = this.queue.length - 1;
-            else {
+            if (this.repeat === 'all') {
+                prevIndex = this.queue.length - 1;
+            } else {
                 this.seek(0);
                 return;
             }
         }
 
-        this.index = prevIndex;
-        this.currentTrack = this.queue[this.index];
-        this._loadAndPlay();
+        this._skipTo(prevIndex);
     }
 
     public seek(timeMs: number) {
@@ -367,6 +391,24 @@ export class Player {
         this.audio.load();
     }
 
+    private _skipTo(index: number) {
+        if (this.priorityTrack) this.priorityTrack = null;
+
+        if (index < 0 || index >= this.queue.length) return;
+
+        if (this.status.playing) this.audio.pause();
+
+        this.index = index;
+        const nextTrack = this.queue[this.index];
+
+        if (nextTrack) {
+            this.currentTrack = nextTrack;
+            this._loadAndPlay();
+        } else {
+            this.stop();
+        }
+    }
+
     private _calculateCropsAndDuration() {
         this.startTime = null;
         this.endTime = null;
@@ -429,6 +471,19 @@ export class Player {
         this.status.paused = false;
         this.eventHandlers['ended']?.();
 
+        if (this.priorityTrack) {
+            this.priorityTrack = null;
+
+            if (this.queue.length > 0 && this.queue[this.index]) {
+                this.currentTrack = this.queue[this.index];
+                this._loadAndPlay();
+            } else {
+                this._resetPlayer();
+            }
+
+            return;
+        }
+
         if (this.queue.length === 0) {
             if (this.repeat === 'one' || this.repeat === 'all') {
                 this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
@@ -471,6 +526,7 @@ export class Player {
         this.status.loading = false;
 
         this.currentTrack = null;
+        this.priorityTrack = null;
         this.startTime = null;
         this.endTime = null;
         this.duration = null;

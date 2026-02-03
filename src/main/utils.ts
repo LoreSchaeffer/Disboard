@@ -57,8 +57,9 @@ export const getYoutubeStream = async (videoId: string): Promise<string> => {
         try {
             const response = await net.fetch(cachedStream, {method: 'HEAD'});
 
-            if (response.status >= 200 && response.status < 400) return cachedStream;
-            else ytStreamCache.delete(videoId);
+            if (response.status >= 200 && response.status < 400) {
+                return cachedStream;
+            } else ytStreamCache.delete(videoId);
         } catch {
             ytStreamCache.delete(videoId);
         }

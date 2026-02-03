@@ -1,4 +1,4 @@
-import {app, BrowserWindow} from 'electron';
+import {app, BrowserWindow, session} from 'electron';
 import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
 import {broadcastProfiles, broadcastSettings} from "./main/utils";
@@ -16,9 +16,31 @@ if (require('electron-squirrel-startup')) app.quit();
 
 registerProtocols();
 
+const setupCorsHandler = () => {
+    const filter = {
+        urls: ['http://*/*', 'https://*/*']
+    };
+
+    session.defaultSession.webRequest.onHeadersReceived(filter, (details, callback) => {
+        const {responseHeaders} = details;
+        if (responseHeaders) {
+            responseHeaders['Access-Control-Allow-Origin'] = ['*'];
+            responseHeaders['Access-Control-Allow-Headers'] = ['*'];
+            responseHeaders['Access-Control-Allow-Methods'] = ['GET, HEAD, OPTIONS'];
+        }
+
+        callback({
+            responseHeaders,
+            statusLine: details.statusLine
+        });
+    });
+};
+
 const initApp = async () => {
     console.log('[Main] Running initialization sequence...');
     setAppPriority();
+
+    setupCorsHandler();
 
     // 1. Setup protocol handlers
     console.log('[Main] Setting up protocol handlers...');

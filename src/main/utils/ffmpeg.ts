@@ -4,7 +4,7 @@ import path from "path";
 import {removeNameInvalidChars} from "./validation";
 import {USER_AGENT} from "../utils";
 
-type ProbeResult = {
+export type ProbeResult = {
     format: string;
     codec: string;
     duration: number;

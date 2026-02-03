@@ -75,6 +75,10 @@ export class MusicApi {
         return res.data?.content;
     }
 
+    public getStreamProxy = (audioUrl: string): string => {
+        return `${this.api.defaults.baseURL}/proxy/audio?url=${encodeURIComponent(audioUrl)}`;
+    }
+
     public isAuthenticated(): boolean {
         return this.accessToken !== null;
     }

@@ -9,6 +9,7 @@ import {formatTime} from "../../utils/time";
 import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
+import {PlayerTrack} from "../../../types/data";
 
 type PlayerProps = {
     showProfileSettings?: () => void;
@@ -23,7 +24,9 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
-        const unsubPlayNow = window.electron.onPlayNow((track) => player.playNow(track));
+        const unsubPlayNow = window.electron.onPlayNow((track: PlayerTrack) => {
+            player.playNow(track)
+        });
         const unsubPause = window.electron.onPause(() => player.pause());
         const unsubPlay = window.electron.onPlay(() => player.play());
         const unsubPlayPause = window.electron.onPlayPause(() => player.playPause());

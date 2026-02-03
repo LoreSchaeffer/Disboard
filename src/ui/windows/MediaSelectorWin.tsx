@@ -203,6 +203,7 @@ const ListSelector = ({onChange}: SelectorProps) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className={styles.mb}
+                autoFocus
             />
 
             <div className={styles.resultsContainer}>
@@ -275,6 +276,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
                         });
                     }
                 }}
+                autoFocus
             />
 
             <div className={styles.resultsContainer}>
@@ -299,7 +301,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
                             />
                             <div className={styles.resultInfo}>
                                 <span className={styles.resultTitle}>{result.name}</span>
-                                <span className={styles.resultSource}>
+                                <span className={styles.resultSource} onClick={() => window.electron.openLink(result.url)}>
                                     {result.url}
                                 </span>
                             </div>
@@ -339,6 +341,7 @@ const FileSelector = ({onChange}: SelectorProps) => {
                         value={path}
                         onChange={(e) => handleChange(e.target.value)}
                         className={styles.mb}
+                        autoFocus
                     />
                 </Col>
                 <Col size={1}>
@@ -370,6 +373,7 @@ const URLSelector = ({onChange}: SelectorProps) => {
                 value={url}
                 onChange={(e) => handleChange(e.target.value)}
                 className={styles.mb}
+                autoFocus
             />
         </div>
     );

@@ -2,8 +2,9 @@ import * as crypto from 'crypto';
 import {PlayerTrack, TrackSource} from "../../types/data";
 import {YTSearchResult} from "../../types/music-api";
 import {tracksStore} from "./store";
-import {state} from "../state";
 import os from "node:os";
+import {getYoutubeStream} from "../utils";
+import {probeMedia} from "./ffmpeg";
 
 export const generateUUID = (): string => {
     return crypto.randomUUID();
@@ -21,11 +22,9 @@ export const getPlayerTrack = async (source: TrackSource, media: YTSearchResult 
         }
         case 'youtube': {
             const ytResult = media as YTSearchResult;
-            const musicApi = state.musicApi;
-            if (!musicApi) return null;
 
             try {
-                const stream = await musicApi.getStream(ytResult.id);
+                const stream = await getYoutubeStream(ytResult.id);
                 if (!stream) return null;
 
                 track = {
@@ -35,38 +34,43 @@ export const getPlayerTrack = async (source: TrackSource, media: YTSearchResult 
                         src: stream
                     },
                     title: ytResult.name,
-                    duration: ytResult.duration,
+                    duration: ytResult.duration * 1000,
                     directStream: true
                 }
+
+                console.log(track);
             } catch {
                 return null;
             }
             break;
         }
-        case 'file': {
+        case 'file':
+        case 'url': {
+            const uri = media as string;
+
+            let duration = 0;
+            let title = source === 'file'
+                ? uri.split(/[/\\]/).pop() || uri
+                : uri;
+
+            try {
+                const probe = await probeMedia(uri);
+                duration = Math.round((probe.duration || 0) * 1000);
+                if (probe.tags?.title) title = probe.tags.title as string;
+            } catch {
+                // Ignored
+            }
+
             track = {
                 id: generateUUID(),
                 source: {
-                    type: 'file',
-                    src: media as string
+                    type: source,
+                    src: uri
                 },
-                title: (media as string).split('/').pop(),
-                duration: 0,
+                title: title,
+                duration: duration,
                 directStream: true
             };
-            break;
-        }
-        case 'url': {
-            track = {
-                id: generateUUID(),
-                source: {
-                    type: 'url',
-                    src: media as string
-                },
-                title: media as string,
-                duration: 0,
-                directStream: true
-            }
             break;
         }
     }

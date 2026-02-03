@@ -45,8 +45,12 @@ export default function WindowProvider({children}: PropsWithChildren) {
 
         loadInitialData();
 
-        const unsubSettings = window.electron.onSettingsChanged(setSettings);
-        const unsubProfiles = window.electron.onProfilesChanged(setProfiles);
+        const unsubSettings = window.electron.onSettingsChanged(settings => {
+            setSettings(settings);
+        });
+        const unsubProfiles = window.electron.onProfilesChanged(profiles => {
+            setProfiles(profiles);
+        });
 
         return () => {
             unsubSettings();

@@ -15,32 +15,12 @@ import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
 
-const defProfileSelectorItems: ContextMenuItemData[] = [
-    {separator: true},
-    {
-        label: 'New profile',
-        icon: <PiPlusBold/>,
-        onClick: () => console.log('Create new profile'), // TODO create new profile logic (use modal)
-    },
-    {separator: true},
-    {
-        label: 'Import profile',
-        icon: <PiArrowSquareInBold/>,
-        onClick: () => window.electron.importProfile(),
-    },
-    {
-        label: 'Export all',
-        icon: <PiArrowSquareOutBold/>,
-        onClick: () => window.electron.exportProfiles(),
-    }
-];
-
 const SoundboardWin = () => {
     const {settings, updateSettings, profiles, activeProfile} = useWindow();
     const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();
-    // const {navigate} = useNavigation();
+    const {navigate} = useNavigation();
 
     const [profileSelectorOpen, setProfileSelectorOpen] = useState<boolean>(false);
     const [profileSettingsOpen, setProfileSettingsOpen] = useState<boolean>(false);
@@ -48,10 +28,11 @@ const SoundboardWin = () => {
 
     const zoomRef = useRef<number>(settings.zoom || 1);
 
-    // // TODO only for development, remove later
-    // useEffect(() => {
-    //     navigate('settings', false);
-    // }, []);
+    // TODO only for development, remove later
+    useEffect(() => {
+        // navigate('settings', false);
+        // navigate('new_profile', false);
+    }, []);
 
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {
@@ -110,6 +91,26 @@ const SoundboardWin = () => {
         }));
 
         const rect = (event.target as HTMLElement).getBoundingClientRect();
+
+        const defProfileSelectorItems: ContextMenuItemData[] = [
+            {separator: true},
+            {
+                label: 'New profile',
+                icon: <PiPlusBold/>,
+                onClick: () => navigate('new_profile', false),
+            },
+            {separator: true},
+            {
+                label: 'Import profile',
+                icon: <PiArrowSquareInBold/>,
+                onClick: () => window.electron.importProfile(),
+            },
+            {
+                label: 'Export all',
+                icon: <PiArrowSquareOutBold/>,
+                onClick: () => window.electron.exportProfiles(),
+            }
+        ];
 
         showContextMenu({
             items: [...items, ...defProfileSelectorItems],

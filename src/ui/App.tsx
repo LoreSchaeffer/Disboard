@@ -7,6 +7,7 @@ import {PlayerProvider} from "./context/PlayerContext";
 import MediaSelectorWin from "./windows/MediaSelectorWin";
 import ButtonSettingsWin from "./windows/ButtonSettingsWin";
 import SettingsWin from "./windows/SettingsWin";
+import NewProfileWin from "./windows/NewProfileWin";
 
 const PAGES: {
     name: string;
@@ -14,9 +15,11 @@ const PAGES: {
     usePlayer: boolean;
 }[] = [
     {name: 'main', component: <SoundboardWin/>, usePlayer: true},
-    {name: 'settings', component: <SettingsWin/>, usePlayer: true},
     {name: 'button_settings', component: <ButtonSettingsWin/>, usePlayer: true},
     {name: 'media_selector', component: <MediaSelectorWin/>, usePlayer: true},
+
+    {name: 'settings', component: <SettingsWin/>, usePlayer: true},
+    {name: 'new_profile', component: <NewProfileWin/>, usePlayer: false},
 ];
 
 const FallbackPage = () => <div>Page not found!</div>

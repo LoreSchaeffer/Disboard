@@ -5,7 +5,7 @@ import {convertBtnToSbBtn, convertProfileToSbProfile, convertSbBtnsToBtns, getPo
 import {IpcResponse} from "../../types/common";
 import {generateValidFileName, removeNameInvalidChars, validateName} from "../utils/validation";
 import {clamp} from "../../common/utils";
-import {broadcastProfiles, broadcastSettings} from "../utils";
+import {broadcastProfiles, broadcastSettings, getDefProfile, fixActiveProfile} from "../utils";
 import path from "path";
 import fs from "node:fs";
 import {generateUUID} from "../utils/utils";
@@ -132,24 +132,11 @@ export const setupProfilesHandlers = () => {
         if (idx === -1) return {success: false, error: 'id_not_found'};
 
         profiles.splice(idx, 1);
-        if (profiles.length === 0) {
-            profiles.push({
-                id: generateUUID(),
-                name: 'Default',
-                rows: 8,
-                cols: 10,
-                buttons: []
-            });
-        }
+        if (profiles.length === 0) profiles.push(getDefProfile());
 
         profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
 
-        const activeProfile = settingsStore.get('activeProfile');
-        if (activeProfile === id || !profiles.find(p => p.id === activeProfile)) {
-            settingsStore.set('activeProfile', profiles[0].id);
-            broadcastSettings(settingsStore.store);
-        }
+        fixActiveProfile();
 
         return {success: true};
     });

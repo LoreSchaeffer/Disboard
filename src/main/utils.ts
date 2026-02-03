@@ -6,10 +6,11 @@ import {AUDIO_DIR, IMAGES_DIR} from "./constants";
 import {Settings} from "../types/settings";
 import {Profile, Source, Track} from "../types/data";
 import {determineTitle, extractCoverImage, processAudio} from "./utils/ffmpeg";
-import {tracksStore} from "./utils/store";
+import {profilesStore, settingsStore, tracksStore} from "./utils/store";
 import axios from "axios";
 import {pipeline} from 'stream/promises';
 import {convertProfileToSbProfile} from "./utils/data";
+import {generateUUID} from "./utils/utils";
 
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 
@@ -127,10 +128,36 @@ export const downloadTrack = async (id: string, uri: string, source: Source, tit
     }
 };
 
+export const getDefProfile = (): Profile => ({
+    id: generateUUID(),
+    name: 'Default',
+    rows: 8,
+    cols: 10,
+    buttons: []
+});
+
+export const fixActiveProfile = () => {
+    const profiles = profilesStore.get('profiles') || [];
+    const activeProfileId = settingsStore.get('activeProfile');
+
+    if (profiles.length === 0) {
+        console.log('[Main] No profiles found, creating default profile...');
+
+        profiles.push(getDefProfile());
+        profilesStore.set('profiles', profiles);
+    }
+
+    if (!activeProfileId || !profiles.find(p => p.id === activeProfileId)) {
+        console.log('[Main] Active profile not set or invalid, setting to first profile...');
+        settingsStore.set('activeProfile', profiles[0].id);
+        console.log(`[Main] Active profile set to: ${profilesStore.get('profiles')[0].name}`);
+    }
+}
+
 export const broadcastSettings = (settings: Settings) => {
-    BrowserWindow.getAllWindows().forEach(win => {
-        if (!win.isDestroyed()) win.webContents.send('settings', settings);
-    });
+    // BrowserWindow.getAllWindows().forEach(win => {
+    //     if (!win.isDestroyed()) win.webContents.send('settings', settings);
+    // });
 }
 
 export const broadcastProfiles = (profiles: Profile[]) => {

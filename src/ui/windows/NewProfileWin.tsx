@@ -1,51 +1,122 @@
-import './NewProfileWin.css';
-import Window from "./Window";
-import InputField from "../generic/forms/InputField";
+import styles from './NewProfileWin.module.css';
+import {PiFloppyDiskBold, PiXBold} from "react-icons/pi";
+import {useNavigation} from "../context/NavigationContext";
+import Row from "../components/layout/Row";
+import Col from "../components/layout/Col";
+import Input from "../components/forms/Input";
 import React, {useState} from "react";
-import Spinner from "../generic/forms/Spinner";
-import Button from "../generic/Button";
-import {useData} from "../../utils/windowContext";
+import {removeNameInvalidChars} from "../../main/utils/validation";
+import {validateName} from "../utils/validation";
+import {useWindow} from "../context/WindowContext";
+import Button from "../components/misc/Button";
+import {clsx} from "clsx";
 
 const NewProfileWin = () => {
-    const {winId} = useData();
+    const {profiles} = useWindow();
+    const {back} = useNavigation();
     const [profileName, setProfileName] = useState<string>('');
+    const [profileNameError, setProfileNameError] = useState<string | undefined>(undefined);
     const [rows, setRows] = useState<number>(8);
-    const [cols, setCols] = useState<number>(10);
+    const [columns, setColumns] = useState<number>(10);
 
-    const handleProfileName = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.value.length !== 0 && e.target.value.trim().length === 0) return;
-        setProfileName(e.target.value);
-        console.log(profileName);
+    const handleProfileNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = removeNameInvalidChars(e.target.value);
+        setProfileName(value);
+
+        if (!validateName(value) || profiles.find(p => p.name.toLowerCase() === value.toLowerCase())) setProfileNameError('This name is not valid');
+        else setProfileNameError(undefined);
     }
 
-    const closeWindow = () => {
-        (window as any).electron.close(winId);
-    }
+    const handleSubmit = () => {
+        if (profileNameError) return;
 
-    const create = () => {
-        (window as any).electron.createProfile(profileName, rows, cols);
-        closeWindow();
+        window.electron.createProfile({
+            name: profileName,
+            rows: rows,
+            cols: columns
+        }).then(res => {
+            if (res.success) back();
+            else console.error('Failed to create profile:', res.error);
+        });
     }
 
     return (
-        <Window>
-            <div className={"row"}>
-                <label>Profile name</label>
-                <InputField placeholder={"Profile name"} value={profileName} onChange={handleProfileName}/>
+        <div className={styles.wrapper}>
+            <div className={styles.content}>
+                <div className={styles.header}>
+                    <PiXBold className={styles.closeBtn} onClick={back}/>
+                    <span className={styles.title}>New Profile</span>
+                </div>
+
+                <div className={styles.form}>
+                    <Row className={styles.row}>
+                        <Col size={3}>
+                            <label>Profile Name</label>
+                        </Col>
+                        <Col size={5}>
+                            <Input
+                                type={'text'}
+                                value={profileName}
+                                onChange={handleProfileNameChange}
+                                placeholder={'Profile Name'}
+                                error={profileNameError}
+                                autoFocus
+                            />
+                        </Col>
+                    </Row>
+                    <Row className={styles.row}>
+                        <Col size={3}>
+                            <label>Rows</label>
+                        </Col>
+                        <Col size={3}>
+                            <Input
+                                type={'number'}
+                                value={rows}
+                                onChange={(e) => setRows(Number(e.target.value))}
+                                min={1}
+                                max={50}
+                                placeholder={'Rows'}
+                                spinner
+                            />
+                        </Col>
+                    </Row>
+                    <Row className={styles.row}>
+                        <Col size={3}>
+                            <label>Columns</label>
+                        </Col>
+                        <Col size={3}>
+                            <Input
+                                type={'number'}
+                                value={columns}
+                                onChange={(e) => setColumns(Number(e.target.value))}
+                                min={1}
+                                max={50}
+                                placeholder={'Columns'}
+                                spinner
+                            />
+                        </Col>
+                    </Row>
+                </div>
+
+                <div className={clsx('windowButtons', styles.buttons)}>
+                    <Button
+                        variant={'danger'}
+                        icon={<PiXBold/>}
+                        onClick={back}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant={'success'}
+                        icon={<PiFloppyDiskBold/>}
+                        disabled={profileNameError !== undefined}
+                        onClick={handleSubmit}
+                    >
+                        Create
+                    </Button>
+                </div>
             </div>
-            <div className={"row"}>
-                <label>Rows</label>
-                <Spinner value={rows} setValue={setRows} min={1} max={20}/>
-            </div>
-            <div className={"row"}>
-                <label>Columns</label>
-                <Spinner value={cols} setValue={setCols} min={1} max={20}/>
-            </div>
-            <div className={"buttons"}>
-                <Button icon={"close"} className={"danger"} onClick={closeWindow}>Discard</Button>
-                <Button icon={"add"} className={"success"} onClick={create} disabled={!profileName}>Create</Button>
-            </div>
-        </Window>
+        </div>
     );
 };
 

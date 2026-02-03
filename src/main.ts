@@ -1,7 +1,7 @@
 import {app, BrowserWindow, session} from 'electron';
 import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
-import {broadcastProfiles, broadcastSettings} from "./main/utils";
+import {broadcastProfiles, broadcastSettings, fixActiveProfile} from "./main/utils";
 import {state} from "./main/state";
 import {createMainWindow} from "./main/windows";
 import {profilesStore, settingsStore} from "./main/utils/store";
@@ -52,34 +52,12 @@ const initApp = async () => {
 
     // 3. Setup sore change listeners
     console.log('[Main] Setting up store listeners...');
-    settingsStore.onDidAnyChange((newValue) => broadcastSettings(newValue));
-    profilesStore.onDidAnyChange((newValue) => broadcastProfiles(newValue.profiles));
+    //settingsStore.onDidAnyChange((newValue) => broadcastSettings(newValue));
+    //profilesStore.onDidAnyChange((newValue) => broadcastProfiles(newValue.profiles));
 
     // 4. Data validation / Initialization
     console.log('[Main] Validating data stores...');
-    if (profilesStore.get('profiles').length === 0) {
-        console.log('[Main] No profiles found, creating default profile...');
-        profilesStore.set('store', [
-            {
-                id: generateUUID(),
-                name: 'Default',
-                rows: 8,
-                cols: 10,
-                buttons: []
-            }
-        ]);
-    }
-
-    if (!settingsStore.get('activeProfile') || !profilesStore.get('profiles').find(p => p.id === settingsStore.get('activeProfile'))) {
-        console.log('[Main] Active profile not set or invalid, setting to first profile...');
-
-        if (profilesStore.get('profiles').length > 0) {
-            console.log(`[Main] Setting active profile to: ${profilesStore.get('profiles')[0].name}`);
-            settingsStore.set('activeProfile', profilesStore.get('profiles')[0].id);
-        } else {
-            console.error('[Main] No profile found');
-        }
-    }
+    fixActiveProfile();
 
     // 5. Initialize Music API
     const musicApiEndpoint = settingsStore.get('musicApi');

@@ -138,6 +138,9 @@ export const setupProfilesHandlers = () => {
 
         fixActiveProfile();
 
+        broadcastSettings(settingsStore.store);
+        broadcastProfiles(profiles);
+
         return {success: true};
     });
 

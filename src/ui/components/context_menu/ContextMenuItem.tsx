@@ -36,7 +36,8 @@ const ContextMenuItem = ({item, onCloseRoot}: ContextMenuItemProps) => {
 
     if (item.separator) return <li className={clsx(styles.item, styles.separator)}/>;
 
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (item.disabled) return;
         item.onClick?.();
         onCloseRoot();

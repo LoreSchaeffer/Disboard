@@ -50,16 +50,11 @@ const initApp = async () => {
     console.log('[Main] Registering IPC handlers...');
     registerIpcHandlers();
 
-    // 3. Setup sore change listeners
-    console.log('[Main] Setting up store listeners...');
-    //settingsStore.onDidAnyChange((newValue) => broadcastSettings(newValue));
-    //profilesStore.onDidAnyChange((newValue) => broadcastProfiles(newValue.profiles));
-
-    // 4. Data validation / Initialization
+    // 3. Data validation / Initialization
     console.log('[Main] Validating data stores...');
     fixActiveProfile();
 
-    // 5. Initialize Music API
+    // 4. Initialize Music API
     const musicApiEndpoint = settingsStore.get('musicApi');
     const musicApiCredentials = settingsStore.get('musicApiCredentials');
     if (musicApiEndpoint && musicApiCredentials && musicApiCredentials.clientId && musicApiCredentials.clientSecret) {
@@ -69,15 +64,15 @@ const initApp = async () => {
         console.log('[Main] Music API not configured.');
     }
 
-    // 6. Init FFMpeg
+    // 5. Init FFMpeg
     console.log('[Main] Initializing FFMpeg...');
     ffmpeg.setFfmpegPath(ffmpegPath.path.replace('app.asar', 'app.asar.unpacked'));
 
-    // 7. Init discord
+    // 6. Init discord
     state.discordBot = new DiscordBot();
     state.discordBot.init();
 
-    // 8. Launch main window
+    // 7. Launch main window
     console.log('[Main] Launching renderer...');
     createMainWindow();
 };

@@ -1,16 +1,16 @@
-import {BrowserWindow, net} from "electron";
-import {state} from "./state";
+import { BrowserWindow, net } from "electron";
+import { state } from "./state";
 import path from "path";
 import fs from "node:fs";
-import {AUDIO_DIR, IMAGES_DIR} from "./constants";
-import {Settings} from "../types/settings";
-import {Profile, Source, Track} from "../types/data";
-import {determineTitle, extractCoverImage, processAudio} from "./utils/ffmpeg";
-import {profilesStore, settingsStore, tracksStore} from "./utils/store";
+import { AUDIO_DIR, IMAGES_DIR } from "./constants";
+import { Settings } from "../types/settings";
+import { Profile, Source, Track } from "../types/data";
+import { determineTitle, extractCoverImage, processAudio } from "./utils/ffmpeg";
+import { profilesStore, settingsStore, tracksStore } from "./utils/store";
 import axios from "axios";
-import {pipeline} from 'stream/promises';
-import {convertProfileToSbProfile} from "./utils/data";
-import {generateUUID} from "./utils/utils";
+import { pipeline } from 'stream/promises';
+import { convertProfileToSbProfile } from "./utils/data";
+import { generateUUID } from "./utils/utils";
 
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 
@@ -22,7 +22,7 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
     const outputPath = path.join(outputDir, `${trackId}.jpg`);
 
     try {
-        fs.mkdirSync(outputDir, {recursive: true});
+        fs.mkdirSync(outputDir, { recursive: true });
 
         const response = await axios({
             method: 'GET',
@@ -56,7 +56,7 @@ export const getYoutubeStream = async (videoId: string): Promise<string> => {
 
     if (cachedStream) {
         try {
-            const response = await net.fetch(cachedStream, {method: 'HEAD'});
+            const response = await net.fetch(cachedStream, { method: 'HEAD' });
 
             if (response.status >= 200 && response.status < 400) {
                 return cachedStream;
@@ -155,9 +155,9 @@ export const fixActiveProfile = () => {
 }
 
 export const broadcastSettings = (settings: Settings) => {
-    // BrowserWindow.getAllWindows().forEach(win => {
-    //     if (!win.isDestroyed()) win.webContents.send('settings', settings);
-    // });
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('settings', settings);
+    });
 }
 
 export const broadcastProfiles = (profiles: Profile[]) => {

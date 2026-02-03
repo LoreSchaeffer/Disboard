@@ -1,5 +1,5 @@
-import {RepeatModeSchema} from "./common";
-import {z} from "zod";
+import { RepeatModeSchema } from "./common";
+import { z } from "zod";
 
 export const ApiCredentialsSchema = z.object({
     clientId: z.string().default(''),
@@ -27,8 +27,8 @@ export const SettingsSchema = z.object({
     zoom: z.number().min(0.5).max(3).default(1),
     showImages: z.boolean().default(true),
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
-    musicApiCredentials: ApiCredentialsSchema.optional().default(null),
-    discord: DiscordSettingsSchema.default({enabled: false, restPort: 24454, udpPort: 24455}),
+    musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
+    discord: DiscordSettingsSchema.default({ enabled: false, restPort: 24454, udpPort: 24455 }),
     debug: z.boolean().default(false)
 });
 

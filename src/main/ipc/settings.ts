@@ -1,8 +1,8 @@
-import {ipcMain} from "electron";
-import {Settings} from "../../types/settings";
-import {broadcastSettings} from "../utils";
-import {settingsStore} from "../utils/store";
-import {state} from "../state";
+import { ipcMain } from "electron";
+import { Settings } from "../../types/settings";
+import { broadcastSettings } from "../utils";
+import { settingsStore } from "../utils/store";
+import { state } from "../state";
 
 export const setupSettingsHandlers = () => {
     ipcMain.handle('get_settings', (): Settings => {
@@ -10,8 +10,10 @@ export const setupSettingsHandlers = () => {
     });
 
     ipcMain.on('update_settings', (_, settings: Partial<Settings>) => {
+        console.log('Updating settings:', settings);
+
         const currentSettings = settingsStore.store;
-        const newSettings = {...currentSettings, ...settings};
+        const newSettings = { ...currentSettings, ...settings };
         settingsStore.set(newSettings);
         broadcastSettings(newSettings);
 

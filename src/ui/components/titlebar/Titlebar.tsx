@@ -14,14 +14,14 @@ export type TitlebarProps = PropsWithChildren<{
 
 const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
     const {resizable} = useWindow();
-    const {navigate, visibleStack} = useNavigation();
+    const {navigate, isInStack, visibleStack} = useNavigation();
 
     return (
         <div className={styles.titlebar}>
-            {visibleStack.find(s => s === 'main') && (
+            {visibleStack.find(s => s.page === 'main') && (
                 <TitlebarButton
-                    onClick={() => navigate('settings', false)}
-                    disabled={visibleStack.indexOf('settings') !== -1}
+                    onClick={() => navigate('settings', {replace: false})}
+                    disabled={isInStack('settings')}
                     icon={PiListBold}
                 />
             )}

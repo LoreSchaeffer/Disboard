@@ -10,8 +10,6 @@ export const setupSettingsHandlers = () => {
     });
 
     ipcMain.on('update_settings', (_, settings: Partial<Settings>) => {
-        console.log('Updating settings:', settings);
-
         const currentSettings = settingsStore.store;
         const newSettings = { ...currentSettings, ...settings };
         settingsStore.set(newSettings);

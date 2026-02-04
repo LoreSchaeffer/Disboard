@@ -30,8 +30,8 @@ const SoundboardWin = () => {
 
     // TODO only for development, remove later
     useEffect(() => {
-        // navigate('settings', false);
-        // navigate('new_profile', false);
+        // navigate('settings', {replace: false});
+        // navigate('new_profile', {replace: false});
     }, []);
 
     useEffect(() => {
@@ -97,7 +97,7 @@ const SoundboardWin = () => {
             {
                 label: 'New profile',
                 icon: <PiPlusBold/>,
-                onClick: () => navigate('new_profile', false),
+                onClick: () => navigate('new_profile', {replace: false}),
             },
             {separator: true},
             {

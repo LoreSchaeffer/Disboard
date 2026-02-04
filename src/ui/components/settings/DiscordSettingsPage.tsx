@@ -42,7 +42,14 @@ const DiscordSettingsPage = () => {
     }, []);
 
     useEffect(() => {
-        if (status.ready) window.electron.getDiscordGuilds().then(guilds => setGuilds(guilds.map(g => ({label: g.name, value: g.id}))));
+        if (status.ready) window.electron.getDiscordGuilds().then(guilds => {
+            const guildOptions = guilds.map(g => ({label: g.name, value: g.id}));
+
+            setGuilds(guildOptions);
+            if (guildOptions.find(g => g.value === settings.discord.lastGuild)) {
+                fetchChannels(settings.discord.lastGuild, settings.discord.lastChannel);
+            }
+        });
     }, [status.ready]);
 
     useEffect(() => {

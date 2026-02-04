@@ -1,5 +1,5 @@
 import {Client, GatewayIntentBits, VoiceBasedChannel} from "discord.js";
-import {AudioPlayer, AudioPlayerStatus, createAudioPlayer, createAudioResource, joinVoiceChannel, NoSubscriberBehavior, StreamType, VoiceConnection, VoiceConnectionStatus} from "@discordjs/voice";
+import {AudioPlayer, AudioPlayerStatus, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, NoSubscriberBehavior, StreamType, VoiceConnection, VoiceConnectionStatus} from "@discordjs/voice";
 import {PassThrough} from 'stream';
 import {settingsStore} from "./store";
 import {DiscordData, DiscordStatus} from "../../types/discord";
@@ -82,9 +82,19 @@ export class DiscordBot {
             this._startStreaming();
         });
 
-        this.connection.on(VoiceConnectionStatus.Disconnected, () => {
-            console.log('[Discord] Voice connection disconnected');
-            this.isConnected = false;
+        this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
+            console.log('[Discord] Connection disconnected. Checking if it is a move or a close...');
+
+            try {
+                await Promise.race([
+                    entersState(this.connection!, VoiceConnectionStatus.Signalling, 5_000),
+                    entersState(this.connection!, VoiceConnectionStatus.Connecting, 5_000),
+                ]);
+                console.log('[Discord] It was a channel move/reconnect. Waiting for Ready state...');
+            } catch {
+                console.log('[Discord] Connection lost permanently.');
+                this.leaveChannel();
+            }
         });
 
         this.connection.on(VoiceConnectionStatus.Destroyed, () => {

@@ -26,6 +26,7 @@ export const SettingsSchema = z.object({
     activeProfile: z.string().nullable().default(null),
     zoom: z.number().min(0.5).max(3).default(1),
     showImages: z.boolean().default(true),
+    confirmButtonDeletion: z.boolean().default(true),
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
     musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
     discord: DiscordSettingsSchema.default({ enabled: false, restPort: 24454, udpPort: 24455 }),

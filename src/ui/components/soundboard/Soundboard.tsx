@@ -11,11 +11,13 @@ import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayFill, PiPlayli
 import {FaRegPaste} from "react-icons/fa6";
 import {BtnStyle, SbBtn} from "../../../types/data";
 import {generateButtonId, playerTrackFromBtn} from "../../utils/utils";
+import {useNavigation} from "../../context/NavigationContext";
 
 const Soundboard = () => {
-    const {activeProfile} = useWindow();
+    const {settings, activeProfile} = useWindow();
     const {showContextMenu} = useContextMenu();
     const {player, previewPlayer} = usePlayer();
+    const {navigate} = useNavigation();
 
     const [copiedButton, setCopiedButton] = useState<SbBtn | null>(null);
     const [copiedStyle, setCopiedStyle] = useState<BtnStyle | null>(null);
@@ -66,7 +68,20 @@ const Soundboard = () => {
 
         const deleteButton = () => {
             if (!button) return;
-            window.electron.deleteButton(activeProfile.id, generateButtonId(row, col));
+
+            if (settings && !settings.confirmButtonDeletion) {
+                window.electron.deleteButton(activeProfile.id, generateButtonId(row, col));
+            } else {
+                navigate('delete_confirmation', {
+                    replace: false,
+                    data:
+                        {
+                            resource: 'button',
+                            id: generateButtonId(button.row, button.col),
+                            onConfirm: () => window.electron.deleteButton(activeProfile.id, generateButtonId(row, col))
+                        }
+                });
+            }
         }
 
         const isButtonNotSet = !button || !button.track;
@@ -139,13 +154,33 @@ const Soundboard = () => {
                         icon: <PiCopyBold/>,
                         onClick: () => copyButton(),
                         disabled: isButtonNotSet
-                    },
+                    }
+                );
+            }
+
+            if ((!button || !button.track) && copiedButton) {
+                items.push(
+                    {separator: true},
                     {
                         label: 'Paste button',
                         icon: <FaRegPaste/>,
                         onClick: () => pasteButton(),
                         disabled: !copiedButton
-                    },
+                    }
+                );
+            } else if (button && button.track) {
+                items.push(
+                    {
+                        label: 'Paste button',
+                        icon: <FaRegPaste/>,
+                        onClick: () => pasteButton(),
+                        disabled: !copiedButton
+                    }
+                );
+            }
+
+            if (button && button.track) {
+                items.push(
                     {separator: true},
                     {
                         label: 'Copy style',

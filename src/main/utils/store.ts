@@ -102,6 +102,7 @@ export const settingsStore = createValidatedStore<Settings>(
         zoom: 1,
         showImages: true,
         activeProfile: null,
+        confirmButtonDeletion: true,
         musicApi: 'https://ma.lycoris.it',
         musicApiCredentials: null,
         discord: {

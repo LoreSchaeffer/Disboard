@@ -21,7 +21,7 @@ const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
             {visibleStack.find(s => s.page === 'main') && (
                 <TitlebarButton
                     onClick={() => navigate('settings', {replace: false})}
-                    disabled={isInStack('settings')}
+                    disabled={isInStack('settings') || visibleStack.length > 1}
                     icon={PiListBold}
                 />
             )}

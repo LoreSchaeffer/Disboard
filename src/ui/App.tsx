@@ -8,6 +8,7 @@ import MediaSelectorWin from "./windows/MediaSelectorWin";
 import ButtonSettingsWin from "./windows/ButtonSettingsWin";
 import SettingsWin from "./windows/SettingsWin";
 import NewProfileWin from "./windows/NewProfileWin";
+import DeleteConfirmationWin from "./windows/DeleteConfirmationWin";
 
 type PageConfig = {
     component: ReactElement;
@@ -21,6 +22,8 @@ const PAGES: Record<string, PageConfig> = {
 
     'settings': {component: <SettingsWin/>, usePlayer: true},
     'new_profile': {component: <NewProfileWin/>, usePlayer: false},
+
+    'delete_confirmation': {component: <DeleteConfirmationWin/>, usePlayer: false},
 }
 
 const FallbackPage = () => <div>Page not found!</div>
@@ -40,7 +43,6 @@ export const App = () => {
                     return null;
                 }
 
-                const isTopPage = index === visibleStack.length - 1;
                 const content = pageConfig.usePlayer ? (
                     <PlayerProvider>{pageConfig.component}</PlayerProvider>
                 ) : (
@@ -52,7 +54,6 @@ export const App = () => {
                         key={entry.page}
                         className="pageContainer"
                         style={{
-                            display: isTopPage ? 'block' : 'none',
                             zIndex: 10 + index,
                         }}
                     >

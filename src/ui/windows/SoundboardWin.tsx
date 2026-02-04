@@ -84,7 +84,16 @@ const SoundboardWin = () => {
                     label: 'Delete',
                     icon: <PiTrashBold/>,
                     variant: 'danger',
-                    onClick: () => window.electron.deleteProfile(p.id),
+                    onClick: () => {
+                        navigate('delete_confirmation', {
+                            replace: false,
+                            data: {
+                                resource: 'profile',
+                                id: p.id,
+                                onConfirm: () => window.electron.deleteProfile(p.id)
+                            }
+                        });
+                    },
                 }
             ],
             onClick: () => updateSettings({activeProfile: p.id}),

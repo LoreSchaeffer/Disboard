@@ -1,8 +1,8 @@
 import './App.css';
-import {ReactElement, useEffect, useState} from "react";
-import SoundboardWin from "./windows/SoundboardWin";
+import {ReactElement} from "react";
+import MainSoundboardWin from "./windows/MainSoundboardWin";
 import {useWindow} from "./context/WindowContext";
-import {StackEntry, useNavigation} from "./context/NavigationContext";
+import {useNavigation} from "./context/NavigationContext";
 import {PlayerProvider} from "./context/PlayerContext";
 import MediaSelectorWin from "./windows/MediaSelectorWin";
 import ButtonSettingsWin from "./windows/ButtonSettingsWin";
@@ -16,7 +16,7 @@ type PageConfig = {
 }
 
 const PAGES: Record<string, PageConfig> = {
-    'main': {component: <SoundboardWin/>, usePlayer: true},
+    'main': {component: <MainSoundboardWin/>, usePlayer: true},
     'button_settings': {component: <ButtonSettingsWin/>, usePlayer: true},
     'media_selector': {component: <MediaSelectorWin/>, usePlayer: true},
 

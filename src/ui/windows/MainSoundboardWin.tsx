@@ -1,4 +1,4 @@
-import styles from './SoundboardWin.module.css';
+import styles from './MainSoundboardWin.module.css';
 import React, {useEffect, useRef, useState} from "react";
 import {FaChevronDown} from "react-icons/fa6";
 import {PiArrowSquareInBold, PiArrowSquareOutBold, PiPlusBold, PiTrashBold} from "react-icons/pi";
@@ -15,7 +15,7 @@ import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
 
-const SoundboardWin = () => {
+const MainSoundboardWin = () => {
     const {settings, updateSettings, profiles, activeProfile} = useWindow();
     const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
@@ -150,4 +150,4 @@ const SoundboardWin = () => {
     )
 }
 
-export default SoundboardWin;
+export default MainSoundboardWin;

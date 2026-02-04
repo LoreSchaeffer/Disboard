@@ -18,18 +18,26 @@ export const DiscordSettingsSchema = z.object({
 export const SettingsSchema = z.object({
     width: z.number().min(1080).max(10000).default(1366),
     height: z.number().min(608).max(10000).default(768),
+
     volume: z.number().min(0).max(100).default(50),
     previewVolume: z.number().min(0).max(100).default(50),
+
     outputDevice: z.string().default('default'),
     previewOutputDevice: z.string().default('default'),
+
     repeat: RepeatModeSchema.default('none'),
+
     activeProfile: z.string().nullable().default(null),
+
     zoom: z.number().min(0.5).max(3).default(1),
     showImages: z.boolean().default(true),
     confirmButtonDeletion: z.boolean().default(true),
+
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
     musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
+
     discord: DiscordSettingsSchema.default({ enabled: false, restPort: 24454, udpPort: 24455 }),
+
     debug: z.boolean().default(false)
 });
 

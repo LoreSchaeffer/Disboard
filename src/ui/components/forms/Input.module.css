@@ -1,0 +1,199 @@
+.formInput {
+    width: 100%;
+}
+
+.inputWrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 8px;
+    transition: all 300ms ease;
+}
+
+.inputWrapper.spinnerMode {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--neutral-100);
+    background-color: transparent;
+    overflow: hidden;
+}
+
+.input {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: transparent;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 300ms ease;
+    outline: none;
+}
+
+.input::placeholder {
+    color: var(--text-secondary);
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.standardInput {
+    padding: 4px 8px;
+    border: 1px solid var(--neutral-100);
+    border-radius: 8px;
+}
+
+.inputWrapper.primary .standardInput {
+    border-color: var(--border-on-primary);
+}
+
+.inputWrapper.secondary .standardInput {
+    border-color: var(--border-on-secondary);
+}
+
+.inputWrapper.tertiary .standardInput {
+    border-color: var(--border-on-tertiary);
+}
+
+.inputWrapper.error .standardInput {
+    border-color: var(--red-35);
+}
+
+.standardInput:focus {
+    border-color: var(--primary);
+}
+
+.spinnerInput {
+    border: none;
+    padding: 4px 0;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.spinnerInput::-webkit-outer-spin-button,
+.spinnerInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.inputWrapper.spinnerMode.primary {
+    border-color: var(--border-on-primary);
+}
+
+.inputWrapper.spinnerMode.secondary {
+    border-color: var(--border-on-secondary);
+}
+
+.inputWrapper.spinnerMode.tertiary {
+    border-color: var(--border-on-tertiary);
+}
+
+.inputWrapper.spinnerMode.error {
+    border-color: var(--red-35);
+}
+
+.inputWrapper.spinnerMode:has(.spinnerInput:focus) {
+    border-color: var(--primary);
+}
+
+.spinnerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.spinnerBtn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.spinnerBtn:active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.spinnerBtn svg {
+    display: block;
+}
+
+.input[type=file] {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border: 1px solid var(--neutral-100);
+    border-radius: 8px;
+}
+
+.input[type=file]::file-selector-button {
+    padding: 4px 8px;
+    margin-right: 14px;
+    background: var(--primary);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.input[type=file]::file-selector-button:hover {
+    background: var(--primary-hover);
+}
+
+.inputWrapper:has(.icon) .standardInput {
+    padding-right: 40px;
+}
+
+.icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    opacity: 0.5;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon.clickable {
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 0.7;
+    z-index: 10;
+    transition: all 200ms ease;
+}
+
+.standardInput:focus ~ .icon {
+    opacity: 0.7;
+}
+
+.standardInput:focus ~ .icon.clickable {
+    opacity: 0.8;
+}
+
+.icon.clickable:hover svg {
+    opacity: 1;
+}
+
+.errorMessage {
+    color: var(--red-35);
+    font-size: 0.85rem;
+    margin-top: 4px;
+}

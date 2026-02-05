@@ -1,0 +1,58 @@
+.category {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: default;
+}
+
+.category:not(:last-child) {
+    border-bottom: 1px solid var(--border-on-primary);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.categoryLabel {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.page {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    margin-left: 2px;
+    border-radius: 5px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 3px;
+    cursor: pointer;
+    transition: all 200ms ease-in-out;
+}
+
+.page svg {
+    fill: var(--text-secondary);
+}
+
+.page:hover {
+    background-color: var(--background-tertiary-hover);
+    color: var(--text-primary);
+}
+
+.page:hover svg {
+    fill: var(--text-primary);
+}
+
+.page.active {
+    background-color: var(--background-tertiary-active);
+    color: var(--text-primary);
+}
+
+.page.active span {
+    font-weight: 500;
+}
+
+.page.active svg {
+    fill: var(--text-primary);
+}

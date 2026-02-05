@@ -1,0 +1,71 @@
+.progressBar {
+    --height: 4px;
+    --thumb-size: 12px;
+
+    position: relative;
+    width: 100%;
+    height: var(--height);
+    border-radius: 4px;
+    background-color: var(--background-tertiary);
+    user-select: none;
+    cursor: pointer;
+    transition: height 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.progress {
+    height: 100%;
+    border-radius: 4px;
+    background-color: var(--primary);
+}
+
+.cursor {
+    position: absolute;
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    border-radius: 50%;
+    background-color: var(--neutral-1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.1s ease;
+    z-index: 10;
+}
+
+.progressBar:hover .cursor,
+.progressBar:active .cursor {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.cursorProgress {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    transform: translateX(-50%);
+    background-color: var(--background-tertiary);
+    color: var(--neutral-1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    pointer-events: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 100ms ease;
+}
+
+.progressBar:hover .cursorProgress,
+.progressBar.dragging .cursorProgress {
+    opacity: 1;
+}
+
+.progressBar.disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.progressBar.disabled .progress {
+    background-color: var(--text-disabled);
+}

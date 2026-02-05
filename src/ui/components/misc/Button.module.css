@@ -1,0 +1,120 @@
+.btn {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    background-color: var(--neutral-50);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: background-color 200ms ease;
+}
+
+.btn:hover {
+    background-color: var(--neutral-55);
+}
+
+.btn:active {
+    background-color: var(--neutral-60);
+}
+
+.btn.disabled {
+    background-color: var(--neutral-50);
+    opacity: 0.8;
+    cursor: default;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+}
+
+.icon svg {
+    fill: var(--text-primary);
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+.loading {
+    cursor: default;
+}
+
+.primary {
+    background-color: var(--blurple-50);
+}
+
+.primary:hover {
+    background-color: var(--blurple-55);
+}
+
+.primary:active {
+    background-color: var(--blurple-60);
+}
+
+.primary.disabled,
+.primary.loading {
+    background-color: var(--blurple-50);
+}
+
+.success {
+    background-color: var(--green-50);
+}
+
+.success:hover {
+    background-color: var(--green-55);
+}
+
+.success:active {
+    background-color: var(--green-60);
+}
+
+.success.disabled,
+.success.loading {
+    background-color: var(--green-50);
+}
+
+.warning {
+    background-color: var(--yellow-50);
+    color: var(--neutral-90);
+}
+
+.warning .icon svg {
+    fill: var(--neutral-90);
+}
+
+.warning:hover {
+    background-color: var(--yellow-55);
+}
+
+.warning:active {
+    background-color: var(--yellow-60);
+}
+
+.warning.disabled,
+.warning.loading {
+    background-color: var(--yellow-50);
+}
+
+.danger {
+    background-color: var(--red-50);
+}
+
+.danger:hover {
+    background-color: var(--red-55);
+}
+
+.danger:active {
+    background-color: var(--red-60);
+}
+
+.danger.disabled,
+.danger.loading {
+    background-color: var(--red-50);
+}

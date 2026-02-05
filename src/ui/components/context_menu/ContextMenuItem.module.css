@@ -1,0 +1,146 @@
+.item {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.item span {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 0.875rem;
+}
+
+.item svg {
+    fill: var(--text-primary);
+}
+
+.item:hover:not(.disabled):not(.separator) {
+    background-color: var(--background-context-menu-hover);
+}
+
+.item:hover:not(.disabled):not(.separator) span {
+    color: white;
+}
+
+.item:hover:not(.disabled):not(.separator) svg {
+    fill: white;
+}
+
+.separator {
+    border-top: 1px solid var(--neutral-68);
+    padding: 0 10px;
+    margin: 5px 8px;
+    cursor: default;
+}
+
+.disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.primary span {
+    color: var(--blurple-35);
+}
+
+.primary svg {
+    fill: var(--blurple-35);
+}
+
+.primary:hover:not(.disabled):not(.separator) {
+    background-color: hsl(var(--blurple-55-hsl) / 0.2);
+}
+
+.primary:hover:not(.disabled):not(.separator) span {
+    color: var(--blurple-35);
+}
+
+.primary:hover:not(.disabled):not(.separator) svg {
+    fill: var(--blurple-35);
+}
+
+.secondary span {
+    color: var(--neutral-35);
+}
+
+.secondary svg {
+    fill: var(--neutral-35);
+}
+
+.secondary:hover:not(.disabled):not(.separator) {
+    background-color: hsla(var(--neutral-35-hsl), 0.1);
+}
+
+.secondary:hover:not(.disabled):not(.separator) span {
+    color: var(--neutral-35);
+}
+
+.secondary:hover:not(.disabled):not(.separator) svg {
+    fill: var(--neutral-35);
+}
+
+.success span {
+    color: var(--green-35);
+}
+
+.success svg {
+    fill: var(--green-35);
+}
+
+.success:hover:not(.disabled):not(.separator) {
+    background-color: hsl(var(--green-55-hsl) / 0.1);
+}
+
+.success:hover:not(.disabled):not(.separator) span {
+    color: var(--green-35);
+}
+
+.success:hover:not(.disabled):not(.separator) svg {
+    fill: var(--green-35);
+}
+
+.warning span {
+    color: var(--yellow-35);
+}
+
+.warning svg {
+    fill: var(--yellow-35);
+}
+
+.warning:hover:not(.disabled):not(.separator) {
+    background-color: hsl(var(--yellow-55-hsl) / 0.1);
+}
+
+.warning:hover:not(.disabled):not(.separator) span {
+    color: var(--yellow-35);
+}
+
+.warning:hover:not(.disabled):not(.separator) svg {
+    fill: var(--yellow-35);
+}
+
+.danger span {
+    color: var(--red-35);
+}
+
+.danger svg {
+    fill: var(--red-35);
+}
+
+.danger:hover:not(.disabled):not(.separator) {
+    background-color: hsl(var(--red-55-hsl) / 0.1);
+}
+
+.danger:hover:not(.disabled):not(.separator) span {
+    color: var(--red-35);
+}
+
+.danger:hover:not(.disabled):not(.separator) svg {
+    fill: var(--red-35);
+}

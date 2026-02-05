@@ -1,0 +1,36 @@
+.titlebarButton {
+    padding: 0 3px;
+    height: var(--titlebar-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+    transition: background-color 100ms ease;
+}
+
+.titlebarButton.disabled svg {
+    fill: var(--text-disabled);
+}
+
+.titlebarButton.disabled:hover {
+    background-color: transparent;
+    cursor: default;
+}
+
+.titlebarButton svg {
+    height: calc(var(--titlebar-height) - 8px);
+    fill: var(--text-disabled);
+}
+
+.titlebarButton:hover {
+    background-color: var(--background-secondary);
+}
+
+.titlebarButton.red:hover {
+    background-color: var(--red-45);
+}
+
+.titlebarButton.red:hover svg {
+    fill: var(--neutral-1);
+}

@@ -1,0 +1,21 @@
+.separatorWrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.separator {
+    border-bottom: 1px solid var(--neutral-100);
+}
+
+.primary {
+    border-bottom-color: var(--border-on-primary);
+}
+
+.secondary {
+    border-bottom-color: var(--border-on-secondary);
+}
+
+.tertiary {
+    border-bottom-color: var(--border-on-tertiary);
+}

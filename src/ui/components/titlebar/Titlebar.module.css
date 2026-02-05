@@ -1,0 +1,45 @@
+.titlebar {
+    width: 100%;
+    height: var(--titlebar-height);
+    position: relative;
+    padding-left: 5px;
+    background-color: var(--background-tertiary);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    -webkit-app-region: drag;
+    z-index: 9000;
+}
+
+.windowTitle {
+    font-weight: 900;
+    font-size: 9pt;
+    line-height: 9pt;
+    color: var(--text-disabled);
+    white-space: nowrap;
+    margin-left: 5px;
+}
+
+.injectedContent {
+    display: flex;
+    align-items: center;
+    -webkit-app-region: no-drag;
+    margin-left: 15px;
+    height: 100%;
+}
+
+.centered {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-left: 0;
+}
+
+.windowControls {
+    display: flex;
+    margin-left: auto;
+}
+
+.last {
+    padding-right: 10px !important;
+}

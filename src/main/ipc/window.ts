@@ -1,8 +1,9 @@
 import {BrowserWindow, ipcMain, IpcMainInvokeEvent} from 'electron';
-import {WindowId, WindowInfo} from "../../types/window";
+import {WindowInfo} from "../../types/window";
 import {state} from "../state";
 import {ButtonSettingsWin, MediaSelectorWin} from "../../types/common";
 import {createButtonSettingsWindow, createMediaSelectorWindow} from "../windows";
+import {Route} from "../../types/routes";
 
 export const setupWindowHandlers = () => {
     ipcMain.on('minimize', (e: IpcMainInvokeEvent) => {
@@ -33,13 +34,13 @@ export const setupWindowHandlers = () => {
         return {
             parent: options.parent ? options.parent.id : null,
             resizable: win.resizable,
-            page: options.page,
+            route: options.route,
             data: state.winData.get(win.id)
         };
     });
 
-    ipcMain.on('open_window', (e: IpcMainInvokeEvent, winId: WindowId, args?: unknown) => {
-        switch (winId) {
+    ipcMain.on('open_window', (e: IpcMainInvokeEvent, route: Route, args?: unknown) => {
+        switch (route) {
             case 'media_selector': {
                 const safeArgs = (args || {}) as MediaSelectorWin;
                 createMediaSelectorWindow(safeArgs.action, e.frameId, safeArgs.profileId, safeArgs.buttonId);
@@ -55,7 +56,7 @@ export const setupWindowHandlers = () => {
                 break;
             }
             default:
-                console.error('[Main] Unknown window ID:', winId);
+                console.error('[Main] Unknown window ID:', route);
                 break;
         }
     });

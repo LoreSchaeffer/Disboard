@@ -1,10 +1,11 @@
 import {contextBridge, ipcRenderer} from "electron";
-import {IpcResponse} from "./types/common";
+import {IpcResponse, MediaType} from "./types/common";
 import {Settings} from "./types/settings";
 import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
-import {WindowId, WindowInfo} from "./types/window";
+import {WindowInfo} from "./types/window";
 import {YTSearchResult} from "./types/music-api";
 import {DiscordData, DiscordStatus} from "./types/discord";
+import {Route} from "./types/routes";
 
 const api = {
     /* === FROM MAIN PROCESS === */
@@ -63,14 +64,14 @@ const api = {
     maximize: () => ipcRenderer.send('maximize'),
     close: () => ipcRenderer.send('close'),
     getWindow: (): Promise<WindowInfo> => ipcRenderer.invoke('get_window'),
-    openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
+    openWindow: (winId: Route, args?: unknown) => ipcRenderer.send('open_window', winId, args),
 
     // Store
     getSettings: (): Promise<Settings> => ipcRenderer.invoke('get_settings'),
     updateSettings: (settings: Partial<Settings>) => ipcRenderer.send('update_settings', settings),
 
     // Profiles
-    getProfiles: (): Promise<SbProfile[]> => ipcRenderer.invoke('get_profiles'),
+    getProfiles: (route: Route): Promise<SbProfile[]> => ipcRenderer.invoke('get_profiles', route),
     getProfile: (id: string): Promise<SbProfile | null> => ipcRenderer.invoke('get_profile', id),
     createProfile: (profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('create_profile', profile),
     updateProfile: (id: string, profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_profile', id, profile),
@@ -91,12 +92,11 @@ const api = {
 
     // System
     openLink: (url: string) => ipcRenderer.send('open_link', url),
-    openFileMediaSelector: (): Promise<IpcResponse<string>> => ipcRenderer.invoke('open_file_media_selector'),
+    openFileMediaSelector: (mediaType?: MediaType): Promise<IpcResponse<string>> => ipcRenderer.invoke('open_file_media_selector', mediaType),
 
     // Music API
     useMusicApi: (): Promise<boolean> => ipcRenderer.invoke('use_music_api'),
     searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
-    getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
 
     // Discord
     sendAudioPacket: (buffer: ArrayBuffer) => ipcRenderer.send('discord_stream_packet', buffer),

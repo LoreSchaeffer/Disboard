@@ -18,7 +18,7 @@ const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
 
     return (
         <div className={styles.titlebar}>
-            {visibleStack.find(s => s.page === 'main') && (
+            {visibleStack.find(s => s.route === 'main') && (
                 <TitlebarButton
                     onClick={() => navigate('settings', {replace: false})}
                     disabled={isInStack('settings') || visibleStack.length > 1}

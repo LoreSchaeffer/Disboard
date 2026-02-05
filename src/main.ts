@@ -1,11 +1,11 @@
 import {app, BrowserWindow, session} from 'electron';
 import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
-import {broadcastProfiles, broadcastSettings, fixActiveProfile} from "./main/utils";
+import {fixActiveProfile} from "./main/utils";
 import {state} from "./main/state";
 import {createMainWindow} from "./main/windows";
-import {profilesStore, settingsStore} from "./main/utils/store";
-import {generateUUID, setAppPriority} from "./main/utils/utils";
+import {settingsStore} from "./main/utils/store";
+import {setAppPriority} from "./main/utils/misc";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';

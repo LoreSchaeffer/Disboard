@@ -2,7 +2,6 @@ import {ipcMain} from "electron";
 import {state} from "../state";
 
 export const setupDiscordBridgeHandlers = () => {
-
     ipcMain.on('discord_stream_packet', (_, buffer: ArrayBuffer) => {
         const nodeBuffer = Buffer.from(buffer);
         state.discordBot.writeAudioPacket(nodeBuffer);

@@ -3,6 +3,7 @@ import {z} from "zod";
 export const RepeatModeSchema = z.enum(['none', 'one', 'all']);
 
 export type RepeatMode = z.infer<typeof RepeatModeSchema>;
+export type MediaType = 'audio' | 'images';
 export type MediaSelectorAction = 'update_button' | 'play_now';
 
 export type IpcResponse<T> = {

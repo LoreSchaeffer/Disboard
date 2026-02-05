@@ -14,9 +14,11 @@ import ProfileSettings from "../components/soundboard/ProfileSettings";
 import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
+import {useProfiles} from "../context/ProfilesProvider";
 
 const MainSoundboardWin = () => {
-    const {settings, updateSettings, profiles, activeProfile} = useWindow();
+    const {settings, updateSettingsAsync} = useWindow();
+    const {profiles, activeProfile} = useProfiles();
     const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();
@@ -28,12 +30,6 @@ const MainSoundboardWin = () => {
 
     const zoomRef = useRef<number>(settings.zoom || 1);
 
-    // TODO only for development, remove later
-    useEffect(() => {
-        // navigate('settings', {replace: false});
-        // navigate('new_profile', {replace: false});
-    }, []);
-
     useEffect(() => {
         const handleMouseWheel = (e: WheelEvent) => {
             if (!e.ctrlKey) return;
@@ -44,7 +40,7 @@ const MainSoundboardWin = () => {
 
             if (newZoom < 0.1 || newZoom > 2) return;
 
-            updateSettings({zoom: Math.round(newZoom * 100) / 100});
+            updateSettingsAsync({zoom: Math.round(newZoom * 100) / 100});
         }
 
         window.addEventListener('wheel', handleMouseWheel, {passive: false});
@@ -96,7 +92,7 @@ const MainSoundboardWin = () => {
                     },
                 }
             ],
-            onClick: () => updateSettings({activeProfile: p.id}),
+            onClick: () => window.electron.updateSettings({mainSoundboard: {...settings.mainSoundboard, activeProfile: p.id}}),
         }));
 
         const rect = (event.target as HTMLElement).getBoundingClientRect();

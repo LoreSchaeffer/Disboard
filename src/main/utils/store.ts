@@ -1,41 +1,54 @@
 import Store from 'electron-store';
-import { z } from 'zod';
+import {z} from 'zod';
 import * as fs from 'node:fs';
-import { generateUUID } from "./utils";
-import { Profiles, ProfilesSchema, Tracks, TracksSchema } from "../../types/data";
-import { Settings, SettingsSchema } from "../../types/settings";
-import { Cache, CacheSchema } from "../../types/cache";
+import {generateUUID} from "./misc";
+import {Profiles, ProfilesSchema, Tracks, TracksSchema} from "../../types/data";
+import {Settings, SettingsSchema} from "../../types/settings";
+import {Cache, CacheSchema} from "../../types/cache";
 import {broadcastProfiles, broadcastSettings} from "../utils";
 
-function createValidatedStore<T>(
-    name: string,
-    schema: z.Schema<T>,
-    defaults: T,
-    onExternalChange?: (newValue: T) => void
-): Store<T> {
+function createValidatedStore<T>(name: string, schema: z.Schema<T>, onExternalChange?: (newValue: T) => void, def?: T): Store<T> {
+    let defaults: T;
+    if (def) {
+        defaults = def;
+    } else {
+        try {
+            defaults = schema.parse({});
+        } catch (e) {
+            console.error(`[Store: ${name}] Failed to generate defaults from schema.`, e);
+            throw e;
+        }
+    }
+
     const store = new Store<T>({
         name,
+        cwd: 'config',
         watch: true,
         defaults
     });
 
     let lastKnownGoodState: T = defaults;
     let isInternalWrite = false;
+
     const originalSet = store.set;
-    
     store.set = function (...args: never[]) {
         isInternalWrite = true;
+
         try {
             originalSet.apply(this, args);
         } finally {
             isInternalWrite = false;
         }
     };
-    
+
     const originalReset = store.reset;
     store.reset = function (...args: never[]) {
         isInternalWrite = true;
-        try { originalReset.apply(this, args); } finally { isInternalWrite = false; }
+        try {
+            originalReset.apply(this, args);
+        } finally {
+            isInternalWrite = false;
+        }
     };
 
     const validate = (source: 'startup' | 'external-change') => {
@@ -79,9 +92,9 @@ function createValidatedStore<T>(
         if (isInternalWrite) return;
 
         console.log(`[Store: ${name}] External file change detected.`);
-        
+
         validate('external-change');
-        
+
         if (onExternalChange) onExternalChange(newValue as T);
     });
 
@@ -91,27 +104,6 @@ function createValidatedStore<T>(
 export const settingsStore = createValidatedStore<Settings>(
     'settings',
     SettingsSchema,
-    {
-        width: 1366,
-        height: 768,
-        volume: 50,
-        previewVolume: 50,
-        outputDevice: 'default',
-        previewOutputDevice: 'default',
-        repeat: 'none',
-        zoom: 1,
-        showImages: true,
-        activeProfile: null,
-        confirmButtonDeletion: true,
-        musicApi: 'https://ma.lycoris.it',
-        musicApiCredentials: null,
-        discord: {
-            enabled: false,
-            restPort: 24454,
-            udpPort: 24455,
-        },
-        debug: false
-    },
     (newValue) => {
         console.log('[Store: settings] Broadcasting settings change...');
         broadcastSettings(newValue);
@@ -121,6 +113,10 @@ export const settingsStore = createValidatedStore<Settings>(
 export const profilesStore = createValidatedStore<Profiles>(
     'profiles',
     ProfilesSchema,
+    (newValue) => {
+        console.log('[Store: profiles] Broadcasting profiles change...');
+        broadcastProfiles(newValue.profiles);
+    },
     {
         profiles: [
             {
@@ -131,26 +127,15 @@ export const profilesStore = createValidatedStore<Profiles>(
                 buttons: []
             }
         ]
-    },
-    (newValue) => {
-        console.log('[Store: profiles] Broadcasting profiles change...');
-        broadcastProfiles(newValue.profiles);
     }
 );
 
 export const tracksStore = createValidatedStore<Tracks>(
     'tracks',
-    TracksSchema,
-    {
-        tracks: []
-    }
+    TracksSchema
 );
 
 export const cacheStore = createValidatedStore<Cache>(
     'cache',
-    CacheSchema,
-    {
-        profilesDir: null,
-        audioDir: null
-    }
+    CacheSchema
 );

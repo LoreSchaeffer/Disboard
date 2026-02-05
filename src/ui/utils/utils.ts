@@ -1,6 +1,8 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
 import {PlayerTrack, SbBtn} from "../../types/data";
+import {Route} from "../../types/routes";
+import {Settings} from "../../types/settings";
 
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
@@ -121,4 +123,11 @@ export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
         titleOverride: btn.title || undefined,
         volumeOverride: btn.volumeOverride || undefined
     }
+}
+
+export const getSettingsForRoute = (settings: Settings, route: Route) => {
+    if (route === 'main') return settings.mainSoundboard;
+    else if (route === 'click') return settings.clickSoundboard;
+    else if (route === 'sfx') return settings.sfxSoundboard;
+    else return null;
 }

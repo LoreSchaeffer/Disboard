@@ -1,17 +1,15 @@
-import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
+import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
 import {Settings} from "../../types/settings";
-import {SbProfile} from "../../types/data";
 import {WindowData} from "../../types/window";
+import {Route} from "../../types/routes";
 
 type WindowContextType = {
     ready: boolean;
     parent: number | null;
     resizable: boolean;
-    page: string | null;
+    route: Route | null;
     settings: Settings | null;
-    updateSettings?: (settings: Partial<Settings>) => void;
-    profiles: SbProfile[] | null;
-    activeProfile: SbProfile | null;
+    updateSettingsAsync?: (settings: Partial<Settings>) => void;
     data: WindowData<unknown> | null;
 }
 
@@ -21,9 +19,8 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [ready, setReady] = useState<boolean>(false);
     const [parent, setParent] = useState<number | null>(null);
     const [resizable, setResizable] = useState<boolean>(false);
-    const [page, setPage] = useState<string | null>(null);
+    const [route, setRoute] = useState<Route | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
-    const [profiles, setProfiles] = useState<SbProfile[] | null>(null);
     const [data, setData] = useState<WindowData<unknown> | null>(null);
 
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -33,14 +30,11 @@ export default function WindowProvider({children}: PropsWithChildren) {
             const winData = await window.electron.getWindow();
             setParent(winData.parent);
             setResizable(winData.resizable);
-            setPage(winData.page);
+            setRoute(winData.route);
             setData(winData.data || null);
 
             const initialSettings = await window.electron.getSettings();
             setSettings(initialSettings);
-
-            const initialProfiles = await window.electron.getProfiles();
-            setProfiles(initialProfiles);
         };
 
         loadInitialData();
@@ -48,13 +42,9 @@ export default function WindowProvider({children}: PropsWithChildren) {
         const unsubSettings = window.electron.onSettingsChanged(settings => {
             setSettings(settings);
         });
-        const unsubProfiles = window.electron.onProfilesChanged(profiles => {
-            setProfiles(profiles);
-        });
 
         return () => {
             unsubSettings();
-            unsubProfiles();
 
             if (saveSettingsTimeoutRef.current) {
                 clearTimeout(saveSettingsTimeoutRef.current);
@@ -63,16 +53,13 @@ export default function WindowProvider({children}: PropsWithChildren) {
         };
     }, []);
 
-    const activeProfile = useMemo(() => {
-        if (!settings || !profiles) return null;
-        return profiles.find(p => p.id === settings.activeProfile) || null;
-    }, [settings, profiles]);
-
     useEffect(() => {
-        if (settings && profiles && page) setReady(true);
-    }, [settings, profiles, page]);
+        if (settings && route) {
+            setReady(true);
+        }
+    }, [settings, route]);
 
-    const updateSettings = (newSettings: Partial<Settings>) => {
+    const updateSettingsAsync = (newSettings: Partial<Settings>) => {
         if (!settings) return;
 
         const updatedSettings = {...settings, ...newSettings};
@@ -82,7 +69,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
         saveSettingsTimeoutRef.current = setTimeout(() => {
             window.electron.updateSettings(newSettings);
             saveSettingsTimeoutRef.current = null;
-        }, 500);
+        }, 250);
     }
 
     return (
@@ -90,11 +77,9 @@ export default function WindowProvider({children}: PropsWithChildren) {
             ready,
             parent,
             resizable,
-            page,
+            route,
             settings,
-            updateSettings,
-            profiles,
-            activeProfile,
+            updateSettingsAsync,
             data,
         }}>
             {children}

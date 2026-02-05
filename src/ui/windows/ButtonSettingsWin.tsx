@@ -45,7 +45,7 @@ const ButtonSettingsWin = () => {
     const [newButton, setNewButton] = useState<Partial<SbBtn>>({});
 
     useEffect(() => {
-        if (!data || data.type !== 'button') return;
+        if (!data || data.type !== 'button_settings') return;
 
         const {profileId, buttonId} = data.data as ButtonWindowData;
 

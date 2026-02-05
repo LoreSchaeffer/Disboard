@@ -6,7 +6,6 @@ import {getVideoId} from "../utils/music-api";
 import {getYoutubeStream} from "../utils";
 
 export const setupMusicApiHandlers = () => {
-
     ipcMain.handle('use_music_api', (): boolean => {
         const musicApi = state.musicApi;
         return !(!musicApi || !musicApi.isAuthenticated());

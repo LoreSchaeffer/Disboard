@@ -49,8 +49,25 @@ export const ProfileSchema = z.object({
 });
 
 export const ProfilesSchema = z.object({
-    profiles: z.array(ProfileSchema)
+    profiles: z.array(ProfileSchema).default([])
 });
+
+export const SfxSchema = z.object({
+    title: z.string(),
+    track: z.uuid(),
+    volumeOverride: z.number().min(0).max(100).optional()
+});
+
+export const SfxProfileSchema = z.object({
+    id: z.uuid(),
+    name: z.string(),
+    sfx: z.array(SfxSchema)
+});
+
+export const SfxProfilesSchema = z.object({
+    profiles: z.array(SfxProfileSchema).default([])
+});
+
 
 export const SourceSchema = z.object({
     type: TrackSourceSchema.refine(val => val !== 'list', {
@@ -87,7 +104,7 @@ export const SbProfileSchema = z.object({
 });
 
 export const TracksSchema = z.object({
-    tracks: z.array(TrackSchema)
+    tracks: z.array(TrackSchema).default([])
 });
 
 export const PlayerTrackSchema = TrackSchema.extend({
@@ -104,6 +121,9 @@ export type CropOptions = z.infer<typeof CropOptionsSchema>;
 export type Btn = z.infer<typeof BtnSchema>;
 export type Profile = z.infer<typeof ProfileSchema>;
 export type Profiles = z.infer<typeof ProfilesSchema>;
+export type Sfx = z.infer<typeof SfxSchema>;
+export type SfxProfile = z.infer<typeof SfxProfileSchema>;
+export type SfxProfiles = z.infer<typeof SfxProfilesSchema>;
 export type Data = z.infer<typeof ProfilesSchema>;
 export type SbBtn = z.infer<typeof SbBtnSchema>;
 export type SbProfile = z.infer<typeof SbProfileSchema>;

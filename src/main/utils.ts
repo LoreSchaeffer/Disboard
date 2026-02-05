@@ -1,16 +1,16 @@
-import { BrowserWindow, net } from "electron";
-import { state } from "./state";
+import {BrowserWindow, net} from "electron";
+import {state} from "./state";
 import path from "path";
 import fs from "node:fs";
-import { AUDIO_DIR, IMAGES_DIR } from "./constants";
-import { Settings } from "../types/settings";
-import { Profile, Source, Track } from "../types/data";
-import { determineTitle, extractCoverImage, processAudio } from "./utils/ffmpeg";
-import { profilesStore, settingsStore, tracksStore } from "./utils/store";
+import {AUDIO_DIR, IMAGES_DIR} from "./constants";
+import {Settings} from "../types/settings";
+import {Profile, Source, Track} from "../types/data";
+import {determineTitle, extractCoverImage, processAudio} from "./utils/ffmpeg";
+import {profilesStore, settingsStore, tracksStore} from "./utils/store";
 import axios from "axios";
-import { pipeline } from 'stream/promises';
-import { convertProfileToSbProfile } from "./utils/data";
-import { generateUUID } from "./utils/utils";
+import {convertProfileToSbProfile} from "./utils/data-converters";
+import {generateUUID} from "./utils/misc";
+import sharp from "sharp";
 
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 
@@ -22,27 +22,50 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
     const outputPath = path.join(outputDir, `${trackId}.jpg`);
 
     try {
-        fs.mkdirSync(outputDir, { recursive: true });
+        fs.mkdirSync(outputDir, {recursive: true});
+        console.log(`[Main] Downloading image for ${trackId} from ${url}...`);
 
         const response = await axios({
             method: 'GET',
             url: url,
-            responseType: 'stream',
+            responseType: 'arraybuffer',
             headers: {
                 'User-Agent': USER_AGENT
             },
             timeout: 20000
         });
 
-        const fileWriter = fs.createWriteStream(outputPath);
-        await pipeline(response.data, fileWriter);
+        const image = sharp(response.data);
+        const metadata = await image.metadata();
+        const width = metadata.width;
+        const height = metadata.height;
+
+        if (!width || !height) throw new Error("Cannot determine image dimensions");
+
+        const minDimension = Math.min(width, height);
+        const leftOffset = Math.round((width - minDimension) / 2);
+        const topOffset = Math.round((height - minDimension) / 2);
+
+        console.log(`[Main] Cropping image for ${trackId} to ${minDimension}x${minDimension} square.`);
+
+        await image
+            .extract({
+                left: leftOffset,
+                top: topOffset,
+                width: minDimension,
+                height: minDimension
+            })
+            .jpeg({quality: 90, mozjpeg: true})
+            .toFile(outputPath);
 
         return true;
+
     } catch (error) {
-        console.warn(`[Main] Failed to download cover for ${trackId}:`, error instanceof Error ? error.message : error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`[Main] Failed to download or process cover for ${trackId}: ${errorMessage}`);
 
         try {
-            fs.unlinkSync(outputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
         } catch {
             // Ignored
         }
@@ -56,7 +79,7 @@ export const getYoutubeStream = async (videoId: string): Promise<string> => {
 
     if (cachedStream) {
         try {
-            const response = await net.fetch(cachedStream, { method: 'HEAD' });
+            const response = await net.fetch(cachedStream, {method: 'HEAD'});
 
             if (response.status >= 200 && response.status < 400) {
                 return cachedStream;

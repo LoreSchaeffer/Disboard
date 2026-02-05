@@ -3,11 +3,11 @@ import Row from "../layout/Row";
 import Col from "../layout/Col";
 import {clsx} from "clsx";
 import Input from "../forms/Input";
-import {useWindow} from "../../context/WindowContext";
 import {validateName} from "../../utils/validation";
 import {useEffect, useRef, useState} from "react";
 import {useClickOutside} from "../../hooks/useClickOutside";
 import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
+import {useProfiles} from "../../context/ProfilesProvider";
 
 type ProfileSettingsProps = {
     show: boolean;
@@ -15,7 +15,7 @@ type ProfileSettingsProps = {
 }
 
 const ProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
-    const {activeProfile, profiles} = useWindow();
+    const {activeProfile, profiles} = useProfiles();
     const {shouldRender, transitionProps} = useAnimatedUnmount(show);
 
     const [profileName, setProfileName] = useState<string>("");

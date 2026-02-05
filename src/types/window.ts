@@ -1,10 +1,9 @@
 import {BrowserWindow, BrowserWindowConstructorOptions} from "electron";
 import {MediaSelectorAction} from "./common";
-
-export type WindowId = 'media_selector' | 'button_settings';
+import {Route} from "./routes";
 
 export type WindowOptions = BrowserWindowConstructorOptions & {
-    page: string;
+    route: Route;
     onLoaded?: (win: BrowserWindow) => void;
     onReady?: (win: BrowserWindow) => void;
     onResize?: (win: BrowserWindow) => void;
@@ -14,12 +13,12 @@ export type WindowOptions = BrowserWindowConstructorOptions & {
 export type WindowInfo = {
     parent: number | null;
     resizable: boolean;
-    page: string;
+    route: Route;
     data?: WindowData<unknown>;
 }
 
 export type WindowData<T> = {
-    type: 'button' | 'media_selector';
+    type: Route;
     data: T;
 }
 

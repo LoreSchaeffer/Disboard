@@ -4,8 +4,8 @@ import {IpcResponse} from "../../types/common";
 import {YTSearchResult} from "../../types/music-api";
 import {profilesStore, tracksStore} from "../utils/store";
 import {broadcastProfiles, downloadTrack, getYoutubeStream} from "../utils";
-import {getPosFromButtonId} from "../utils/data";
-import {generateUUID, getPlayerTrack} from "../utils/utils";
+import {getPosFromButtonId} from "../utils/data-converters";
+import {generateUUID, getPlayerTrack} from "../utils/misc";
 import {state} from "../state";
 import {getBestThumbnail} from "../utils/music-api";
 

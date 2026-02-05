@@ -1,6 +1,8 @@
 import { RepeatModeSchema } from "./common";
 import { z } from "zod";
 
+export const SoundboardType = z.enum(['main', 'sfx', 'click']);
+
 export const ApiCredentialsSchema = z.object({
     clientId: z.string().default(''),
     clientSecret: z.string().default('')
@@ -15,19 +17,23 @@ export const DiscordSettingsSchema = z.object({
     lastChannel: z.string().optional(),
 });
 
-export const SettingsSchema = z.object({
+export const SoundboardSettingsSchema = z.object({
     width: z.number().min(1080).max(10000).default(1366),
     height: z.number().min(608).max(10000).default(768),
-
     volume: z.number().min(0).max(100).default(50),
-    previewVolume: z.number().min(0).max(100).default(50),
+    activeProfile: z.uuid().nullable().default(null),
+});
 
+export const SettingsSchema = z.object({
+    openOnStartup: z.array(SoundboardType).default(['main']),
+
+    mainSoundboard: SoundboardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, repeat: 'none'}),
+    sfxSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+    clickSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+
+    previewVolume: z.number().min(0).max(100).default(50),
     outputDevice: z.string().default('default'),
     previewOutputDevice: z.string().default('default'),
-
-    repeat: RepeatModeSchema.default('none'),
-
-    activeProfile: z.string().nullable().default(null),
 
     zoom: z.number().min(0.5).max(3).default(1),
     showImages: z.boolean().default(true),
@@ -41,6 +47,8 @@ export const SettingsSchema = z.object({
     debug: z.boolean().default(false)
 });
 
+export type SoundboardSchema = z.infer<typeof SoundboardType>;
+export type SoundboardSettings = z.infer<typeof SoundboardSettingsSchema>;
 export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
 export type DiscordSettings = z.infer<typeof DiscordSettingsSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;

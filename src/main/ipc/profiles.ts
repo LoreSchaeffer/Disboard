@@ -1,14 +1,14 @@
 import {app, dialog, ipcMain} from "electron";
 import {Btn, BtnStyle, CropOptions, Profile, SbBtn, SbProfile, SbProfileSchema} from "../../types/data";
 import {cacheStore, profilesStore, settingsStore, tracksStore} from "../utils/store";
-import {convertBtnToSbBtn, convertProfileToSbProfile, convertSbBtnsToBtns, getPosFromButtonId} from "../utils/data";
+import {convertBtnToSbBtn, convertProfileToSbProfile, convertSbBtnsToBtns, getPosFromButtonId} from "../utils/data-converters";
 import {IpcResponse} from "../../types/common";
 import {generateValidFileName, removeNameInvalidChars, validateName} from "../utils/validation";
 import {clamp} from "../../common/utils";
 import {broadcastProfiles, broadcastSettings, getDefProfile, fixActiveProfile} from "../utils";
 import path from "path";
 import fs from "node:fs";
-import {generateUUID} from "../utils/utils";
+import {generateUUID} from "../utils/misc";
 
 type NullablePartial<T> = {
     [P in keyof T]?: T[P] | null;

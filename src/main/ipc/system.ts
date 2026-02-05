@@ -1,17 +1,17 @@
 import {app, dialog, ipcMain, shell} from "electron";
-import {IpcResponse} from "../../types/common";
 import path from "path";
 import {cacheStore} from "../utils/store";
+import {IpcResponse, MediaType} from "../../types/common";
 
 export const setupSystemHandlers = () => {
     ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
 
-    ipcMain.handle('open_file_media_selector', async (): Promise<IpcResponse<string>> => {
-        const {canceled, filePaths} = await dialog.showOpenDialog({
-            title: 'Select Audio File',
-            defaultPath: cacheStore.get('audioDir') || app.getPath('documents'),
-            properties: ['openFile'],
-            filters: [
+    ipcMain.handle('open_file_media_selector', async (_, mediaType?: MediaType): Promise<IpcResponse<string>> => {
+        if (!mediaType) mediaType = 'audio';
+
+        let filters;
+        if (mediaType === 'audio') {
+            filters = [
                 {
                     name: 'All Media Files',
                     extensions: [
@@ -27,7 +27,21 @@ export const setupSystemHandlers = () => {
                     name: 'Video Only',
                     extensions: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv']
                 }
-            ]
+            ];
+        } else {
+            filters = [
+                {
+                    name: 'Images',
+                    extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tiff']
+                }
+            ];
+        }
+
+        const {canceled, filePaths} = await dialog.showOpenDialog({
+            title: mediaType === 'audio' ? 'Select Audio File' : 'Select Image File',
+            defaultPath: cacheStore.get('audioDir') || app.getPath('documents'),
+            properties: ['openFile'],
+            filters: filters
         });
 
         if (canceled || !filePaths || filePaths.length === 0) return {success: false, error: 'canceled'};

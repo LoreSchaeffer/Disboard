@@ -29,8 +29,8 @@ const stringsMap: Record<ResourceType, { header: string, message: (displayId: st
 
 const DeleteConfirmationWin = () => {
     const {activeProfile, profiles} = useWindow();
-    const {back, currentPage} = useNavigation();
-    const data: DeleteConfirmationData = currentPage?.data as DeleteConfirmationData;
+    const {back, currentRoute} = useNavigation();
+    const data: DeleteConfirmationData = currentRoute?.data as DeleteConfirmationData;
 
     if (!data) return null;
 

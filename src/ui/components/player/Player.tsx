@@ -17,10 +17,10 @@ type PlayerProps = {
 };
 
 const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
-    const {settings, updateSettings} = useWindow();
+    const {settings, updateSettingsAsync} = useWindow();
     const {player, status, currentTrack, duration, currentTime, queue} = usePlayer();
 
-    const [volume, setVolume] = useState<number>(settings.volume);
+    const [volume, setVolume] = useState<number>(settings.mainSoundboard.volume);
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
@@ -46,8 +46,8 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     }, []);
 
     useEffect(() => {
-        setVolume(settings.volume);
-    }, [settings.volume]);
+        setVolume(settings.mainSoundboard.volume);
+    }, [settings.mainSoundboard.volume]);
 
     useEffect(() => {
         if (muted) player.setVolume(0);
@@ -59,7 +59,7 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
         else if (player.getRepeatMode() === 'all') player.setRepeatMode('one');
         else player.setRepeatMode('none');
 
-        updateSettings({repeat: player.getRepeatMode()})
+        window.electron.updateSettings({mainSoundboard: {...settings.mainSoundboard, repeat: player.getRepeatMode()}});
     };
 
     const search = () => {
@@ -69,7 +69,7 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const changeVolume = (_: number, newValue: number) => {
         if (muted && newValue > 0) setMuted(false);
         setVolume(newValue);
-        updateSettings({volume: newValue});
+        updateSettingsAsync({mainSoundboard: {...settings.mainSoundboard, volume: newValue}});
     };
 
     const toggleMute = () => {
@@ -80,7 +80,7 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const queueExists = queue && queue.length > 0;
     const isFirstTrack = queueExists && currentTrack ? queue[0].id === currentTrack.id : false;
     const isLastTrack = queueExists && currentTrack ? queue[queue.length - 1].id === currentTrack.id : false;
-    const repeatModeAll = settings.repeat === 'all';
+    const repeatModeAll = settings.mainSoundboard.repeat === 'all';
     const VolumeIcon = muted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
 
     return (
@@ -118,10 +118,10 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                             title={'Next'}
                         />
                         <PlayerBtn
-                            icon={settings.repeat === 'one' ? <PiRepeatOnceBold/> : <PiRepeatBold/>}
+                            icon={settings.mainSoundboard.repeat === 'one' ? <PiRepeatOnceBold/> : <PiRepeatBold/>}
                             onClick={changeRepeatMode}
-                            className={settings.repeat === 'none' ? styles.disabledBtn : undefined}
-                            title={`Repeat: ${settings.repeat}`}
+                            className={settings.mainSoundboard.repeat === 'none' ? styles.disabledBtn : undefined}
+                            title={`Repeat: ${settings.mainSoundboard.repeat}`}
                         />
                     </div>
 

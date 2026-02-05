@@ -49,7 +49,7 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
 
     if (options.data) state.winData.set(win.id, options.data);
 
-    const pageName = options.page || 'main';
+    const pageName = options.route || 'empty';
     loadWindowUrl(win, pageName);
 
     win.webContents.on('did-finish-load', () => {
@@ -75,7 +75,7 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
 let resizeTimeout: NodeJS.Timeout;
 export const createMainWindow = () => {
     state.mainWindow = createWindow({
-        page: 'main',
+        route: 'main',
         width: settingsStore.get('width'),
         height: settingsStore.get('height'),
         minWidth: 1080,
@@ -109,14 +109,14 @@ export const createMainWindow = () => {
 // TODO Data should be updated manually from the main process when it's changed
 export const createButtonSettingsWindow = (profileId: string, buttonId: string): BrowserWindow => {
     return createWindow({
-        page: 'button_settings',
+        route: 'button_settings',
         modal: true,
         parent: state.mainWindow,
         width: 500,
         height: 600,
         resizable: false,
         data: {
-            type: 'button',
+            type: 'button_settings',
             data: {
                 profileId: profileId,
                 buttonId: buttonId
@@ -127,7 +127,7 @@ export const createButtonSettingsWindow = (profileId: string, buttonId: string):
 
 export const createMediaSelectorWindow = (action: MediaSelectorAction, parent?: number, profileId?: string, buttonId?: string) => {
     return createWindow({
-        page: 'media_selector',
+        route: 'media_selector',
         modal: true,
         parent: parent ? BrowserWindow.fromId(parent) : undefined,
         width: 500,

@@ -12,9 +12,11 @@ import {FaRegPaste} from "react-icons/fa6";
 import {BtnStyle, SbBtn} from "../../../types/data";
 import {generateButtonId, playerTrackFromBtn} from "../../utils/utils";
 import {useNavigation} from "../../context/NavigationContext";
+import {useProfiles} from "../../context/ProfilesProvider";
 
 const Soundboard = () => {
-    const {settings, activeProfile} = useWindow();
+    const {settings} = useWindow();
+    const {activeProfile} = useProfiles();
     const {showContextMenu} = useContextMenu();
     const {player, previewPlayer} = usePlayer();
     const {navigate} = useNavigation();

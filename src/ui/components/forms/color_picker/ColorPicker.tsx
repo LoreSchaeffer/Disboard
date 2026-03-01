@@ -1,6 +1,6 @@
 import styles from './ColorPicker.module.css';
 import {ChangeEvent, useEffect, useRef, useState} from "react";
-import {Background} from "../../types/common";
+import {Background} from "../../types/shared";
 import {clsx} from "clsx";
 
 type ColorPickerProps = {

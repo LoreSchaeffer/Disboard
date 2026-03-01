@@ -1,7 +1,7 @@
 import styles from "./SoundboardButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {useWindow} from "../../context/WindowContext";
-import {clamp} from "../../../common/utils";
+import {clamp} from "../../../shared/utils";
 import {clsx} from "clsx";
 import {SbBtn} from "../../../types/data";
 

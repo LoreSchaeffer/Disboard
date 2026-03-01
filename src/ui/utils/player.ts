@@ -1,5 +1,5 @@
 import {Time} from "./time";
-import {clamp} from "../../common/utils";
+import {clamp} from "../../shared/utils";
 import {RepeatMode} from "../../types/common";
 import {PlayerTrack} from "../../types/data";
 

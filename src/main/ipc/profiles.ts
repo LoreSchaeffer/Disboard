@@ -4,7 +4,7 @@ import {cacheStore, getProfileStore, settingsStore, tracksStore} from "../utils/
 import {convertBtnToSbBtn, convertProfileToSbProfile, convertSbBtnsToBtns, getPosFromButtonId} from "../utils/data-converters";
 import {IpcResponse, SoundboardWithProfile} from "../../types/common";
 import {generateValidFileName, removeNameInvalidChars, validateName} from "../utils/validation";
-import {clamp} from "../../common/utils";
+import {clamp} from "../../shared/utils";
 import path from "path";
 import fs from "node:fs";
 import {deepMerge, fixActiveProfile, generateUUID, getDefProfile, pruneNulls} from "../utils/misc";

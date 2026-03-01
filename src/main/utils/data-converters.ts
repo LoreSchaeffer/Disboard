@@ -1,75 +1,46 @@
-import {Profile, Btn, SbBtn, SbProfile, Track, Sfx, SfxProfile} from "../../types/data";
-import {tracksStore} from "./store";
+import {AmbientProfile, GridBtn, GridProfile, SbAmbientProfile, SbGridBtn, SbGridProfile, Track} from "../../types";
+import {getGridBtnId} from "../../shared/utils";
+import {tracksStore} from "../storage/tracks-store";
 
-export const generateButtonId = (row: number, col: number): string => {
-    return `btn_${row}_${col}`;
+const getTracksRecord = (): Record<string, Track> => {
+    const record: Record<string, Track> = {};
+    tracksStore.get('tracks').forEach(track => record[track.id] = track);
+    return record;
 }
 
-export const getPosFromButtonId = (buttonId: string): { row: number, col: number } | null => {
-    const match = buttonId.match(/^btn_(\d+)_(\d+)$/);
-    if (!match) return null;
-    const row = parseInt(match[1], 10);
-    const col = parseInt(match[2], 10);
-    return {row, col};
-}
-
-export const convertBtnToSbBtn = (profileBtn: Btn, tracks: Track[]): SbBtn | null => {
-    const track = tracks.find(t => t.id === profileBtn.track);
-
+const buildSbGridBtn = (gridBtn: GridBtn, track?: Track): SbGridBtn => {
     return {
-        id: generateButtonId(profileBtn.row, profileBtn.col),
-        row: profileBtn.row,
-        col: profileBtn.col,
+        ...gridBtn,
+        id: getGridBtnId(gridBtn.row, gridBtn.col),
         track: track,
-        title: profileBtn.title || track.title,
-        style: profileBtn.style,
-        cropOptions: profileBtn.cropOptions
+        title: gridBtn.title || track?.title,
     };
+};
+
+export const convertGridBtn2SbGridBtn = (gridBtn: GridBtn): SbGridBtn => {
+    const track = tracksStore.get('tracks').find(t => t.id === gridBtn.track);
+    return buildSbGridBtn(gridBtn, track);
+};
+
+export const convertGridBtns2SbGridBtns = (gridBtns: GridBtn[]): SbGridBtn[] => {
+    const tracks: Record<string, Track> = getTracksRecord();
+
+    return gridBtns.map(btn => {
+        const track = tracks[btn.track];
+        return buildSbGridBtn(btn, track);
+    });
 }
 
-export const convertBtnsToSbBtns = (profileBtns: Btn[]): SbBtn[] => {
-    const tracks = tracksStore.get('tracks');
-    return profileBtns.map(pb => convertBtnToSbBtn(pb, tracks));
-}
-
-// TODO To be removed?
-export const convertSbBtnToBtn = (sbBtn: SbBtn): Btn => {
+export const convertGridProfile2SbGridProfile = (gridProfile: GridProfile): SbGridProfile => {
     return {
-        row: sbBtn.row,
-        col: sbBtn.col,
-        title: sbBtn.title,
-        style: sbBtn.style,
-        cropOptions: sbBtn.cropOptions,
-        track: sbBtn.track.id
+        ...gridProfile,
+        buttons: convertGridBtns2SbGridBtns(gridProfile.buttons)
     }
 }
 
-// TODO To be removed?
-export const convertSbBtnsToBtns = (sbBtns: SbBtn[]): Btn[] => {
-    return sbBtns.map(sbBtn => convertSbBtnToBtn(sbBtn));
-}
-
-export const convertProfileToSbProfile = (profile: Profile): SbProfile => {
+export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientProfile): SbAmbientProfile => {
     return {
-        id: profile.id,
-        name: profile.name,
-        rows: profile.rows,
-        cols: profile.cols,
-        buttons: convertBtnsToSbBtns(profile.buttons)
+        ...ambientProfile,
+        // TODO
     }
-}
-
-export const convertSfxToSbSfx = (sfx: Sfx) => {
-    // TODO To be implemented
-    return null;
-}
-
-export const convertSfxsToSbSfxs = (sfxs: Sfx[]) => {
-    // TODO To be implemented
-    return [];
-}
-
-export const convertSfxProfileToSbSfxProfile = (sfxProfile: SfxProfile) => {
-    // TODO To be implemented
-    return null;
 }

@@ -1,4 +1,4 @@
-import {Tracks, TracksSchema} from "../../types/data";
+import {Tracks, TracksSchema} from "../../types";
 import {createValidatedStore} from "./store";
 import Store from "electron-store";
 

@@ -1,9 +1,13 @@
 import {BrowserWindow} from "electron";
-import {SbGridProfile, Settings, Track} from "../../types";
+import {SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
 
 export type BroadcastChannelMap = {
     'settings:change': Settings,
-    'profiles:change': SbGridProfile[],
+
+    'music_profiles:change': SbGridProfile[],
+    'sfx_profiles:change': SbGridProfile[],
+    'ambient_profiles:change': SbAmbientProfile[],
+
     'tracks:change': Track[],
 
     'player:play_now': Track,

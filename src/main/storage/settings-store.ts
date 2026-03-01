@@ -1,5 +1,5 @@
 import Store from "electron-store";
-import {Settings, SettingsSchema} from "../../types/settings";
+import {Settings, SettingsSchema} from "../../types";
 import {createValidatedStore} from "./store";
 import {broadcastData} from "../utils/broadcast";
 

@@ -200,4 +200,15 @@ export const fixActiveProfile = (sbType: SoundboardType) => {
             console.log(`[Main] Active profile for ${sbType} soundboard set to: ${profiles[0].name}`);
         }
     }
+
+    // eslint-disable-next-line no-control-regex
+    const fileNameInvalidCharsRegex = /[<>:"/\\|?*\x00-\x1F]/g;
+    export const generateValidFileName = (name: string, def?: string, ext: string = '.json') => {
+        if (name.toLowerCase().endsWith(ext.toLowerCase())) name = name.substring(0, name.length - ext.length);
+
+        let validName = name.replace(fileNameInvalidCharsRegex, '_').trim();
+        if (validName.length === 0) validName = def || 'Untitled';
+        if (validName.length > 64) validName = validName.substring(0, 64);
+        return validName + ext;
+    }
 }

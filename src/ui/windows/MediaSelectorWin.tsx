@@ -7,7 +7,7 @@ import {usePlayer} from "../context/PlayerContext";
 import {MediaSelectorAction} from "../../types/common";
 import {Track, TrackSource} from "../../types/data";
 import {YTSearchResult} from "../../types/music-api";
-import {MediaSelectorWindowData} from "../../types/window";
+import {MediaSelectorWindowData} from "../../types/windows";
 import Button from "../components/misc/Button";
 import Separator from "../components/misc/Separator";
 import Input from "../components/forms/Input";

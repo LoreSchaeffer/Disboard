@@ -1,5 +1,7 @@
 import {z} from "zod";
 
+export const BoardTypeSchema = z.enum(['music', 'sfx', 'ambient']);
+
 export const RepeatModeSchema = z.enum(['none', 'one', 'all']);
 
 export type RepeatMode = z.infer<typeof RepeatModeSchema>;
@@ -22,3 +24,5 @@ export type ButtonSettingsWin = {
     profileId: string;
     buttonId: string;
 }
+
+export type BoardType = z.infer<typeof BoardTypeSchema>;

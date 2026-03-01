@@ -1,4 +1,4 @@
-import {Profile, Btn, SbBtn, SbProfile, Track} from "../../types/data";
+import {Profile, Btn, SbBtn, SbProfile, Track, Sfx, SfxProfile} from "../../types/data";
 import {tracksStore} from "./store";
 
 export const generateButtonId = (row: number, col: number): string => {
@@ -32,6 +32,7 @@ export const convertBtnsToSbBtns = (profileBtns: Btn[]): SbBtn[] => {
     return profileBtns.map(pb => convertBtnToSbBtn(pb, tracks));
 }
 
+// TODO To be removed?
 export const convertSbBtnToBtn = (sbBtn: SbBtn): Btn => {
     return {
         row: sbBtn.row,
@@ -43,6 +44,7 @@ export const convertSbBtnToBtn = (sbBtn: SbBtn): Btn => {
     }
 }
 
+// TODO To be removed?
 export const convertSbBtnsToBtns = (sbBtns: SbBtn[]): Btn[] => {
     return sbBtns.map(sbBtn => convertSbBtnToBtn(sbBtn));
 }
@@ -55,4 +57,19 @@ export const convertProfileToSbProfile = (profile: Profile): SbProfile => {
         cols: profile.cols,
         buttons: convertBtnsToSbBtns(profile.buttons)
     }
+}
+
+export const convertSfxToSbSfx = (sfx: Sfx) => {
+    // TODO To be implemented
+    return null;
+}
+
+export const convertSfxsToSbSfxs = (sfxs: Sfx[]) => {
+    // TODO To be implemented
+    return [];
+}
+
+export const convertSfxProfileToSbSfxProfile = (sfxProfile: SfxProfile) => {
+    // TODO To be implemented
+    return null;
 }

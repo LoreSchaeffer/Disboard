@@ -4,9 +4,9 @@ import {cacheStore} from "../utils/store";
 import {IpcResponse, MediaType} from "../../types/common";
 
 export const setupSystemHandlers = () => {
-    ipcMain.on('open_link', async (_, url: string) => shell.openExternal(url));
+    ipcMain.on('system:open_link', async (_, url: string) => shell.openExternal(url));
 
-    ipcMain.handle('open_file_media_selector', async (_, mediaType?: MediaType): Promise<IpcResponse<string>> => {
+    ipcMain.handle('system:open_file_media_selector', async (_, mediaType?: MediaType): Promise<IpcResponse<string>> => {
         if (!mediaType) mediaType = 'audio';
 
         let filters;

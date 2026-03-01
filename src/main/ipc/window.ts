@@ -1,17 +1,17 @@
 import {BrowserWindow, ipcMain, IpcMainInvokeEvent} from 'electron';
-import {WindowInfo} from "../../types/window";
+import {WindowInfo} from "../../types/windows";
 import {state} from "../state";
 import {ButtonSettingsWin, MediaSelectorWin} from "../../types/common";
 import {createButtonSettingsWindow, createMediaSelectorWindow} from "../windows";
 import {Route} from "../../types/routes";
 
 export const setupWindowHandlers = () => {
-    ipcMain.on('minimize', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:minimize', (e: IpcMainInvokeEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.minimize();
     });
 
-    ipcMain.on('maximize', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:maximize', (e: IpcMainInvokeEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (!win || !win.isResizable()) return;
 
@@ -19,12 +19,12 @@ export const setupWindowHandlers = () => {
         else win.maximize();
     });
 
-    ipcMain.on('close', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:close', (e: IpcMainInvokeEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.close();
     });
 
-    ipcMain.handle('get_window', (e: IpcMainInvokeEvent): WindowInfo => {
+    ipcMain.handle('window:info', (e: IpcMainInvokeEvent): WindowInfo => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (!win) throw new Error('Could not find the window');
 
@@ -39,7 +39,7 @@ export const setupWindowHandlers = () => {
         };
     });
 
-    ipcMain.on('open_window', (e: IpcMainInvokeEvent, route: Route, args?: unknown) => {
+    ipcMain.on('window:open', (e: IpcMainInvokeEvent, route: Route, args?: unknown) => {
         switch (route) {
             case 'media_selector': {
                 const safeArgs = (args || {}) as MediaSelectorWin;

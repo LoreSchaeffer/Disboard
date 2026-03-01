@@ -1,5 +1,5 @@
 import {BrowserWindow} from "electron";
-import {WindowData, WindowOptions} from "../types/window";
+import {WindowData, WindowOptions} from "../types/windows";
 import {MusicApi} from "./utils/music-api";
 import {DiscordBot} from "./utils/discord-bot";
 

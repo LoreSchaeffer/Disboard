@@ -5,13 +5,15 @@ import {setupTracksHandlers} from "./tracks";
 import {setupSystemHandlers} from "./system";
 import {setupMusicApiHandlers} from "./music-api";
 import {setupDiscordBridgeHandlers} from "./discord";
+import {setupPlayerHandlers} from "./player";
 
 export const registerIpcHandlers = () => {
-    setupWindowHandlers();
-    setupSettingsHandlers();
-    setupProfilesHandlers();
-    setupTracksHandlers();
-    setupSystemHandlers();
-    setupMusicApiHandlers();
     setupDiscordBridgeHandlers();
+    setupMusicApiHandlers();
+    setupPlayerHandlers();
+    setupProfilesHandlers();
+    setupSettingsHandlers();
+    setupSystemHandlers();
+    setupTracksHandlers();
+    setupWindowHandlers();
 }

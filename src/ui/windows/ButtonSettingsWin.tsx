@@ -2,7 +2,7 @@ import styles from './ButtonSettingsWin.module.css';
 import React, {useEffect, useMemo, useState} from "react";
 import {BtnStyle, CropOptions, EndTimeType, PlayerTrack, SbBtn, SbProfile, TimeUnit} from "../../types/data";
 import {useWindow} from "../context/WindowContext";
-import {ButtonWindowData} from "../../types/window";
+import {ButtonWindowData} from "../../types/windows";
 import Spinner from "../components/misc/Spinner";
 import {useTitlebar} from "../context/TitlebarContext";
 import Input from "../components/forms/Input";

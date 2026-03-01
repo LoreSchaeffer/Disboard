@@ -1,15 +1,14 @@
 import {app, BrowserWindow, session} from 'electron';
 import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
-import {fixActiveProfile} from "./main/utils";
 import {state} from "./main/state";
 import {createMainWindow} from "./main/windows";
-import {settingsStore} from "./main/utils/store";
-import {setAppPriority} from "./main/utils/misc";
+import {fixActiveProfile, setAppPriority} from "./main/utils/misc";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import {DiscordBot} from "./main/utils/discord-bot";
+import {settingsStore} from "./main/storage/settings-store";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -52,7 +51,8 @@ const initApp = async () => {
 
     // 3. Data validation / Initialization
     console.log('[Main] Validating data stores...');
-    fixActiveProfile();
+    fixActiveProfile('main');
+    fixActiveProfile('click');
 
     // 4. Initialize Music API
     const musicApiEndpoint = settingsStore.get('musicApi');

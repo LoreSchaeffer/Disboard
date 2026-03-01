@@ -2,22 +2,22 @@ import {ipcMain} from "electron";
 import {Btn, PlayerTrack, Track, TrackSource} from "../../types/data";
 import {IpcResponse} from "../../types/common";
 import {YTSearchResult} from "../../types/music-api";
-import {profilesStore, tracksStore} from "../utils/store";
-import {broadcastProfiles, downloadTrack, getYoutubeStream} from "../utils";
+import {tracksStore} from "../utils/store";
 import {getPosFromButtonId} from "../utils/data-converters";
 import {generateUUID, getPlayerTrack} from "../utils/misc";
-import {state} from "../state";
-import {getBestThumbnail} from "../utils/music-api";
+import {getBestThumbnail, getYoutubeStream} from "../utils/music-api";
+import {broadcastProfiles, broadcastTracks} from "../utils/broadcast";
+import {downloadTrack} from "../utils/downloads";
 
 export const setupTracksHandlers = () => {
-    ipcMain.handle('get_tracks', (): Track[] => tracksStore.get('tracks'));
+    ipcMain.handle('tracks:get_all', (): Track[] => tracksStore.get('tracks'));
 
-    ipcMain.handle('get_track', (_, trackId: string): Track | null => {
+    ipcMain.handle('tracks:get', (_, trackId: string): Track | null => {
         const tracks = tracksStore.get('tracks');
         return tracks.find(t => t.id === trackId) || null;
     });
 
-    ipcMain.handle('add_track', (_, source: TrackSource, media: YTSearchResult | string, customTitle: string, profileId: string, buttonId: string): IpcResponse<void> => {
+    ipcMain.handle('tracks:add', (_, source: TrackSource, media: YTSearchResult | string, customTitle: string, profileId: string, buttonId: string): IpcResponse<void> => {
         if (!source || !media || !profileId || !buttonId) return {success: false, error: 'invalid_parameters'};
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
@@ -70,7 +70,7 @@ export const setupTracksHandlers = () => {
             let previousButtonState: Btn | undefined = undefined;
 
             updateButtonInStore((existing) => {
-                previousButtonState = existing ? { ...existing } : undefined;
+                previousButtonState = existing ? {...existing} : undefined;
                 return {
                     row: buttonPos.row,
                     col: buttonPos.col,
@@ -106,7 +106,7 @@ export const setupTracksHandlers = () => {
                 console.log(`[Main] Track ${track.id} downloaded.`);
                 updateButtonInStore((existing) => {
                     if (!existing) return null;
-                    const finalBtn = { ...existing };
+                    const finalBtn = {...existing};
                     finalBtn.track = track.id;
                     delete finalBtn.title;
                     return finalBtn;
@@ -126,18 +126,40 @@ export const setupTracksHandlers = () => {
         return {success: true};
     });
 
-    ipcMain.on('play_now', async (_, source: TrackSource, media: YTSearchResult | string, customTitle: string) => {
-        if (!source || !media) return;
-        if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return;
-        if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return;
+    ipcMain.handle('tracks:remove', (_, trackId: string): IpcResponse<void> => {
+        const tracks = tracksStore.get('tracks');
+        const trackIndex = tracks.findIndex(t => t.id === trackId);
+        if (trackIndex === -1) return {success: false, error: 'track_not_found'};
 
-        const track = await getPlayerTrack(source, media);
-        if (!track) return;
-        track.titleOverride = customTitle !== '' ? customTitle : undefined;
-        state.mainWindow.webContents.send('play_now', track);
+        tracks.splice(trackIndex, 1);
+        tracksStore.set('tracks', tracks);
+        broadcastTracks(tracks);
+
+        const profiles = profilesStore.get('profiles');
+        let profilesChanged = false;
+
+        for (const profile of profiles) {
+            let buttonsChanged = false;
+            for (let i = profile.buttons.length - 1; i >= 0; i--) {
+                const btn: Btn = profile.buttons[i];
+                if (btn.track === trackId) {
+                    profile.buttons.splice(i, 1);
+                    buttonsChanged = true;
+                }
+            }
+
+            if (buttonsChanged) profilesChanged = true;
+        }
+
+        if (profilesChanged) {
+            profilesStore.set('profiles', profiles);
+            broadcastProfiles(profiles);
+        }
+
+        return {success: true};
     });
 
-    ipcMain.handle('get_volatile_track', async (_, source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => {
+    ipcMain.handle('tracks:get_volatile', async (_, source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => {
         if (!source || !media) return {success: false, error: 'invalid_parameters'};
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_parameters'};
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_parameters'};

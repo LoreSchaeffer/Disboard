@@ -1,4 +1,4 @@
-import {ButtonWindowData, MediaSelectorWindowData, WindowOptions} from "../types/window";
+import {ButtonWindowData, MediaSelectorWindowData, WindowOptions} from "../types/windows";
 import {BrowserWindow} from "electron";
 import path from "path";
 import {state} from "./state";

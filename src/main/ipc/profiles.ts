@@ -1,79 +1,32 @@
 import {app, dialog, ipcMain} from "electron";
-import {Btn, BtnStyle, CropOptions, Profile, SbBtn, SbProfile, SbProfileSchema} from "../../types/data";
-import {cacheStore, profilesStore, settingsStore, tracksStore} from "../utils/store";
+import {Btn, Profile, SbBtn, SbProfile, SbProfileSchema} from "../../types/data";
+import {cacheStore, getProfileStore, settingsStore, tracksStore} from "../utils/store";
 import {convertBtnToSbBtn, convertProfileToSbProfile, convertSbBtnsToBtns, getPosFromButtonId} from "../utils/data-converters";
-import {IpcResponse} from "../../types/common";
+import {IpcResponse, SoundboardWithProfile} from "../../types/common";
 import {generateValidFileName, removeNameInvalidChars, validateName} from "../utils/validation";
 import {clamp} from "../../common/utils";
-import {broadcastProfiles, broadcastSettings, getDefProfile, fixActiveProfile} from "../utils";
 import path from "path";
 import fs from "node:fs";
-import {generateUUID} from "../utils/misc";
-
-type NullablePartial<T> = {
-    [P in keyof T]?: T[P] | null;
-};
-
-type BtnUpdatePayload = NullablePartial<Omit<SbBtn, 'track'>> & {
-    track?: { id: string } | string | null;
-};
-
-const updateButton = (target: Btn, updates: BtnUpdatePayload) => {
-    if (typeof updates.row === 'number') target.row = clamp(Math.floor(updates.row), 0, 49);
-    if (typeof updates.col === 'number') target.col = clamp(Math.floor(updates.col), 0, 49);
-
-    if (updates.title === null) delete target.title;
-    else if (updates.title !== undefined) target.title = removeNameInvalidChars(updates.title);
-
-    if (updates.track === null) delete target.track;
-    else if (updates.track !== undefined) target.track = typeof updates.track === 'object' ? updates.track.id : updates.track;
-
-    const applyNestedUpdates = <T extends object>(currentTarget: T | undefined, nestedUpdates: NullablePartial<T> | undefined | null): T | undefined => {
-        if (nestedUpdates === null) return undefined;
-        if (nestedUpdates === undefined) return currentTarget;
-
-        const nextObj: Partial<T> = currentTarget ? {...currentTarget} : {};
-
-        (Object.keys(nestedUpdates) as Array<keyof T>).forEach((key) => {
-            const val = nestedUpdates[key];
-
-            if (val === null) delete nextObj[key];
-            else if (val !== undefined) nextObj[key] = val as T[keyof T];
-        });
-
-        if (Object.keys(nextObj).length === 0) return undefined;
-
-        return nextObj as T;
-    };
-
-    if (updates.style !== undefined) {
-        const newStyle = applyNestedUpdates<BtnStyle>(target.style, updates.style);
-        if (newStyle) target.style = newStyle;
-        else delete target.style;
-    }
-
-    if (updates.cropOptions !== undefined) {
-        const newCrop = applyNestedUpdates<CropOptions>(target.cropOptions, updates.cropOptions);
-        if (newCrop) target.cropOptions = newCrop;
-        else delete target.cropOptions;
-    }
-};
+import {deepMerge, fixActiveProfile, generateUUID, getDefProfile, pruneNulls} from "../utils/misc";
+import {broadcastProfiles, broadcastSettings} from "../utils/broadcast";
 
 export const setupProfilesHandlers = () => {
-    ipcMain.handle('get_profiles', (): SbProfile[] => {
-        return profilesStore.get('profiles').map(convertProfileToSbProfile);
+    ipcMain.handle('profiles:get_all', (_, soundboardType: SoundboardWithProfile): SbProfile[] => {
+        return getProfileStore(soundboardType).get('profiles').map(convertProfileToSbProfile);
     });
 
-    ipcMain.handle('get_profile', (_, id: string): SbProfile => {
-        const profile = profilesStore.get('profiles').find(p => p.id === id) || null
+    ipcMain.handle('profiles:get', (_, soundboardType: SoundboardWithProfile, id: string): SbProfile => {
+        const profile = getProfileStore(soundboardType).get('profiles').find(p => p.id === id) || null
         if (!profile) return null;
 
         return convertProfileToSbProfile(profile);
     });
 
-    ipcMain.handle('create_profile', (_, profile: Partial<Profile>): IpcResponse<void> => {
+    ipcMain.handle('profiles:create', (_, soundboardType: SoundboardWithProfile, profile: Partial<Profile>): IpcResponse<void> => {
         if (!profile.name) return {success: false, error: 'name_required'};
         if (!validateName(profile.name)) return {success: false, error: 'name_invalid'};
+
+        const profilesStore = getProfileStore(soundboardType);
 
         const profiles = profilesStore.get('profiles');
         if (profiles.some(p => p.name.toLowerCase() === profile.name!.toLowerCase())) return {success: false, error: 'name_exists'};
@@ -88,15 +41,17 @@ export const setupProfilesHandlers = () => {
 
         profiles.push(newProfile);
         profilesStore.set('profiles', profiles);
-        settingsStore.set('activeProfile', newProfile.id);
+        settingsStore.set(`${soundboardType}Soundboard.activeProfile`, newProfile.id);
 
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
         broadcastSettings(settingsStore.store);
         return {success: true};
     });
 
-    ipcMain.handle('update_profile', (_, id: string, profile: Partial<Profile>): IpcResponse<void> => {
+    ipcMain.handle('profiles:update', (_, soundboardType: SoundboardWithProfile, id: string, profile: Partial<Profile>): IpcResponse<void> => {
         if (!id) return {success: false, error: 'id_required'};
+
+        const profilesStore = getProfileStore(soundboardType);
 
         const profiles = profilesStore.get('profiles');
         const idx = profiles.findIndex(p => p.id === id);
@@ -120,12 +75,14 @@ export const setupProfilesHandlers = () => {
         };
 
         profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
         return {success: true};
     });
 
-    ipcMain.handle('delete_profile', (_, id: string): IpcResponse<void> => {
+    ipcMain.handle('profiles:delete', (_, soundboardType: SoundboardWithProfile, id: string): IpcResponse<void> => {
         if (!id) return {success: false, error: 'id_required'};
+
+        const profilesStore = getProfileStore(soundboardType);
 
         const profiles = profilesStore.get('profiles');
         const idx = profiles.findIndex(p => p.id === id);
@@ -136,15 +93,15 @@ export const setupProfilesHandlers = () => {
 
         profilesStore.set('profiles', profiles);
 
-        fixActiveProfile();
+        fixActiveProfile(soundboardType);
 
         broadcastSettings(settingsStore.store);
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
 
         return {success: true};
     });
 
-    ipcMain.on('import_profile', async () => {
+    ipcMain.on('profiles:import', async (_, soundboardType: SoundboardWithProfile) => {
         const defaultPath: string = cacheStore.get('profilesDir') || app.getPath('documents');
 
         const {canceled, filePaths} = await dialog.showOpenDialog({
@@ -181,6 +138,7 @@ export const setupProfilesHandlers = () => {
 
         const importedData: SbProfile = result.data;
 
+        const profilesStore = getProfileStore(soundboardType);
         const profiles = profilesStore.get('profiles');
 
         let newName = removeNameInvalidChars(importedData.name);
@@ -203,11 +161,11 @@ export const setupProfilesHandlers = () => {
 
         profiles.push(newProfile);
         profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
     });
 
-    ipcMain.on('export_profile', async (_, id: string) => {
-        const profile = profilesStore.get('profiles').find(p => p.id === id);
+    ipcMain.on('profiles:export', async (_, soundboardType: SoundboardWithProfile, id: string) => {
+        const profile = getProfileStore(soundboardType).get('profiles').find(p => p.id === id);
         if (!profile) {
             console.error('[Main] Profile not found');
             return;
@@ -237,8 +195,8 @@ export const setupProfilesHandlers = () => {
         }
     });
 
-    ipcMain.on('export_profiles', async () => {
-        const profiles = profilesStore.get('profiles');
+    ipcMain.on('profiles:export_all', async (_, soundboardType: SoundboardWithProfile) => {
+        const profiles = getProfileStore(soundboardType).get('profiles');
         if (!profiles || profiles.length === 0) return;
 
         const {canceled, filePaths} = await dialog.showOpenDialog({
@@ -277,8 +235,8 @@ export const setupProfilesHandlers = () => {
         console.log(`[Main] Esportati ${profiles.length} profili.`);
     });
 
-    ipcMain.handle('get_button', (_, profileId: string, buttonId: string): SbBtn | null => {
-        const profile = profilesStore.get('profiles').find(p => p.id === profileId);
+    ipcMain.handle('profiles:buttons:get', (_, soundboardType: SoundboardWithProfile, profileId: string, buttonId: string): SbBtn | null => {
+        const profile = getProfileStore(soundboardType).get('profiles').find(p => p.id === profileId);
         if (!profile) return null;
 
         const buttonPos = getPosFromButtonId(buttonId);
@@ -290,7 +248,8 @@ export const setupProfilesHandlers = () => {
         return convertBtnToSbBtn(btn, tracksStore.get('tracks'));
     });
 
-    ipcMain.handle('update_button', (_, profileId: string, buttonId: string, updates: Partial<SbBtn>): IpcResponse<void> => {
+    ipcMain.handle('profiles:buttons:update', (_, soundboardType: SoundboardWithProfile, profileId: string, buttonId: string, updates: Partial<Btn>): IpcResponse<void> => {
+        const profilesStore = getProfileStore(soundboardType);
         const profiles = profilesStore.get('profiles');
 
         const profileIdx = profiles.findIndex(p => p.id === profileId);
@@ -300,32 +259,31 @@ export const setupProfilesHandlers = () => {
         const buttonPos = getPosFromButtonId(buttonId);
         if (!buttonPos) return {success: false, error: 'invalid_button_id'};
 
-        let button: Btn;
-
         const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
-        if (existingButtonIdx !== -1) {
-            button = profile.buttons[existingButtonIdx];
-        } else {
-            button = {
-                row: buttonPos.row,
-                col: buttonPos.col,
-                track: null
-            };
+        const targetButton: Btn = existingButtonIdx !== -1
+            ? profile.buttons[existingButtonIdx]
+            : {row: buttonPos.row, col: buttonPos.col, track: ''} as Btn;
 
-            profile.buttons.push(button);
+        if (updates.title) updates.title = removeNameInvalidChars(updates.title);
+        if (typeof updates.row === 'number') updates.row = clamp(updates.row, 0, 49);
+        if (typeof updates.col === 'number') updates.col = clamp(updates.col, 0, 49);
+
+        const finalButton: Btn = pruneNulls(deepMerge(targetButton, updates));
+
+        if (existingButtonIdx !== -1) {
+            profile.buttons[existingButtonIdx] = finalButton;
+        } else {
+            if (finalButton.track && finalButton.track.length > 0) profile.buttons.push(finalButton as Btn);
         }
 
-        updateButton(button, updates);
-
-        // TODO If the track is changed, we might need to handle downloading
-
         profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
 
         return {success: true};
     });
 
-    ipcMain.handle('delete_button', (_, profileId: string, buttonId: string): IpcResponse<void> => {
+    ipcMain.handle('profiles:buttons:delete', (_, soundboardType: SoundboardWithProfile, profileId: string, buttonId: string): IpcResponse<void> => {
+        const profilesStore = getProfileStore(soundboardType);
         const profiles = profilesStore.get('profiles');
 
         const profileIdx = profiles.findIndex(p => p.id === profileId);
@@ -342,7 +300,7 @@ export const setupProfilesHandlers = () => {
 
         profiles[profileIdx] = profile;
         profilesStore.set('profiles', profiles);
-        broadcastProfiles(profiles);
+        broadcastProfiles(soundboardType, profiles);
 
         return {success: true};
     });

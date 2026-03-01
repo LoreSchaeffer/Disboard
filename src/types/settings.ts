@@ -1,7 +1,5 @@
-import { RepeatModeSchema } from "./common";
-import { z } from "zod";
-
-export const SoundboardType = z.enum(['main', 'sfx', 'click']);
+import {BoardTypeSchema, RepeatModeSchema} from "./common";
+import {z} from "zod";
 
 export const ApiCredentialsSchema = z.object({
     clientId: z.string().default(''),
@@ -25,11 +23,11 @@ export const SoundboardSettingsSchema = z.object({
 });
 
 export const SettingsSchema = z.object({
-    openOnStartup: z.array(SoundboardType).default(['main']),
+    openOnStartup: z.array(BoardTypeSchema).default(['music']),
 
     mainSoundboard: SoundboardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, repeat: 'none'}),
-    sfxSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
     clickSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+    sfxSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
 
     previewVolume: z.number().min(0).max(100).default(50),
     outputDevice: z.string().default('default'),
@@ -42,12 +40,11 @@ export const SettingsSchema = z.object({
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
     musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
 
-    discord: DiscordSettingsSchema.default({ enabled: false, restPort: 24454, udpPort: 24455 }),
+    discord: DiscordSettingsSchema.default({enabled: false, restPort: 24454, udpPort: 24455}),
 
     debug: z.boolean().default(false)
 });
 
-export type SoundboardSchema = z.infer<typeof SoundboardType>;
 export type SoundboardSettings = z.infer<typeof SoundboardSettingsSchema>;
 export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
 export type DiscordSettings = z.infer<typeof DiscordSettingsSchema>;

@@ -6,10 +6,10 @@ export const registerMediaShortcuts = () => {
     const mainWindow = state.mainWindow;
 
     const shortcuts = [
-        {key: 'MediaPlayPause', channel: 'play_pause'},
-        {key: 'MediaNextTrack', channel: 'next'},
-        {key: 'MediaPreviousTrack', channel: 'prev'},
-        {key: 'MediaStop', channel: 'stop'}
+        {key: 'MediaPlayPause', channel: 'player:play_pause'},
+        {key: 'MediaNextTrack', channel: 'player:next'},
+        {key: 'MediaPreviousTrack', channel: 'player:prev'},
+        {key: 'MediaStop', channel: 'player:stop'}
     ];
 
     shortcuts.forEach(({key, channel}) => {

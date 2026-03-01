@@ -8,6 +8,13 @@ export type RepeatMode = z.infer<typeof RepeatModeSchema>;
 export type MediaType = 'audio' | 'images';
 export type MediaSelectorAction = 'update_button' | 'play_now';
 
+export type ProbeResult = {
+    format: string;
+    codec: string;
+    duration: number;
+    tags: Record<string, string | number>;
+}
+
 export type IpcResponse<T> = {
     success: boolean;
     data?: T;

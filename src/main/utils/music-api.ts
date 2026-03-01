@@ -1,6 +1,5 @@
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig} from "axios";
-import {ApiCredentials} from "../../types/settings";
-import {YTSearchResult, YTStream} from "../../types/music-api";
+import {ApiCredentials, YTSearchResult, YTStream} from "../../types";
 import {net} from "electron";
 import {state} from "../state";
 
@@ -192,7 +191,7 @@ export const getVideoId = (url: string): string | null => {
     return match ? match[1] : null;
 }
 
-export const getBestThumbnail = (thumbnails: ({url: string; width: number; height: number})[]): string | null => {
+export const getBestThumbnail = (thumbnails: ({ url: string; width: number; height: number })[]): string | null => {
     if (thumbnails.length === 0) return null;
     const sorted = thumbnails.sort((a, b) => (b.width * b.height) - (a.width * a.height));
     return sorted[0].url;

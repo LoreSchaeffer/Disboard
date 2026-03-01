@@ -1,15 +1,9 @@
 import ffmpeg from 'fluent-ffmpeg';
-import * as fs from "node:fs";
+import fs from 'node:fs/promises';
 import path from "path";
-import {removeNameInvalidChars} from "./validation";
-import {USER_AGENT} from "../utils";
-
-export type ProbeResult = {
-    format: string;
-    codec: string;
-    duration: number;
-    tags: Record<string, string | number>;
-}
+import {USER_AGENT} from "../constants";
+import {ProbeResult} from "../../types";
+import {removeNameInvalidChars} from "../../shared/validation";
 
 const getInputOptions = (inputSource: string): string[] => {
     const isUrl = inputSource.startsWith('http');
@@ -46,7 +40,7 @@ export const probeMedia = (inputSource: string): Promise<ProbeResult> => {
 };
 
 export const processAudio = async (inputSource: string, outputDir: string, trackId: string): Promise<number> => {
-    fs.mkdirSync(outputDir, {recursive: true});
+    await fs.mkdir(outputDir, {recursive: true});
 
     const tempPath = path.join(outputDir, `${trackId}.tmp`);
     const finalPath = path.join(outputDir, `${trackId}.mp3`);
@@ -55,7 +49,8 @@ export const processAudio = async (inputSource: string, outputDir: string, track
     try {
         probe = await probeMedia(inputSource);
     } catch (e) {
-        throw new Error(`[FFmpeg] Error processing source: ${e.message}`);
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        throw new Error(`[FFmpeg] Error processing source: ${errorMessage}`);
     }
 
     const isSourceMp3 = probe.codec === 'mp3';
@@ -75,8 +70,7 @@ export const processAudio = async (inputSource: string, outputDir: string, track
                 .audioCodec('libmp3lame')
                 .audioBitrate(256)
                 .outputOptions([
-                    '-threads 0',
-                    '-compression_level 2'
+                    '-threads 0'
                 ])
                 .format('mp3');
         }
@@ -84,18 +78,16 @@ export const processAudio = async (inputSource: string, outputDir: string, track
         command
             .on('error', async (err) => {
                 console.error(`[FFmpeg] Error processing ${trackId}:`, err);
-
                 try {
-                    fs.unlinkSync(tempPath);
+                    await fs.unlink(tempPath);
                 } catch {
                     // Ignored
                 }
-
                 reject(err);
             })
             .on('end', async () => {
                 try {
-                    fs.renameSync(tempPath, finalPath);
+                    await fs.rename(tempPath, finalPath);
                     resolve(Math.round(probe.duration * 1000));
                 } catch (renameErr) {
                     reject(renameErr);
@@ -106,7 +98,7 @@ export const processAudio = async (inputSource: string, outputDir: string, track
 };
 
 export const extractCoverImage = async (inputSource: string, outputDir: string, trackId: string): Promise<boolean> => {
-    fs.mkdirSync(outputDir, {recursive: true});
+    await fs.mkdir(outputDir, {recursive: true});
     const outputPath = path.join(outputDir, `${trackId}.jpg`);
 
     return new Promise((resolve) => {
@@ -146,12 +138,10 @@ export const determineTitle = async (uri: string, providedTitle?: string): Promi
         const baseName = path.basename(uri);
 
         if (isUrl) {
-
             const decodedName = decodeURIComponent(baseName).split('?')[0];
             const nameWithoutExt = decodedName.replace(/\.[^/.]+$/, "");
             return removeNameInvalidChars(nameWithoutExt) || 'Unknown Title';
         } else {
-
             const nameWithoutExt = path.parse(uri).name;
             return removeNameInvalidChars(nameWithoutExt) || 'Unknown Title';
         }

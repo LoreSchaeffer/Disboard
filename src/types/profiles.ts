@@ -5,7 +5,7 @@ import {BoardTypeSchema} from "./common";
 export const GridProfileSchema = z.object({
     id: z.uuid(),
     name: z.string(),
-    type: BoardTypeSchema.refine(val => val === 'ambient', {
+    type: BoardTypeSchema.refine(val => val !== 'ambient', {
         message: "'ambient' type is not allowed as a grid profile type",
     }),
     rows: z.number().int().min(1).max(50),

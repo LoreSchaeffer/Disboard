@@ -1,11 +1,11 @@
 import path from "path";
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import axios from "axios";
-import {AUDIO_DIR, IMAGES_DIR, USER_AGENT} from "../constants";
+import {THUMBNAILS_DIR, TRACKS_DIR, USER_AGENT} from "../constants";
 import sharp from "sharp";
-import {Source, Track} from "../../types/data";
 import {determineTitle, extractCoverImage, processAudio} from "./ffmpeg";
-import {tracksStore} from "./store";
+import {BoardType, Track, TrackSource} from "../../types";
+import {tracksStore} from "../storage/tracks-store";
 
 const downloadImageFromUrl = async (url: string, outputDir: string, trackId: string): Promise<boolean> => {
     if (!url || !url.startsWith('http')) return false;
@@ -13,7 +13,7 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
     const outputPath = path.join(outputDir, `${trackId}.jpg`);
 
     try {
-        fs.mkdirSync(outputDir, {recursive: true});
+        await fs.mkdir(outputDir, {recursive: true});
         console.log(`[Main] Downloading image for ${trackId} from ${url}...`);
 
         const response = await axios({
@@ -54,30 +54,33 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.warn(`[Main] Failed to download or process cover for ${trackId}: ${errorMessage}`);
-
-        try {
-            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-        } catch {
-            // Ignored
-        }
+        await fs.unlink(outputPath).catch(() => {
+        });
 
         return false;
     }
 }
 
-export const downloadTrack = async (id: string, uri: string, source: Source, title?: string, cover?: string): Promise<Track> => {
-    const audioTask = processAudio(uri, AUDIO_DIR, id);
+export const downloadTrack = async (
+    id: string,
+    uri: string,
+    source: TrackSource,
+    board: Exclude<BoardType, 'ambient'>,
+    title?: string,
+    cover?: string,
+): Promise<Track> => {
+    const audioTask = processAudio(uri, TRACKS_DIR, id);
     const titleTask = determineTitle(uri, title);
 
     let coverTask: Promise<boolean>;
     if (source.type === 'youtube' && cover) {
-        coverTask = downloadImageFromUrl(cover, IMAGES_DIR, id)
+        coverTask = downloadImageFromUrl(cover, THUMBNAILS_DIR, id)
             .catch(err => {
                 console.warn('[Downloader] Failed to download YT cover:', err);
                 return false;
             });
     } else {
-        coverTask = extractCoverImage(uri, IMAGES_DIR, id);
+        coverTask = extractCoverImage(uri, THUMBNAILS_DIR, id);
     }
 
     try {
@@ -91,7 +94,8 @@ export const downloadTrack = async (id: string, uri: string, source: Source, tit
             id: id,
             source: source,
             title: finalTitle,
-            duration: duration
+            duration: duration,
+            board: board
         };
 
         const tracks = tracksStore.get('tracks') || [];
@@ -102,18 +106,16 @@ export const downloadTrack = async (id: string, uri: string, source: Source, tit
     } catch (error) {
         console.error(`[Downloader] Critical error for ${id}:`, error);
 
-        const audioFile = path.join(AUDIO_DIR, `${id}.mp3`);
-        try {
-            fs.unlinkSync(audioFile);
-        } catch {
-            // Ignored
-        }
+        const audioFile = path.join(TRACKS_DIR, `${id}.mp3`);
+        await fs.unlink(audioFile).catch(() => {
+        });
 
         const tracks = tracksStore.get('tracks') || [];
         if (tracks.some(t => t.id === id)) {
             tracksStore.set('tracks', tracks.filter(t => t.id !== id));
         }
 
-        throw new Error(error.message || 'download_error');
+        const errorMessage = error instanceof Error ? error.message : 'download_error';
+        throw new Error(errorMessage);
     }
 };

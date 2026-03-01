@@ -15,7 +15,7 @@ export const DiscordSettingsSchema = z.object({
     lastChannel: z.string().optional(),
 });
 
-export const SoundboardSettingsSchema = z.object({
+export const BoardSettingsSchema = z.object({
     width: z.number().min(1080).max(10000).default(1366),
     height: z.number().min(608).max(10000).default(768),
     volume: z.number().min(0).max(100).default(50),
@@ -25,9 +25,9 @@ export const SoundboardSettingsSchema = z.object({
 export const SettingsSchema = z.object({
     openOnStartup: z.array(BoardTypeSchema).default(['music']),
 
-    mainSoundboard: SoundboardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, repeat: 'none'}),
-    clickSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
-    sfxSoundboard: SoundboardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+    music: BoardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, repeat: 'none'}),
+    sfx: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+    ambient: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
 
     previewVolume: z.number().min(0).max(100).default(50),
     outputDevice: z.string().default('default'),
@@ -45,7 +45,7 @@ export const SettingsSchema = z.object({
     debug: z.boolean().default(false)
 });
 
-export type SoundboardSettings = z.infer<typeof SoundboardSettingsSchema>;
+export type BoardSettings = z.infer<typeof BoardSettingsSchema>;
 export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
 export type DiscordSettings = z.infer<typeof DiscordSettingsSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;

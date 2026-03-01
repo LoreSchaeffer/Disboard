@@ -1,8 +1,8 @@
 import {Client, GatewayIntentBits, VoiceBasedChannel} from "discord.js";
 import {AudioPlayer, AudioPlayerStatus, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, NoSubscriberBehavior, StreamType, VoiceConnection, VoiceConnectionStatus} from "@discordjs/voice";
 import {PassThrough} from 'stream';
-import {settingsStore} from "./store";
-import {DiscordData, DiscordStatus} from "../../types/discord";
+import {DiscordData, DiscordStatus} from "../../types";
+import {settingsStore} from "../storage/settings-store";
 
 export class DiscordBot {
     private client: Client;

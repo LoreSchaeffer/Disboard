@@ -1,5 +1,5 @@
 import Store from "electron-store";
-import {Settings, SettingsSchema} from "../../types";
+import {BoardSettings, BoardType, Settings, SettingsSchema} from "../../types";
 import {createValidatedStore} from "./store";
 import {broadcastData} from "../utils/broadcast";
 
@@ -8,3 +8,9 @@ export const settingsStore: Store<Settings> = createValidatedStore<Settings>(
     SettingsSchema,
     (settings) => broadcastData('settings:change', settings)
 );
+
+export const getBoardSettings = (boardType: BoardType): BoardSettings => {
+    const settings = settingsStore.get(boardType);
+    if (!settings) throw new Error(`Settings for ${boardType} board not found`);
+    return settings;
+}

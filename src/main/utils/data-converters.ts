@@ -1,6 +1,9 @@
-import {AmbientProfile, GridBtn, GridProfile, SbAmbientProfile, SbGridBtn, SbGridProfile, Track} from "../../types";
+import {AmbientProfile, GridBtn, GridProfile, PlayerTrack, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {getGridBtnId} from "../../shared/utils";
 import {tracksStore} from "../storage/tracks-store";
+import {getYoutubeStream} from "./music-api";
+import {generateUUID} from "./misc";
+import {probeMedia} from "./ffmpeg";
 
 const getTracksRecord = (): Record<string, Track> => {
     const record: Record<string, Track> = {};
@@ -43,4 +46,72 @@ export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientPr
         ...ambientProfile,
         // TODO
     }
+}
+
+export const createPlayerTrack = async (source: TrackSourceName, media: YTSearchResult | string): Promise<PlayerTrack | null> => {
+    if (!source || !media) return null;
+
+    let track: PlayerTrack;
+
+    switch (source) {
+        case 'list': {
+            track = tracksStore.get('tracks').find(t => t.id === media as string) || null;
+            break;
+        }
+        case 'youtube': {
+            const ytResult = media as YTSearchResult;
+
+            try {
+                const stream = await getYoutubeStream(ytResult.id);
+                if (!stream) return null;
+
+                track = {
+                    id: generateUUID(),
+                    source: {
+                        type: 'youtube',
+                        src: stream
+                    },
+                    title: ytResult.name,
+                    duration: ytResult.duration * 1000,
+                    directStream: true,
+                    board: undefined
+                }
+            } catch {
+                return null;
+            }
+            break;
+        }
+        case 'file':
+        case 'url': {
+            const uri = media as string;
+
+            let duration = 0;
+            let title = source === 'file'
+                ? uri.split(/[/\\]/).pop() || uri
+                : uri;
+
+            try {
+                const probe = await probeMedia(uri);
+                duration = Math.round((probe.duration || 0) * 1000);
+                if (probe.tags?.title) title = probe.tags.title as string;
+            } catch {
+                // Ignored
+            }
+
+            track = {
+                id: generateUUID(),
+                source: {
+                    type: source,
+                    src: uri
+                },
+                title: title,
+                duration: duration,
+                directStream: true,
+                board: undefined
+            };
+            break;
+        }
+    }
+
+    return track;
 }

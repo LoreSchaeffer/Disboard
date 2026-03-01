@@ -1,6 +1,6 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
 import {Settings} from "../../types/settings";
-import {WindowData} from "../../types/windows";
+import {StaticWindowData} from "../../types/windows";
 import {Route} from "../../types/routes";
 
 type WindowContextType = {
@@ -10,7 +10,7 @@ type WindowContextType = {
     route: Route | null;
     settings: Settings | null;
     updateSettingsAsync?: (settings: Partial<Settings>) => void;
-    data: WindowData<unknown> | null;
+    data: StaticWindowData<unknown> | null;
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined);
@@ -21,7 +21,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [resizable, setResizable] = useState<boolean>(false);
     const [route, setRoute] = useState<Route | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
-    const [data, setData] = useState<WindowData<unknown> | null>(null);
+    const [data, setData] = useState<StaticWindowData<unknown> | null>(null);
 
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

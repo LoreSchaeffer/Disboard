@@ -1,5 +1,5 @@
 import {BrowserWindow, BrowserWindowConstructorOptions} from "electron";
-import {MediaSelectorAction} from "./common";
+import {BoardType, MediaSelectorAction} from "./common";
 import {Route} from "./routes";
 
 export type WindowOptions = BrowserWindowConstructorOptions & {
@@ -7,28 +7,30 @@ export type WindowOptions = BrowserWindowConstructorOptions & {
     onLoaded?: (win: BrowserWindow) => void;
     onReady?: (win: BrowserWindow) => void;
     onResize?: (win: BrowserWindow) => void;
-    data?: WindowData<unknown>;
+    data?: StaticWindowData<unknown>;
 }
 
 export type WindowInfo = {
     parent: number | null;
     resizable: boolean;
     route: Route;
-    data?: WindowData<unknown>;
+    data?: StaticWindowData<unknown>;
 }
 
-export type WindowData<T> = {
+export type StaticWindowData<T> = {
     type: Route;
     data: T;
 }
 
-// Window Data
-export type ButtonWindowData = {
+// Static Window Data
+export type GridBtnWindowData = {
+    boardType: BoardType;
     profileId: string;
     buttonId: string;
 }
 
-export type MediaSelectorWindowData = {
+export type GridMediaSelectorWindowData = {
+    boardType: BoardType;
     action: MediaSelectorAction;
     profileId: string;
     buttonId: string;

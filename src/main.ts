@@ -2,13 +2,14 @@ import {app, BrowserWindow, session} from 'electron';
 import {registerProtocols, setupProtocolHandlers} from "./main/protocol";
 import {registerIpcHandlers} from "./main/ipc";
 import {state} from "./main/state";
-import {createMainWindow} from "./main/windows";
 import {fixActiveProfile, setAppPriority} from "./main/utils/misc";
 import {MusicApi} from "./main/utils/music-api";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import {DiscordBot} from "./main/utils/discord-bot";
 import {settingsStore} from "./main/storage/settings-store";
+import {createBoardWin} from "./main/windows";
+import {BoardType} from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -51,8 +52,9 @@ const initApp = async () => {
 
     // 3. Data validation / Initialization
     console.log('[Main] Validating data stores...');
-    fixActiveProfile('main');
-    fixActiveProfile('click');
+    fixActiveProfile('music');
+    fixActiveProfile('sfx');
+    fixActiveProfile('ambient');
 
     // 4. Initialize Music API
     const musicApiEndpoint = settingsStore.get('musicApi');
@@ -72,9 +74,14 @@ const initApp = async () => {
     state.discordBot = new DiscordBot();
     state.discordBot.init();
 
-    // 7. Launch main window
+    // 7. Launch board
     console.log('[Main] Launching renderer...');
-    createMainWindow();
+    const startupBoards: BoardType[] = settingsStore.get('openOnStartup') || ['music'];
+    const boardsToOpen: BoardType[] = startupBoards.length > 0 ? startupBoards : ['music'];
+    boardsToOpen.forEach(boardType => {
+        console.log(`[Main] Opening ${boardType} board on startup...`);
+        createBoardWin(boardType);
+    });
 };
 
 // Lifecycle events
@@ -86,7 +93,11 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+        const startupBoards: BoardType[] = settingsStore.get('openOnStartup') || ['music'];
+        const boardsToOpen: BoardType[] = startupBoards.length > 0 ? startupBoards : ['music'];
+        boardsToOpen.forEach(board => createBoardWin(board));
+    }
 });
 
 app.on('will-quit', async () => {

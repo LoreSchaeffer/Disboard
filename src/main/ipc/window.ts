@@ -35,7 +35,7 @@ export const setupWindowHandlers = () => {
             parent: options.parent ? options.parent.id : null,
             resizable: win.resizable,
             route: options.route,
-            data: state.winData.get(win.id)
+            data: state.winStaticData.get(win.id)
         };
     });
 

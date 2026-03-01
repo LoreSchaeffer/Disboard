@@ -1,12 +1,6 @@
 import {contextBridge, ipcRenderer, IpcRendererEvent} from "electron";
-import {IpcResponse, MediaType} from "./types/common";
-import {Settings} from "./types/settings";
-import {Btn, PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
-import {WindowInfo} from "./types/windows";
-import {YTSearchResult} from "./types/music-api";
-import {DiscordData, DiscordStatus} from "./types/discord";
-import {Route} from "./types/routes";
 import {BroadcastChannelMap} from "./main/utils/broadcast";
+import {Route, Settings, WindowInfo} from "./types";
 
 type ListenerCallback<K extends keyof BroadcastChannelMap> = BroadcastChannelMap[K] extends void ? () => void : (data: BroadcastChannelMap[K]) => void;
 

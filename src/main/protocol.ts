@@ -1,8 +1,8 @@
 import {app, net, protocol} from "electron";
-import {AUDIO_DIR, IMAGES_DIR} from "./constants";
 import path from "path";
 import {pathToFileURL} from "url";
 import fs from "node:fs";
+import {THUMBNAILS_DIR, TRACKS_DIR} from "./constants";
 
 const getFallbackImagePath = (): string => {
     if (app.isPackaged) return path.join(__dirname, '../renderer/images/track.png');
@@ -12,7 +12,7 @@ const getFallbackImagePath = (): string => {
 export const registerProtocols = () => {
     protocol.registerSchemesAsPrivileged([
         {
-            scheme: 'music',
+            scheme: 'disboard',
             privileges: {
                 secure: true,
                 standard: true,
@@ -25,8 +25,9 @@ export const registerProtocols = () => {
     ]);
 }
 
+// TODO Change path names
 export const setupProtocolHandlers = () => {
-    protocol.handle('music', async (request: Request): Promise<Response> => {
+    protocol.handle('disboard', async (request: Request): Promise<Response> => {
         try {
             const parsedUrl = new URL(request.url);
             const type = parsedUrl.hostname;
@@ -35,9 +36,9 @@ export const setupProtocolHandlers = () => {
             let targetPath = '';
 
             if (type === 'audio') {
-                targetPath = path.join(AUDIO_DIR, `${resName}.mp3`);
+                targetPath = path.join(TRACKS_DIR, `${resName}.mp3`);
             } else if (type === 'images') {
-                targetPath = path.join(IMAGES_DIR, `${resName}.jpg`);
+                targetPath = path.join(THUMBNAILS_DIR, `${resName}.jpg`);
 
                 try {
                     await fs.promises.access(targetPath);

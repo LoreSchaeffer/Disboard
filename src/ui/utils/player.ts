@@ -1,7 +1,6 @@
 import {Time} from "./time";
 import {clamp} from "../../shared/utils";
-import {RepeatMode} from "../../types/common";
-import {PlayerTrack} from "../../types/data";
+import {PlayerTrack, RepeatMode} from "../../types";
 
 export type PlayerStatus = {
     playing: boolean;
@@ -45,6 +44,7 @@ export class Player {
     private masterVolume: number = 50;
 
     private botMode: boolean = false;
+    private captureMediaKeys: boolean = false;
 
     // Web Audio API Components
     private audioContext: AudioContext;
@@ -120,6 +120,7 @@ export class Player {
         this.audio.addEventListener('playing', () => {
             setLoading(false);
             this.status.playing = true;
+            this._updateMediaSessionState('playing');
             if (this.status.paused) {
                 this.status.paused = false;
                 this.eventHandlers['resume']?.();
@@ -131,6 +132,7 @@ export class Player {
         this.audio.addEventListener('pause', () => {
             if (this.status.playing && !this.status.seeking) {
                 this.status.paused = true;
+                this._updateMediaSessionState('paused');
                 this.eventHandlers['pause']?.();
             }
         });
@@ -176,6 +178,17 @@ export class Player {
         } else {
             this._stopRecording();
             this.localGateNode.gain.setTargetAtTime(1, this.audioContext.currentTime, 0.1);
+        }
+    }
+
+    public setCaptureMediaKeys(enable: boolean) {
+        this.captureMediaKeys = enable;
+
+        if (enable) {
+            this._setupMediaSessionHandlers();
+            this._updateMediaSessionMetadata();
+        } else {
+            this._clearMediaSession();
         }
     }
 
@@ -379,13 +392,14 @@ export class Player {
         if (!this.currentTrack) return;
 
         this.eventHandlers['trackchange']?.(this.currentTrack);
+        this._updateMediaSessionMetadata();
         this._calculateCropsAndDuration();
 
         if (this.currentTrack.directStream) {
             if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
-            else this.audio.src = `music://file/${encodeURIComponent(this.currentTrack.source.src)}`;
+            else this.audio.src = `disboard://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
-            this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
+            this.audio.src = `disboard://audio/${encodeURIComponent(this.currentTrack.id)}`;
         }
 
         this.audio.load();
@@ -531,9 +545,61 @@ export class Player {
         this.endTime = null;
         this.duration = null;
 
+        this._updateMediaSessionState('none');
+        this._updateMediaSessionMetadata();
+
         this.eventHandlers['trackchange']?.(null);
         this.eventHandlers['reset']?.();
         this.eventHandlers['timeupdate']?.(Time.fromMs(0), Time.fromMs(0));
+    }
+
+    private _setupMediaSessionHandlers() {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+
+        try {
+            navigator.mediaSession.setActionHandler('play', () => this.play());
+            navigator.mediaSession.setActionHandler('pause', () => this.pause());
+            navigator.mediaSession.setActionHandler('previoustrack', () => this.previous());
+            navigator.mediaSession.setActionHandler('nexttrack', () => this.next());
+            navigator.mediaSession.setActionHandler('stop', () => this.stop());
+        } catch (e) {
+            console.warn('Media Session API action handlers not fully supported.', e);
+        }
+    }
+
+    private _clearMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+
+        try {
+            navigator.mediaSession.setActionHandler('play', null);
+            navigator.mediaSession.setActionHandler('pause', null);
+            navigator.mediaSession.setActionHandler('previoustrack', null);
+            navigator.mediaSession.setActionHandler('nexttrack', null);
+            navigator.mediaSession.setActionHandler('stop', null);
+            navigator.mediaSession.metadata = null;
+        } catch (e) {
+            console.warn('Failed to clear Media Session API.', e);
+        }
+    }
+
+    private _updateMediaSessionMetadata() {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+
+        if (!this.currentTrack) {
+            navigator.mediaSession.metadata = null;
+            return;
+        }
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: this.currentTrack.title || 'Unknown Title',
+            artist: 'Disboard',
+            artwork: this.currentTrack ? [{src: `disboard://images/${this.currentTrack.id}`, sizes: '256x256', type: 'image/jpeg'}] : [] // TODO Fix artwork with real data
+        });
+    }
+
+    private _updateMediaSessionState(state: 'playing' | 'paused' | 'none') {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+        navigator.mediaSession.playbackState = state;
     }
 
     private async _startRecording() {

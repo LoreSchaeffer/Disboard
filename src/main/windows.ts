@@ -1,11 +1,10 @@
-import {ButtonWindowData, MediaSelectorWindowData, WindowOptions} from "../types/windows";
+import {BoardType, GridBtnWindowData, GridMediaSelectorWindowData, MediaSelectorAction, WindowOptions} from "../types";
 import {BrowserWindow} from "electron";
 import path from "path";
 import {state} from "./state";
-import {MediaSelectorAction} from "../types/common";
-import {settingsStore} from "./utils/store";
-import {registerMediaShortcuts} from "./media";
 import os from "node:os";
+import {getBoardSettings, settingsStore} from "./storage/settings-store";
+import {broadcastData} from "./utils/broadcast";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -16,7 +15,7 @@ const loadWindowUrl = (win: BrowserWindow, pageName: string, queryParams: string
     else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search}).catch(e => console.log(`[Main] Failed to load file: ${e}`));
 };
 
-const createWindow = (options: WindowOptions): BrowserWindow => {
+const createWin = (options: WindowOptions): BrowserWindow => {
     const customOnLoaded = options.onLoaded;
 
     const browserOptions: Electron.BrowserWindowConstructorOptions = {
@@ -47,7 +46,7 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
     const win = new BrowserWindow(browserOptions);
     state.winOptions.set(win.id, options);
 
-    if (options.data) state.winData.set(win.id, options.data);
+    if (options.data) state.winStaticData.set(win.id, options.data);
 
     const pageName = options.route || 'empty';
     loadWindowUrl(win, pageName);
@@ -63,7 +62,7 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
 
     win.on('closed', () => {
         state.winOptions.delete(win.id);
-        state.winData.delete(win.id);
+        state.winStaticData.delete(win.id);
     });
 
     if (options.onResize) win.on('resize', () => options.onResize!(win));
@@ -72,22 +71,33 @@ const createWindow = (options: WindowOptions): BrowserWindow => {
     return win;
 }
 
-let resizeTimeout: NodeJS.Timeout;
-export const createMainWindow = () => {
-    state.mainWindow = createWindow({
-        route: 'main',
-        width: settingsStore.get('width'),
-        height: settingsStore.get('height'),
+// Windows specific
+
+export const createBoardWin = (boardType: BoardType) => {
+    let resizeTimeout: NodeJS.Timeout;
+
+    const boardSettings = getBoardSettings(boardType);
+
+    createWin({
+        route: `${boardType}_board`,
+        width: boardSettings.width,
+        height: boardSettings.height,
         minWidth: 1080,
         minHeight: 608,
         onResize: (win) => {
             clearTimeout(resizeTimeout);
 
             resizeTimeout = setTimeout(() => {
-                const size = win.getSize();
-                settingsStore.set('width', size[0]);
-                settingsStore.set('height', size[1]);
-                win.webContents.send('settings', settingsStore.store);
+                if (win.isDestroyed()) return;
+
+                const [width, height] = win.getSize();
+                if (boardSettings.width === width && boardSettings.height === height) return;
+
+                boardSettings.width = width;
+                boardSettings.height = height;
+
+                settingsStore.set(boardType, boardSettings);
+                broadcastData('settings:change', settingsStore.store);
             }, 250);
         },
         onReady: (win) => {
@@ -95,51 +105,67 @@ export const createMainWindow = () => {
             if (pid) {
                 try {
                     os.setPriority(pid, os.constants.priority.PRIORITY_HIGH);
-                    console.log(`[Main] Priority set to HIGH for main window renderer process (PID: ${pid}).`);
+                    console.log(`[Main] Priority set to HIGH for ${boardType} window renderer process (PID: ${pid}).`);
                 } catch (e) {
-                    console.error(`[Main] Failed to set priority for main window renderer process (PID: ${pid}):`, e);
+                    console.error(`[Main] Failed to set priority for ${boardType} window renderer process (PID: ${pid}):`, e);
                 }
             }
         }
     });
-
-    registerMediaShortcuts();
 }
 
-// TODO Data should be updated manually from the main process when it's changed
-export const createButtonSettingsWindow = (profileId: string, buttonId: string): BrowserWindow => {
-    return createWindow({
-        route: 'button_settings',
-        modal: true,
-        parent: state.mainWindow,
+export const createModalWin = (parent: number, options: WindowOptions): BrowserWindow | null => {
+    const parentWin = BrowserWindow.fromId(parent);
+    if (!parentWin || parentWin.isDestroyed()) {
+        console.warn(`[Main] Failed to create button settings window: parent window with ID ${parent} not found or destroyed.`);
+        return null;
+    }
+
+    return createWin({...options, parent: parentWin, modal: true});
+}
+
+export const createGridBtnSettingsWin = (
+    boardType: Exclude<BoardType, 'ambient'>,
+    parent: number,
+    profileId: string,
+    buttonId: string
+): BrowserWindow | null => {
+    return createModalWin(parent, {
+        route: 'grid_btn_settings',
         width: 500,
         height: 600,
         resizable: false,
         data: {
-            type: 'button_settings',
+            type: 'grid_btn_settings',
             data: {
-                profileId: profileId,
-                buttonId: buttonId
-            } as ButtonWindowData
+                boardType,
+                profileId,
+                buttonId
+            } as GridBtnWindowData
         }
     });
 }
 
-export const createMediaSelectorWindow = (action: MediaSelectorAction, parent?: number, profileId?: string, buttonId?: string) => {
-    return createWindow({
-        route: 'media_selector',
-        modal: true,
-        parent: parent ? BrowserWindow.fromId(parent) : undefined,
+export const createGridMediaSelectorWin = (
+    boardType: Exclude<BoardType, 'ambient'>,
+    parent: number,
+    action: MediaSelectorAction,
+    profileId: string,
+    buttonId: string
+): BrowserWindow | null => {
+    return createModalWin(parent, {
+        route: 'grid_media_selector',
         width: 500,
         height: 600,
         resizable: false,
         data: {
-            type: 'media_selector',
+            type: 'grid_media_selector',
             data: {
-                action: action,
-                profileId: profileId,
-                buttonId: buttonId
-            } as MediaSelectorWindowData
+                boardType,
+                action,
+                profileId,
+                buttonId
+            } as GridMediaSelectorWindowData
         }
     });
 }

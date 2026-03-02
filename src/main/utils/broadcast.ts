@@ -2,21 +2,13 @@ import {BrowserWindow} from "electron";
 import {SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
 
 export type BroadcastChannelMap = {
-    'settings:change': Settings,
+    'settings:changed': Settings,
 
-    'music_profiles:change': SbGridProfile[],
-    'sfx_profiles:change': SbGridProfile[],
-    'ambient_profiles:change': SbAmbientProfile[],
+    'grid_profiles:music:changed': SbGridProfile[],
+    'grid_profiles:sfx:changed': SbGridProfile[],
+    'ambient_profiles:changed': SbAmbientProfile[],
 
-    'tracks:change': Track[],
-
-    'player:play_now': Track,
-    'player:pause': void,
-    'player:play': void,
-    'player:play_pause': void,
-    'player:stop': void,
-    'player:next': void,
-    'player:prev': void
+    'tracks:changed': Track[],
 }
 
 export const broadcastData = <K extends keyof BroadcastChannelMap>(

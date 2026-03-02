@@ -5,7 +5,7 @@ export const BoardTypeSchema = z.enum(['music', 'sfx', 'ambient']);
 export const RepeatModeSchema = z.enum(['none', 'one', 'all']);
 
 export type RepeatMode = z.infer<typeof RepeatModeSchema>;
-export type MediaType = 'audio' | 'images';
+export type MediaType = 'audio' | 'audio/video' | 'images';
 export type MediaSelectorAction = 'update_button' | 'play_now';
 
 export type ProbeResult = {
@@ -21,13 +21,15 @@ export type IpcResponse<T> = {
     error?: string;
 }
 
-export type MediaSelectorWin = {
+export type GridMediaSelectorWin = {
+    boardType: Exclude<BoardType, 'ambient'>;
     action: MediaSelectorAction;
     profileId?: string;
     buttonId?: string;
 }
 
-export type ButtonSettingsWin = {
+export type GridBtnSettingsWin = {
+    boardType: Exclude<BoardType, 'ambient'>;
     profileId: string;
     buttonId: string;
 }

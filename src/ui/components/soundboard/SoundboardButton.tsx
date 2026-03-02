@@ -102,7 +102,7 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             {settings.showImages && (
                 <img
                     className={styles.image}
-                    src={btn.track ? `disboard://images/${btn.track?.id}` : '/images/track.png'}
+                    src={btn.track ? `disboard://thumbnail/${btn.track?.id}` : '/images/track.png'}
                     alt={btn.title || ''}
                     onError={(e) => {
                         const img = e.currentTarget;

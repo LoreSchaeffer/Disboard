@@ -218,7 +218,7 @@ const ListSelector = ({onChange}: SelectorProps) => {
                         >
                             <img
                                 className={styles.resultThumbnail}
-                                src={`disboard://images/${track.id}`}
+                                src={`disboard://thumbnail/${track.id}`}
                                 alt={track.title || ''}
                                 onError={(e) => {
                                     const img = e.currentTarget;

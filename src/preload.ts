@@ -1,6 +1,27 @@
 import {contextBridge, ipcRenderer, IpcRendererEvent} from "electron";
 import {BroadcastChannelMap} from "./main/utils/broadcast";
-import {Route, Settings, WindowInfo} from "./types";
+import {
+    AmbientBtn,
+    AmbientProfile,
+    BoardType,
+    DiscordData,
+    DiscordStatus,
+    GridBtn,
+    GridProfile,
+    IpcResponse,
+    MediaType,
+    PlayerTrack,
+    Route,
+    SbAmbientBtn,
+    SbAmbientProfile,
+    SbGridBtn,
+    SbGridProfile,
+    Settings,
+    Track,
+    TrackSourceName,
+    WindowInfo,
+    YTSearchResult
+} from "./types";
 
 type ListenerCallback<K extends keyof BroadcastChannelMap> = BroadcastChannelMap[K] extends void ? () => void : (data: BroadcastChannelMap[K]) => void;
 
@@ -25,48 +46,55 @@ const settingsApi = {
     get: (): Promise<Settings> => ipcRenderer.invoke('settings:get'),
     set: (settings: Partial<Settings>) => ipcRenderer.send('settings:set', settings),
 
-    onChange: (func: (settings: Settings) => void) => createListener('settings:change', func),
+    onChanged: (func: (settings: Settings) => void) => createListener('settings:changed', func),
 }
 
-const profilesApi = {
-    getAll: (soundboardType: SoundboardWithProfile): Promise<SbProfile[]> => ipcRenderer.invoke('profiles:get_all', soundboardType),
-    get: (soundboardType: SoundboardWithProfile, id: string): Promise<SbProfile | null> => ipcRenderer.invoke('profiles:get', soundboardType, id),
-    create: (soundboardType: SoundboardWithProfile, profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('profiles:create', soundboardType, profile),
-    update: (soundboardType: SoundboardWithProfile, id: string, profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('profiles:update', soundboardType, id, profile),
-    delete: (soundboardType: SoundboardWithProfile, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('profiles:delete', soundboardType, id),
-    import: (soundboardType: SoundboardWithProfile) => ipcRenderer.send('profiles:import', soundboardType),
-    export: (soundboardType: SoundboardWithProfile, id: string) => ipcRenderer.send('profiles:export', soundboardType, id),
-    exportAll: (soundboardType: SoundboardWithProfile) => ipcRenderer.send('profiles:export_all', soundboardType),
+const gridProfilesApi = {
+    getAll: (boardType: BoardType): Promise<SbGridProfile[]> => ipcRenderer.invoke('grid_profiles:get_all', boardType),
+    get: (boardType: BoardType, id: string): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get', boardType, id),
+    create: (boardType: BoardType, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:create', boardType, profile),
+    update: (boardType: BoardType, id: string, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:update', boardType, id, profile),
+    delete: (boardType: BoardType, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:delete', boardType, id),
+    import: (boardType: BoardType) => ipcRenderer.send('grid_profiles:import', boardType),
+    export: (boardType: BoardType, id: string) => ipcRenderer.send('grid_profiles:export', boardType, id),
+    exportAll: (boardType: BoardType) => ipcRenderer.send('grid_profiles:export_all', boardType),
 
-    onChange: (func: (soundboardType: SoundboardWithProfile, profiles: SbProfile[] | SbSfxProfile[]) => void) => createListener('profiles:change', func),
+    onMusicChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:music:changed', func),
+    onSfxChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:sfx:changed', func),
 
     buttons: {
-        get: (soundboardType: SoundboardWithProfile, profileId: string, buttonId: string): Promise<SbBtn | null> => ipcRenderer.invoke('profiles:buttons:get', soundboardType, profileId, buttonId),
-        update: (soundboardType: SoundboardWithProfile, profileId: string, buttonId: string, updates: Partial<Btn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('profiles:buttons:update', soundboardType, profileId, buttonId, updates),
-        delete: (soundboardType: SoundboardWithProfile, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('profiles:buttons:delete', soundboardType, profileId, buttonId),
+        get: (boardType: BoardType, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
+        update: (boardType: BoardType, profileId: string, buttonId: string, updates: Partial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
+        delete: (boardType: BoardType, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
+    }
+}
+
+const ambientProfilesApi = {
+    getAll: (): Promise<SbAmbientProfile[]> => ipcRenderer.invoke('ambient_profiles:get_all'),
+    get: (id: string): Promise<SbAmbientProfile | null> => ipcRenderer.invoke('ambient_profiles:get', id),
+    create: (profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:create', profile),
+    update: (id: string, profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:update', id, profile),
+    delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:delete', id),
+    import: () => ipcRenderer.send('ambient_profiles:import'),
+    export: (id: string) => ipcRenderer.send('ambient_profiles:export', id),
+    exportAll: () => ipcRenderer.send('ambient_profiles:export_all'),
+
+    onChanged: (func: (profiles: SbAmbientProfile[]) => void) => createListener('ambient_profiles:changed', func),
+
+    buttons: {
+        get: (profileId: string, buttonId: string): Promise<SbAmbientBtn | null> => ipcRenderer.invoke('ambient_profiles:buttons:get', profileId, buttonId),
+        update: (profileId: string, buttonId: string, updates: Partial<AmbientBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:buttons:update', profileId, buttonId, updates),
+        delete: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:buttons:delete', profileId, buttonId),
     }
 }
 
 const tracksApi = {
     getAll: (): Promise<Track[]> => ipcRenderer.invoke('tracks:get_all'),
     get: (id: string): Promise<Track | null> => ipcRenderer.invoke('tracks:get', id),
-    add: (source: TrackSource, media: YTSearchResult | string, customTitle: string): Promise<IpcResponse<Track>> => ipcRenderer.invoke('tracks:add', source, media, customTitle),
-    remove: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:remove', id),
-    getVolatileTrack: (source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile_track', source, media),
+    getVolatile: (source: TrackSourceName, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
+    delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:delete', id),
 
-    onChange: (func: (tracks: Track[]) => void) => createListener('tracks:change', func),
-}
-
-const playerApi = {
-    playNow: (track: PlayerTrack) => ipcRenderer.send('player:play_now', track),
-
-    onPlayNow: (func: (track: PlayerTrack) => void) => createListener('player:play_now', func),
-    onPause: (func: () => void) => createListener('player:pause', func),
-    onPlay: (func: () => void) => createListener('player:play', func),
-    onPlayPause: (func: () => void) => createListener('player:play_pause', func),
-    onStop: (func: () => void) => createListener('player:stop', func),
-    onNext: (func: () => void) => createListener('player:next', func),
-    onPrev: (func: () => void) => createListener('player:prev', func),
+    onChanged: (func: (tracks: Track[]) => void) => createListener('tracks:changed', func),
 }
 
 const systemApi = {
@@ -89,9 +117,9 @@ const discordApi = {
 const api = {
     window: windowApi,
     settings: settingsApi,
-    profiles: profilesApi,
+    gridProfiles: gridProfilesApi,
+    ambientProfiles: ambientProfilesApi,
     tracks: tracksApi,
-    player: playerApi,
     system: systemApi,
     music: musicApi,
     discord: discordApi

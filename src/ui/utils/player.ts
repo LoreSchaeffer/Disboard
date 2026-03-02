@@ -399,7 +399,7 @@ export class Player {
             if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
             else this.audio.src = `disboard://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
-            this.audio.src = `disboard://audio/${encodeURIComponent(this.currentTrack.id)}`;
+            this.audio.src = `disboard://track/${encodeURIComponent(this.currentTrack.id)}`;
         }
 
         this.audio.load();
@@ -593,7 +593,7 @@ export class Player {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: this.currentTrack.title || 'Unknown Title',
             artist: 'Disboard',
-            artwork: this.currentTrack ? [{src: `disboard://images/${this.currentTrack.id}`, sizes: '256x256', type: 'image/jpeg'}] : [] // TODO Fix artwork with real data
+            artwork: this.currentTrack ? [{src: `disboard://thumbnail/${this.currentTrack.id}`, sizes: '256x256', type: 'image/jpeg'}] : [] // TODO Fix artwork with real data
         });
     }
 

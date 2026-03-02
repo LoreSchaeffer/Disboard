@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {TrackSchema} from "./tracks";
-import {CropOptionsSchema, GridBtnSchema} from "./buttons";
+import {AmbientBtnSchema, CropOptionsSchema, GridBtnSchema} from "./buttons";
 import {AmbientProfileSchema, GridProfileSchema} from "./profiles";
 
 export const PlayerTrackSchema = TrackSchema.extend({
@@ -23,13 +23,16 @@ export const SbGridProfileSchema = GridProfileSchema
         buttons: z.array(SbGridBtnSchema)
     });
 
+export const SbAmbientBtnSchema = AmbientBtnSchema; //TODO
+
 export const SbAmbientProfileSchema = AmbientProfileSchema
     .omit({buttons: true})
     .extend({
-        // TODO
+        buttons: z.array(SbAmbientBtnSchema)
     });
 
 export type PlayerTrack = z.infer<typeof PlayerTrackSchema>;
 export type SbGridBtn = z.infer<typeof SbGridBtnSchema>;
 export type SbGridProfile = z.infer<typeof SbGridProfileSchema>;
+export type SbAmbientBtn = z.infer<typeof SbAmbientBtnSchema>;
 export type SbAmbientProfile = z.infer<typeof SbAmbientProfileSchema>;

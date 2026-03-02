@@ -4,26 +4,26 @@ import {createValidatedStore} from "./store";
 import {broadcastData} from "../utils/broadcast";
 import {convertAmbientProfile2SbAmbientProfile, convertGridProfile2SbGridProfile} from "../utils/data-converters";
 
-const broadcastGridProfiles = (channel: 'music_profiles:change' | 'sfx_profiles:change', profiles: GridProfile[]) => {
+const broadcastGridProfiles = (boardType: Exclude<BoardType, 'ambient'>, profiles: GridProfile[]) => {
     const sbGridProfiles: SbGridProfile[] = profiles.map(convertGridProfile2SbGridProfile);
-    broadcastData(channel, sbGridProfiles);
+    broadcastData(`grid_profiles:${boardType}:changed`, sbGridProfiles);
 }
 
 const broadcastAmbientProfiles = (profiles: AmbientProfile[]) => {
     const sbAmbientProfiles: SbAmbientProfile[] = profiles.map(convertAmbientProfile2SbAmbientProfile);
-    broadcastData('ambient_profiles:change', sbAmbientProfiles);
+    broadcastData('ambient_profiles:changed', sbAmbientProfiles);
 }
 
 export const musicBoardStore: Store<GridProfiles> = createValidatedStore<GridProfiles>(
     'music_board_profiles',
     GridProfilesSchema,
-    (profiles: GridProfiles) => broadcastGridProfiles('music_profiles:change', profiles.profiles)
+    (profiles: GridProfiles) => broadcastGridProfiles('music', profiles.profiles)
 );
 
 export const sfxBoardStore: Store<GridProfiles> = createValidatedStore<GridProfiles>(
     'sfx_board_profiles',
     GridProfilesSchema,
-    (profiles: GridProfiles) => broadcastGridProfiles('sfx_profiles:change', profiles.profiles)
+    (profiles: GridProfiles) => broadcastGridProfiles('sfx', profiles.profiles)
 );
 
 export const ambientBoardStore: Store<AmbientProfiles> = createValidatedStore<AmbientProfiles>(

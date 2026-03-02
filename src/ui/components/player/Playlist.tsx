@@ -105,7 +105,7 @@ const Track = ({index, track}: TrackProps) => {
             <span className={styles.trackIndex}>{index + 1}</span>
             <img
                 className={styles.trackImage}
-                src={track ? `disboard://images/${track.id}` : '/images/track.png'}
+                src={track ? `disboard://thumbnail/${track.id}` : '/images/track.png'}
                 alt={track.titleOverride || track.title || 'Unknown Title'}
                 onError={(e) => {
                     const img = e.currentTarget;

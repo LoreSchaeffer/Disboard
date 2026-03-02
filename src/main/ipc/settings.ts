@@ -1,8 +1,9 @@
 import {ipcMain} from "electron";
-import {Settings} from "../../types/settings";
+import {Settings} from "../../types";
 import {state} from "../state";
-import {broadcastSettings} from "../utils/broadcast";
-import {deepMerge} from "../utils/misc";
+import {settingsStore} from "../storage/settings-store";
+import {deepMerge} from "../utils/objects";
+import {broadcastData} from "../utils/broadcast";
 
 const handleSettingsChange = (oldSettings: Settings, newSettings: Settings) => {
     if (state.discordBot) {
@@ -48,7 +49,7 @@ export const setupSettingsHandlers = () => {
         const oldSettings = settingsStore.store;
         const newSettings = deepMerge(oldSettings, settings);
         settingsStore.set(newSettings);
-        broadcastSettings(newSettings);
+        broadcastData('settings:changed', settingsStore.store);
         handleSettingsChange(oldSettings, newSettings);
     });
 }

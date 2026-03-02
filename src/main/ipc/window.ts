@@ -1,17 +1,15 @@
-import {BrowserWindow, ipcMain, IpcMainInvokeEvent} from 'electron';
-import {WindowInfo} from "../../types/windows";
+import {BrowserWindow, ipcMain, IpcMainEvent, IpcMainInvokeEvent} from 'electron';
+import {GridBtnSettingsWin, GridMediaSelectorWin, Route, WindowInfo} from "../../types";
 import {state} from "../state";
-import {ButtonSettingsWin, MediaSelectorWin} from "../../types/common";
-import {createButtonSettingsWindow, createMediaSelectorWindow} from "../windows";
-import {Route} from "../../types/routes";
+import {createGridBtnSettingsWin, createGridMediaSelectorWin} from "../windows";
 
 export const setupWindowHandlers = () => {
-    ipcMain.on('window:minimize', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:minimize', (e: IpcMainEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.minimize();
     });
 
-    ipcMain.on('window:maximize', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:maximize', (e: IpcMainEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (!win || !win.isResizable()) return;
 
@@ -19,17 +17,17 @@ export const setupWindowHandlers = () => {
         else win.maximize();
     });
 
-    ipcMain.on('window:close', (e: IpcMainInvokeEvent) => {
+    ipcMain.on('window:close', (e: IpcMainEvent) => {
         const win = BrowserWindow.fromWebContents(e.sender);
         if (win) win.close();
     });
 
     ipcMain.handle('window:info', (e: IpcMainInvokeEvent): WindowInfo => {
         const win = BrowserWindow.fromWebContents(e.sender);
-        if (!win) throw new Error('Could not find the window');
+        if (!win) throw new Error('Could not find the window'); // This should never happen in a normal context
 
         const options = state.winOptions.get(win.id);
-        if (!options) throw new Error('Could not find the window options');
+        if (!options) throw new Error('Could not find the window options');  // This should never happen in a normal context
 
         return {
             parent: options.parent ? options.parent.id : null,
@@ -39,20 +37,20 @@ export const setupWindowHandlers = () => {
         };
     });
 
-    ipcMain.on('window:open', (e: IpcMainInvokeEvent, route: Route, args?: unknown) => {
+    ipcMain.on('window:open', (e: IpcMainEvent, route: Route, args?: unknown) => {
+        const win = BrowserWindow.fromWebContents(e.sender);
+        if (!win) return;
+        const parentId = win.id;
+
         switch (route) {
-            case 'media_selector': {
-                const safeArgs = (args || {}) as MediaSelectorWin;
-                createMediaSelectorWindow(safeArgs.action, e.frameId, safeArgs.profileId, safeArgs.buttonId);
+            case 'grid_media_selector': {
+                const {boardType, action, profileId, buttonId} = (args || {}) as GridMediaSelectorWin;
+                createGridMediaSelectorWin(boardType, parentId, action, profileId, buttonId);
                 break;
             }
-            case 'button_settings': {
-                if (args && typeof args === 'object' && 'profileId' in args && 'buttonId' in args) {
-                    const {profileId, buttonId} = args as ButtonSettingsWin;
-                    createButtonSettingsWindow(profileId, buttonId);
-                } else {
-                    console.error('[Main] Invalid arguments for button_settings window');
-                }
+            case 'grid_btn_settings': {
+                const {boardType, profileId, buttonId} = (args || {}) as GridBtnSettingsWin;
+                createGridBtnSettingsWin(boardType, parentId, profileId, buttonId);
                 break;
             }
             default:

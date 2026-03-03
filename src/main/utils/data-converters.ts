@@ -41,6 +41,22 @@ export const convertGridProfile2SbGridProfile = (gridProfile: GridProfile): SbGr
     }
 }
 
+export const convertSbGridBtn2GridBtn = (sbGridBtn: SbGridBtn): GridBtn => {
+    return {
+        row: sbGridBtn.row,
+        col: sbGridBtn.col,
+        track: sbGridBtn.track.id,
+        title: sbGridBtn.title,
+        volumeOverride: sbGridBtn.volumeOverride,
+        style: sbGridBtn.style,
+        cropOptions: sbGridBtn.cropOptions
+    }
+}
+
+export const convertSbGridBtns2GridBtns = (sbGridBtns: SbGridBtn[]): GridBtn[] => {
+    return sbGridBtns.map(convertSbGridBtn2GridBtn);
+}
+
 export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientProfile): SbAmbientProfile => {
     return {
         ...ambientProfile,

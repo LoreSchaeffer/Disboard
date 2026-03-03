@@ -1,8 +1,7 @@
 import {ipcMain} from "electron";
 import {state} from "../state";
-import {IpcResponse} from "../../types/common";
-import {YTSearchResult} from "../../types/music-api";
 import {getVideoId} from "../utils/music-api";
+import {IpcResponse, YTSearchResult} from "../../types";
 
 export const setupMusicApiHandlers = () => {
     ipcMain.handle('musicapi:use_api', (): boolean => {

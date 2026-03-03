@@ -44,3 +44,7 @@ export const getProfilesStore = (boardType: BoardType): Store<GridProfiles> | St
             throw new Error(`Invalid board type: ${boardType}`);
     }
 }
+
+export const getGridProfilesStore = (boardType: Exclude<BoardType, 'ambient'>): Store<GridProfiles> => {
+    return getProfilesStore(boardType) as Store<GridProfiles>;
+}

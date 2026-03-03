@@ -1,6 +1,6 @@
 import {setupWindowHandlers} from "./window";
 import {setupSettingsHandlers} from "./settings";
-import {setupProfilesHandlers} from "./profiles";
+import {setupGridProfilesHandlers} from "./grid-profiles";
 import {setupTracksHandlers} from "./tracks";
 import {setupSystemHandlers} from "./system";
 import {setupMusicApiHandlers} from "./music-api";
@@ -11,7 +11,7 @@ export const registerIpcHandlers = () => {
     setupDiscordBridgeHandlers();
     setupMusicApiHandlers();
     setupPlayerHandlers();
-    setupProfilesHandlers();
+    setupGridProfilesHandlers();
     setupSettingsHandlers();
     setupSystemHandlers();
     setupTracksHandlers();

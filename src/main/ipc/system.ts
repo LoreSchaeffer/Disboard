@@ -1,7 +1,8 @@
 import {app, dialog, ipcMain, shell} from "electron";
 import path from "path";
-import {cacheStore} from "../utils/store";
-import {IpcResponse, MediaType} from "../../types/common";
+import {IpcResponse, MediaType} from "../../types";
+import {ALL_MEDIA_FILES, AUDIO_FILES, VIDEO_FILES} from "../constants";
+import {cacheStore} from "../storage/cache-store";
 
 export const setupSystemHandlers = () => {
     ipcMain.on('system:open_link', async (_, url: string) => shell.openExternal(url));
@@ -14,18 +15,15 @@ export const setupSystemHandlers = () => {
             filters = [
                 {
                     name: 'All Media Files',
-                    extensions: [
-                        'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac',
-                        'mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv'
-                    ]
+                    extensions: ALL_MEDIA_FILES
                 },
                 {
                     name: 'Audio Only',
-                    extensions: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac']
+                    extensions: AUDIO_FILES
                 },
                 {
                     name: 'Video Only',
-                    extensions: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv']
+                    extensions: VIDEO_FILES
                 }
             ];
         } else {

@@ -1,7 +1,7 @@
 import {Client, GatewayIntentBits, VoiceBasedChannel} from "discord.js";
 import {AudioPlayer, AudioPlayerStatus, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, NoSubscriberBehavior, StreamType, VoiceConnection, VoiceConnectionStatus} from "@discordjs/voice";
 import {PassThrough} from 'stream';
-import {DiscordData, DiscordStatus} from "../../types";
+import {DiscordData, DiscordStatus, Settings} from "../../types";
 import {settingsStore} from "../storage/settings-store";
 
 export class DiscordBot {
@@ -178,6 +178,38 @@ export class DiscordBot {
         }).catch(err => {
             console.error('[Discord] Failed to initialize:', err);
         });
+    }
+
+    public onSettingsUpdate(oldSettings: Settings, newSettings: Settings) {
+        const currentDiscordSettings = oldSettings.discord;
+        const newDiscordSettings = newSettings.discord;
+
+        if (currentDiscordSettings.enabled !== newDiscordSettings.enabled) {
+            if (newDiscordSettings.enabled) this.init();
+            else this.disconnect();
+        }
+
+        if (currentDiscordSettings.token !== newDiscordSettings.token) {
+            console.log('[Main] Discord token changed, restarting bot...');
+            this.disconnect();
+
+            if (newDiscordSettings.token && newDiscordSettings.token.length > 1) {
+                this.init();
+                return;
+            }
+        }
+
+        if (newDiscordSettings.enabled && this.getStatus().ready) {
+            const guildChanged = currentDiscordSettings.lastGuild !== newDiscordSettings.lastGuild;
+            const channelChanged = currentDiscordSettings.lastChannel !== newDiscordSettings.lastChannel;
+
+            if (guildChanged || channelChanged) {
+                console.log('[Main] Discord guild/channel changed, switching...');
+                if (newDiscordSettings.lastGuild && newDiscordSettings.lastChannel) {
+                    this.joinChannel(newDiscordSettings.lastGuild, newDiscordSettings.lastChannel);
+                }
+            }
+        }
     }
 
     public async waitForReady(timeoutMs: number = 10000): Promise<boolean> {

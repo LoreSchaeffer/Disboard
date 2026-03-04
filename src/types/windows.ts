@@ -1,5 +1,5 @@
 import {BrowserWindow, BrowserWindowConstructorOptions} from "electron";
-import {BoardType, MediaSelectorAction} from "./common";
+import {BoardType, GridPos, MediaSelectorAction} from "./common";
 import {Route} from "./routes";
 
 export type WindowOptions = BrowserWindowConstructorOptions & {
@@ -25,14 +25,15 @@ export type StaticWindowData<T> = {
 
 // Static Window Data
 export type GridBtnWindowData = {
-    boardType: BoardType;
+    boardType: Exclude<BoardType, 'ambient'>;
     profileId: string;
     buttonId: string;
 }
 
 export type GridMediaSelectorWindowData = {
-    boardType: BoardType;
+    boardType: Exclude<BoardType, 'ambient'>;
     action: MediaSelectorAction;
     profileId: string;
-    buttonId: string;
+    buttonId?: string;
+    gridPos: GridPos;
 }

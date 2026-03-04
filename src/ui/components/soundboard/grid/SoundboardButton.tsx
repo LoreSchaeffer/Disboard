@@ -1,21 +1,8 @@
 import styles from "./SoundboardButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
-import {useWindow} from "../../context/WindowContext";
-import {clamp} from "../../../shared/utils";
+import {clamp} from "../../../../shared/utils";
 import {clsx} from "clsx";
-import {SbBtn} from "../../../types/data";
-
-export type SoundboardButtonProps = {
-    row: number;
-    col: number;
-    button?: SbBtn;
-    active?: boolean;
-    className?: string;
-    isDragging?: boolean;
-    isDropping?: boolean;
-    onClick?: (e: React.MouseEvent, btn: SbBtn, row: number, col: number) => void;
-    onContextMenu?: (e: React.MouseEvent, btn: SbBtn, row: number, col: number) => void;
-};
+import {SbGridBtn} from "../../../../types";
 
 type CustomCSSProperties = CSSProperties & {
     '--sb-bg'?: string;
@@ -37,29 +24,44 @@ type CustomCSSProperties = CSSProperties & {
     '--sb-image-radius'?: string;
 }
 
+export type SoundboardButtonProps = {
+    row: number;
+    col: number;
+    button?: SbGridBtn;
+    active?: boolean;
+    zoom?: number;
+    showImages?: boolean;
+    className?: string;
+    isDragging?: boolean;
+    isDropping?: boolean;
+    onClick?: (e: React.MouseEvent, btn: SbGridBtn, row: number, col: number) => void;
+    onContextMenu?: (e: React.MouseEvent, btn: SbGridBtn, row: number, col: number) => void;
+};
+
 const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
     {
         row,
         col,
         button,
         active = false,
+        zoom = 1,
+        showImages = true,
         className,
         isDragging = false,
         isDropping = false,
         onClick,
         onContextMenu
     }, ref) => {
-    const {settings} = useWindow();
 
-    const btn = useMemo(() => button || {
+    const btn: SbGridBtn = button || {
+        id: '',
         row,
         col,
         title: `Button ${row}-${col}`,
-        track: null
-    }, [button, row, col]);
+    };
 
     const dynamicStyle: CustomCSSProperties = useMemo(() => {
-        const zoomFactor = Math.pow(clamp((settings.zoom || 1), 0.1, 2), 0.8);
+        const zoomFactor = Math.pow(clamp(zoom, 0.1, 2), 0.8);
 
         return ({
             '--sb-bg': btn.style?.backgroundColor || undefined,
@@ -80,9 +82,9 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             '--sb-image-size': `${30 * zoomFactor}px`,
             '--sb-image-radius': `${5 * zoomFactor}px`,
 
-            justifyContent: settings.showImages ? 'flex-start' : 'center',
-        })
-    }, [btn, settings.zoom, settings.showImages]);
+            justifyContent: showImages ? 'flex-start' : 'center',
+        });
+    }, [btn.style, zoom, showImages]);
 
     return (
         <div
@@ -99,7 +101,7 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             onContextMenu={(e) => onContextMenu?.(e, btn, row, col)}
             title={btn.title}
         >
-            {settings.showImages && (
+            {showImages && (
                 <img
                     className={styles.image}
                     src={btn.track ? `disboard://thumbnail/${btn.track?.id}` : '/images/track.png'}

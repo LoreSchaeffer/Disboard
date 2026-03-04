@@ -8,9 +8,9 @@ import {ContextMenuItemData} from "../components/context_menu/ContextMenuItem";
 import {useWindow} from "../context/WindowContext";
 import {useTitlebar} from "../context/TitlebarContext";
 import {useContextMenu} from "../context/ContextMenuContext";
-import Soundboard from "../components/soundboard/Soundboard";
+import GridSoundboard from "../components/soundboard/grid/GridSoundboard";
 import Player from "../components/player/Player";
-import ProfileSettings from "../components/soundboard/ProfileSettings";
+import GridProfileSettings from "../components/soundboard/grid/GridProfileSettings";
 import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
@@ -31,6 +31,8 @@ const MainSoundboardWin = () => {
     const zoomRef = useRef<number>(settings.zoom || 1);
 
     useEffect(() => {
+        player.setCaptureMediaKeys(true);
+
         const handleMouseWheel = (e: WheelEvent) => {
             if (!e.ctrlKey) return;
             e.preventDefault();
@@ -127,13 +129,13 @@ const MainSoundboardWin = () => {
 
     return (
         <>
-            <Soundboard/>
+            <GridSoundboard/>
             <Player
                 showProfileSettings={() => setProfileSettingsOpen(true)}
                 showPlaylist={() => setPlaylistOpen(true)}
             />
 
-            <ProfileSettings
+            <GridProfileSettings
                 show={profileSettingsOpen}
                 onClose={() => setProfileSettingsOpen(false)}
             />

@@ -1,16 +1,15 @@
 import styles from './DeleteConfirmationWin.module.css';
 import {PiTrashBold, PiXBold} from "react-icons/pi";
-import React, {ReactNode} from "react";
+import React, {ReactNode, useEffect, useState} from "react";
 import {useNavigation} from "../context/NavigationContext";
-import {useWindow} from "../context/WindowContext";
 import {clsx} from "clsx";
 import Button from "../components/misc/Button";
-import {SbBtn} from "../../types/data";
-import {getPosFromButtonId} from "../utils/utils";
+import {BoardType, SbGridBtn} from "../../types";
 
 export type ResourceType = 'profile' | 'button';
 
 export type DeleteConfirmationData = {
+    boardType: BoardType;
     resource: ResourceType;
     id: string;
     onConfirm?: () => void;
@@ -28,34 +27,42 @@ const stringsMap: Record<ResourceType, { header: string, message: (displayId: st
 }
 
 const DeleteConfirmationWin = () => {
-    const {activeProfile, profiles} = useWindow();
     const {back, currentRoute} = useNavigation();
     const data: DeleteConfirmationData = currentRoute?.data as DeleteConfirmationData;
+    const [displayName, setDisplayName] = useState<string | undefined>(undefined);
 
-    if (!data) return null;
+    useEffect(() => {
+        if (!data) return;
 
-    let displayName;
-    switch (data.resource) {
-        case 'profile':
-            displayName = profiles.find(p => p.id === data.id)?.name || data.id;
-            break;
-        case 'button': {
-            const btn: SbBtn = activeProfile?.buttons.find(b => b.id === data.id);
-            const pos = getPosFromButtonId(data.id);
+        let isMounted = true;
+        if (data.boardType === 'music' || data.boardType === 'sfx') {
+            if (data.resource === 'profile') {
+                window.electron.gridProfiles.get(data.boardType, data.id).then(profile => {
+                    if (isMounted) setDisplayName(profile?.name || data.id);
+                });
+            } else if (data.resource === 'button') {
+                window.electron.gridProfiles.getActive(data.boardType).then(profile => {
+                    if (!profile) return;
 
-            if (btn) {
-                displayName = (btn.title || btn.track.title) + ` (${pos.row}-${pos.col})`;
-            } else {
-                displayName = `Button ${pos.row}-${pos.col}`;
+                    const btn: SbGridBtn | undefined = profile.buttons.find(b => b.id === data.id);
+                    if (!btn) return;
+
+                    if (isMounted) {
+                        const titleFallback = btn.title || btn.track?.title || 'Unknown Button';
+                        setDisplayName(`${titleFallback} (${btn.row}-${btn.col})`);
+                    }
+                });
             }
-            break;
+        } else if (data.boardType === 'ambient') {
+            // TODO To be implemented later
         }
-        default:
-            displayName = undefined;
-            break;
-    }
 
-    if (!displayName) return null;
+        return () => {
+            isMounted = false;
+        };
+    }, [data]);
+
+    if (!data || !displayName) return null;
 
     return (
         <div className={styles.wrapper}>

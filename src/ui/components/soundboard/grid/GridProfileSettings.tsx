@@ -1,21 +1,21 @@
-import styles from './ProfileSettings.module.css';
-import Row from "../layout/Row";
-import Col from "../layout/Col";
+import styles from './GridProfileSettings.module.css';
+import Row from "../../layout/Row";
+import Col from "../../layout/Col";
 import {clsx} from "clsx";
-import Input from "../forms/Input";
-import {validateName} from "../../utils/validation";
+import Input from "../../forms/Input";
 import {useEffect, useRef, useState} from "react";
-import {useClickOutside} from "../../hooks/useClickOutside";
-import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
-import {useGridProfiles} from "../../context/GridProfilesProvider";
+import {useClickOutside} from "../../../hooks/useClickOutside";
+import {useAnimatedUnmount} from "../../../hooks/useAnimatedUnmount";
+import {useGridProfiles} from "../../../context/GridProfilesProvider";
+import {validateName} from "../../../../shared/validation";
 
 type ProfileSettingsProps = {
     show: boolean;
     onClose: () => void;
 }
 
-const ProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
-    const {activeProfile, profiles} = useGridProfiles();
+const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
+    const {activeProfile, profiles, boardType} = useGridProfiles();
     const {shouldRender, transitionProps} = useAnimatedUnmount(show);
 
     const [profileName, setProfileName] = useState<string>("");
@@ -62,20 +62,20 @@ const ProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
         }
 
         titleTimeoutRef.current = setTimeout(() => {
-            window.electron.updateProfile(activeProfile.id, {name: value});
+            window.electron.gridProfiles.update(boardType, activeProfile.id, {name: value});
         }, 500);
     }
 
     const handleRowsChange = (value: number) => {
         if (!activeProfile) return;
         setProfileRows(value);
-        window.electron.updateProfile(activeProfile.id, {rows: value});
+        window.electron.gridProfiles.update(boardType, activeProfile.id, {rows: value});
     }
 
     const handleColsChange = (value: number) => {
         if (!activeProfile) return;
         setProfileCols(value);
-        window.electron.updateProfile(activeProfile.id, {cols: value});
+        window.electron.gridProfiles.update(boardType, activeProfile.id, {cols: value});
     }
 
     if (!shouldRender) return null;
@@ -136,4 +136,4 @@ const ProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
     )
 }
 
-export default ProfileSettings;
+export default GridProfileSettings;

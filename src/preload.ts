@@ -3,7 +3,7 @@ import {BroadcastChannelMap} from "./main/utils/broadcast";
 import {
     AmbientBtn,
     AmbientProfile,
-    BoardType,
+    BoardType, DeepPartial,
     DiscordData,
     DiscordStatus,
     GridBtn, GridPos,
@@ -38,13 +38,14 @@ const createListener = <K extends keyof BroadcastChannelMap>(channel: K, callbac
 const windowApi = {
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),
+    close: () => ipcRenderer.send('window:close'),
     getInfo: (): Promise<WindowInfo> => ipcRenderer.invoke('window:info'),
     open: (route: Route, args?: unknown) => ipcRenderer.send('window:open', route, args),
 }
 
 const settingsApi = {
     get: (): Promise<Settings> => ipcRenderer.invoke('settings:get'),
-    set: (settings: Partial<Settings>) => ipcRenderer.send('settings:set', settings),
+    set: (settings: DeepPartial<Settings>) => ipcRenderer.send('settings:set', settings),
 
     onChanged: (func: (settings: Settings) => void) => createListener('settings:changed', func),
 }
@@ -52,6 +53,7 @@ const settingsApi = {
 const gridProfilesApi = {
     getAll: (boardType: Exclude<BoardType, 'ambient'>): Promise<SbGridProfile[]> => ipcRenderer.invoke('grid_profiles:get_all', boardType),
     get: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get', boardType, id),
+    getActive: (boardType: Exclude<BoardType, 'ambient'>): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get_active', boardType),
     create: (boardType: Exclude<BoardType, 'ambient'>, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:create', boardType, profile),
     update: (boardType: Exclude<BoardType, 'ambient'>, id: string, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:update', boardType, id, profile),
     delete: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:delete', boardType, id),
@@ -64,7 +66,8 @@ const gridProfilesApi = {
 
     buttons: {
         get: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
-        update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: Partial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
+        update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
+        swap: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:swap', boardType, profileId, pos1, pos2),
         updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
         delete: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
     }
@@ -109,7 +112,7 @@ const musicApi = {
 }
 
 const discordApi = {
-    sendAudioPacket: (buffer: ArrayBuffer) => ipcRenderer.send('discord:audio_packet', buffer),
+    sendAudioPacket: (playerId: string, buffer: ArrayBuffer) => ipcRenderer.send('discord:audio_packet', playerId, buffer),
     getStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('discord:status'),
     getGuilds: (): Promise<DiscordData[]> => ipcRenderer.invoke('discord:guilds'),
     getChannels: (guildId: string): Promise<DiscordData[]> => ipcRenderer.invoke('discord:channels', guildId),

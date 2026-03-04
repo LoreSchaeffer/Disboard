@@ -2,9 +2,9 @@ import {ipcMain} from "electron";
 import {state} from "../state";
 
 export const setupDiscordBridgeHandlers = () => {
-    ipcMain.on('discord:audio_packet', (_, buffer: ArrayBuffer) => {
+    ipcMain.on('discord:audio_packet', (_, playerId: string, buffer: ArrayBuffer) => {
         const nodeBuffer = Buffer.from(buffer);
-        state.discordBot.writeAudioPacket(nodeBuffer);
+        state.discordBot.writeAudioPacket(playerId, nodeBuffer);
     });
 
     ipcMain.handle('discord:status', () => {

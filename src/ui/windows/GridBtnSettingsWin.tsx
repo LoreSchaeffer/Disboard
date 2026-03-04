@@ -1,25 +1,24 @@
-import styles from './ButtonSettingsWin.module.css';
+import styles from './GridBtnSettingsWin.module.css';
 import React, {useEffect, useMemo, useState} from "react";
-import {BtnStyle, CropOptions, EndTimeType, PlayerTrack, SbBtn, SbProfile, TimeUnit} from "../../types/data";
 import {useWindow} from "../context/WindowContext";
-import {ButtonWindowData} from "../../types/windows";
 import Spinner from "../components/misc/Spinner";
 import {useTitlebar} from "../context/TitlebarContext";
 import Input from "../components/forms/Input";
 import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiStopFill, PiXBold} from "react-icons/pi";
 import Button from "../components/misc/Button";
-import SoundboardButton from "../components/soundboard/SoundboardButton";
+import SoundboardButton from "../components/soundboard/grid/SoundboardButton";
 import Separator from "../components/misc/Separator";
 import Select from "../components/forms/Select";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
 import {clsx} from "clsx";
 import Toggle from "../components/forms/Toggle";
-import {generateButtonId, hexToHsl, hslToHex} from "../utils/utils";
+import {hexToHsl, hslToHex} from "../utils/utils";
 import {Time} from "../utils/time";
 import {usePlayer} from "../context/PlayerContext";
-import {validateName} from "../../main/utils/validation";
 import ResettableColorPicker from "../components/forms/color_picker/ResettableColorPicker";
+import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWindowData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
+import {validateName} from "../../shared/validation";
 
 const timeUnitOptions: { value: TimeUnit, label: string }[] = [
     {value: 's', label: 'Seconds'},
@@ -32,34 +31,36 @@ const timeEndTypeOptions: { value: EndTimeType, label: string }[] = [
     {value: 'at', label: 'At'}
 ]
 
-const ButtonSettingsWin = () => {
+const GridBtnSettingsWin = () => {
     const {data} = useWindow();
     const {previewPlayer, previewStatus} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
 
-    const [profile, setProfile] = useState<SbProfile | undefined>(undefined);
-    const [button, setButton] = useState<SbBtn | undefined>(undefined);
+    const [boardType, setBoardType] = useState<Exclude<BoardType, 'ambient'>>(undefined);
+    const [profile, setProfile] = useState<SbGridProfile | undefined>(undefined);
+    const [button, setButton] = useState<SbGridBtn | undefined>(undefined);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [newButton, setNewButton] = useState<Partial<SbBtn>>({});
+    const [newButton, setNewButton] = useState<DeepPartial<SbGridBtn>>({});
 
     useEffect(() => {
-        if (!data || data.type !== 'button_settings') return;
+        if (!data || data.type !== 'grid_btn_settings') return;
 
-        const {profileId, buttonId} = data.data as ButtonWindowData;
+        const {boardType, profileId, buttonId} = data.data as GridBtnWindowData;
 
-        if (!profileId || !buttonId) {
-            setError('Profile id of Button id missing.');
+        if (!boardType || !profileId || !buttonId) {
+            setError('Board Type, Profile Id or Button Id missing!');
             setLoading(false);
             return;
         }
 
         setLoading(true);
+        setBoardType(boardType)
 
         Promise.all([
-            window.electron.getProfile(profileId),
-            window.electron.getButton(profileId, buttonId)
+            window.electron.gridProfiles.get(boardType, profileId),
+            window.electron.gridProfiles.buttons.get(boardType, profileId, buttonId)
         ]).then(([fetchedProfile, fetchedButton]) => {
             if (!fetchedProfile) throw new Error("Profile not found");
             if (!fetchedButton) throw new Error("Button not found");
@@ -84,17 +85,18 @@ const ButtonSettingsWin = () => {
         });
     }, [data]);
 
-    const previewBtnData: SbBtn | null = useMemo(() => {
+    const previewBtnData: SbGridBtn | null = useMemo(() => {
         if (!button) return null;
 
         const mergedStyle = {...(button.style || {}), ...(newButton.style || {})};
         const mergedCrop = {...(button.cropOptions || {}), ...(newButton.cropOptions || {})};
 
-        const preview: SbBtn = {
+        const preview: SbGridBtn = {
             ...button,
             ...newButton,
             style: Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined,
             cropOptions: Object.keys(mergedCrop).length > 0 ? mergedCrop : undefined,
+            track: undefined
         };
 
         if (newButton.title === null) preview.title = button.track.title;
@@ -115,7 +117,7 @@ const ButtonSettingsWin = () => {
         );
     }
 
-    if (error || !profile || !button) {
+    if (error || !profile || !button || !button.track) {
         return (
             <div style={{
                 display: 'flex',
@@ -128,9 +130,9 @@ const ButtonSettingsWin = () => {
         );
     }
 
-    const getValue = <K extends keyof SbBtn>(field: K): SbBtn[K] | undefined => {
+    const getValue = <K extends keyof SbGridBtn>(field: K): SbGridBtn[K] | undefined => {
         const newVal = newButton[field];
-        return (newVal !== undefined ? newVal : button?.[field]) as SbBtn[K] | undefined;
+        return (newVal !== undefined ? newVal : button?.[field]) as SbGridBtn[K] | undefined;
     }
 
     const getCropValue = (field: keyof CropOptions): unknown => {
@@ -167,9 +169,9 @@ const ButtonSettingsWin = () => {
 
     const handleTitleReset = () => {
         setNewButton(prev => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const {title, ...rest} = prev;
-            return rest;
+            const updated = {...prev};
+            delete updated.title;
+            return updated;
         });
     }
 
@@ -181,7 +183,7 @@ const ButtonSettingsWin = () => {
         if (inputValue === '' || numericVal === 0) {
             setNewButton(prev => {
                 const currentCrop = prev.cropOptions || {};
-                const newCropOptions = { ...currentCrop };
+                const newCropOptions = {...currentCrop};
 
                 newCropOptions.startTime = null;
                 newCropOptions.startTimeUnit = null;
@@ -191,7 +193,7 @@ const ButtonSettingsWin = () => {
                     delete newCropOptions.startTimeUnit;
                 }
 
-                const updatedBtn = { ...prev };
+                const updatedBtn = {...prev};
                 const hasKeys = Object.values(newCropOptions).some(v => v !== undefined);
 
                 if (!hasKeys) delete updatedBtn.cropOptions;
@@ -243,14 +245,14 @@ const ButtonSettingsWin = () => {
 
         setNewButton(prev => {
             const currentCrop = prev.cropOptions || {};
-            const newCropOptions = { ...currentCrop };
+            const newCropOptions = {...currentCrop};
 
             if (value === button.cropOptions?.startTime) delete newCropOptions.startTime;
             else newCropOptions.startTime = value;
 
             if (!newCropOptions.startTimeUnit && !button.cropOptions?.startTimeUnit) newCropOptions.startTimeUnit = 's';
 
-            const updatedBtn = { ...prev };
+            const updatedBtn = {...prev};
             if (Object.keys(newCropOptions).length === 0) delete updatedBtn.cropOptions;
             else updatedBtn.cropOptions = newCropOptions;
 
@@ -266,7 +268,7 @@ const ButtonSettingsWin = () => {
         if (inputValue === '' || numericVal === 0) {
             setNewButton(prev => {
                 const currentCrop = prev.cropOptions || {};
-                const newCropOptions = { ...currentCrop };
+                const newCropOptions = {...currentCrop};
 
                 newCropOptions.endTime = null;
                 newCropOptions.endTimeUnit = null;
@@ -278,7 +280,7 @@ const ButtonSettingsWin = () => {
                     delete newCropOptions.endTimeType;
                 }
 
-                const updatedBtn = { ...prev };
+                const updatedBtn = {...prev};
                 const hasKeys = Object.values(newCropOptions).some(v => v !== undefined);
 
                 if (!hasKeys) delete updatedBtn.cropOptions;
@@ -324,7 +326,7 @@ const ButtonSettingsWin = () => {
 
         setNewButton(prev => {
             const currentCrop = prev.cropOptions || {};
-            const newCropOptions = { ...currentCrop };
+            const newCropOptions = {...currentCrop};
 
             if (value === button.cropOptions?.endTime) delete newCropOptions.endTime;
             else newCropOptions.endTime = value;
@@ -332,7 +334,7 @@ const ButtonSettingsWin = () => {
             if (!newCropOptions.endTimeUnit && !button.cropOptions?.endTimeUnit) newCropOptions.endTimeUnit = 's';
             if (!newCropOptions.endTimeType && !button.cropOptions?.endTimeType) newCropOptions.endTimeType = 'after';
 
-            const updatedBtn = { ...prev };
+            const updatedBtn = {...prev};
             if (Object.keys(newCropOptions).length === 0) delete updatedBtn.cropOptions;
             else updatedBtn.cropOptions = newCropOptions;
 
@@ -483,7 +485,7 @@ const ButtonSettingsWin = () => {
     }
 
 
-    const isModified = (field: keyof SbBtn) => field in newButton;
+    const isModified = (field: keyof SbGridBtn) => field in newButton;
 
     const isCropModified = (field: keyof CropOptions) => newButton.cropOptions && field in newButton.cropOptions;
 
@@ -493,29 +495,28 @@ const ButtonSettingsWin = () => {
 
 
     const handleSubmit = () => {
-        if (!canSubmit()) return;
+        if (!canSubmit() || !profile || !button || !boardType) return;
 
-        const newButtonCopy = {...newButton};
+        const payload: DeepPartial<GridBtn> = JSON.parse(JSON.stringify(newButton));
+        if (payload.track) delete payload.track;
 
-        if (newButtonCopy.cropOptions) {
-            const cropOptions = newButtonCopy.cropOptions;
-
-            if (cropOptions.startTimeUnit && !cropOptions.startTime) delete cropOptions.startTimeUnit;
-            if (cropOptions.endTimeUnit && !cropOptions.endTime) delete cropOptions.endTimeUnit;
-            if (cropOptions.endTimeType && !cropOptions.endTime) delete cropOptions.endTimeType;
-
-            if (Object.keys(cropOptions).length === 0) delete newButtonCopy.cropOptions;
-            else newButtonCopy.cropOptions = cropOptions;
+        if (payload.cropOptions) {
+            if (payload.cropOptions.startTime === null) payload.cropOptions.startTimeUnit = null;
+            if (payload.cropOptions.endTime === null) {
+                payload.cropOptions.endTimeUnit = null;
+                payload.cropOptions.endTimeType = null;
+            }
         }
 
-        if (Object.keys(newButtonCopy).length === 0) {
-            window.electron.close();
-        } else if (profile && button) {
-            window.electron.updateButton(profile.id, generateButtonId(button.row, button.col), newButtonCopy).then((res) => {
-                if (res.success) window.electron.close();
-                else console.error(res.error);
-            });
+        if (Object.keys(payload).length === 0) {
+            window.electron.window.close();
+            return;
         }
+
+        window.electron.gridProfiles.buttons.update(boardType, profile.id, button.id, payload).then((res) => {
+            if (res.success) window.electron.window.close();
+            else console.error("[Settings] Error updating button:", res.error);
+        });
     }
 
     const playPausePreview = () => {
@@ -697,7 +698,7 @@ const ButtonSettingsWin = () => {
                 <Button
                     variant={'danger'}
                     icon={<PiXBold/>}
-                    onClick={() => window.electron.close()}
+                    onClick={() => window.electron.window.close()}
                 >
                     Discard
                 </Button>
@@ -827,4 +828,4 @@ const ColorPickerRow = ({
     )
 }
 
-export default ButtonSettingsWin;
+export default GridBtnSettingsWin;

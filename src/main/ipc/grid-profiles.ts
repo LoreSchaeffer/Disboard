@@ -2,12 +2,12 @@ import {app, dialog, ipcMain} from "electron";
 import {clamp} from "../../shared/utils";
 import path from "path";
 import fs from "node:fs/promises";
-import {BoardType, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, SbGridProfileSchema, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, SbGridProfileSchema, TrackSourceName, YTSearchResult} from "../../types";
 import {getGridProfilesStore} from "../storage/profiles-store";
 import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile, convertSbGridBtns2GridBtns} from "../utils/data-converters";
 import {removeNameInvalidChars, validateName} from "../../shared/validation";
 import {fixActiveProfile, generateUUID, generateValidFileName} from "../utils/misc";
-import {settingsStore} from "../storage/settings-store";
+import {getBoardSettings, settingsStore} from "../storage/settings-store";
 import {broadcastData} from "../utils/broadcast";
 import {cacheStore} from "../storage/cache-store";
 import {deepMerge, pruneNulls} from "../utils/objects";
@@ -21,6 +21,16 @@ export const setupGridProfilesHandlers = () => {
 
     ipcMain.handle('grid_profiles:get', (_, boardType: Exclude<BoardType, 'ambient'>, id: string): SbGridProfile => {
         const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === id) || null;
+        if (!profile) return null;
+
+        return convertGridProfile2SbGridProfile(profile);
+    });
+
+    ipcMain.handle('grid_profiles:get_active', (_, boardType: Exclude<BoardType, 'ambient'>): SbGridProfile => {
+        const activeProfile = getBoardSettings(boardType).activeProfile;
+        if (!activeProfile) return null;
+
+        const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === activeProfile) || null;
         if (!profile) return null;
 
         return convertGridProfile2SbGridProfile(profile);
@@ -263,7 +273,7 @@ export const setupGridProfilesHandlers = () => {
         return convertGridBtn2SbGridBtn(btn);
     });
 
-    ipcMain.handle('grid_profiles:buttons:update', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: Partial<GridBtn>): IpcResponse<void> => {
+    ipcMain.handle('grid_profiles:buttons:update', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): IpcResponse<void> => {
         const profilesStore = getGridProfilesStore(boardType);
         const profiles = profilesStore.get('profiles');
 
@@ -284,6 +294,35 @@ export const setupGridProfilesHandlers = () => {
         const finalButton: GridBtn = pruneNulls(deepMerge(existingButton, updates));
         if (!finalButton.track || finalButton.track.length === 0) profile.buttons.splice(btnIdx, 1);
         else profile.buttons[btnIdx] = finalButton;
+
+        profilesStore.set('profiles', profiles);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:buttons:swap', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): IpcResponse<void> => {
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles');
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const btn1Idx = profile.buttons.findIndex(b => b.row === pos1.row && b.col === pos1.col);
+        const btn1 = btn1Idx !== -1 ? profile.buttons[btn1Idx] : null;
+        const btn2Idx = profile.buttons.findIndex(b => b.row === pos2.row && b.col === pos2.col);
+        const btn2 = btn2Idx !== -1 ? profile.buttons[btn2Idx] : null;
+
+        if (btn1) {
+            btn1.row = pos2.row;
+            btn1.col = pos2.col;
+        }
+
+        if (btn2) {
+            btn2.row = pos1.row;
+            btn2.col = pos1.col;
+        }
 
         profilesStore.set('profiles', profiles);
         broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
@@ -357,7 +396,6 @@ export const setupGridProfilesHandlers = () => {
 
         profile.buttons.splice(existingButtonIdx, 1);
 
-        profiles[profileIdx] = profile;
         profilesStore.set('profiles', profiles);
         broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
 

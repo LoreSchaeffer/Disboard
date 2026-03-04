@@ -1,6 +1,6 @@
 import styles from './TrackInfo.module.css';
 import React from "react";
-import {PlayerTrack} from "../../../types/data";
+import {PlayerTrack} from "../../../types";
 import {clsx} from "clsx";
 
 type TrackInfoProps = {

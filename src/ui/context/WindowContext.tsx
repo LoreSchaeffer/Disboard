@@ -1,5 +1,5 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
-import {Route, Settings, StaticWindowData, WindowInfo} from "../../types";
+import {DeepPartial, Route, Settings, StaticWindowData, WindowInfo} from "../../types";
 
 type WindowContextType = {
     ready: boolean;
@@ -7,7 +7,7 @@ type WindowContextType = {
     resizable: boolean;
     route: Route | null;
     settings: Settings | null;
-    updateSettingsAsync: (settings: Partial<Settings>) => void;
+    updateSettingsAsync: (settings: DeepPartial<Settings>) => void;
     data: StaticWindowData<unknown> | null;
 }
 

@@ -16,7 +16,7 @@ type EventHandlerMap = {
     pause?: () => void;
     resume?: () => void;
     play?: () => void;
-    trackchange?: (track: PlayerTrack) => void;
+    trackchange?: (track: PlayerTrack | null) => void;
     seeked?: () => void;
     timeupdate?: (currentTime: Time, duration: Time) => void;
     repeatupdate?: (mode: RepeatMode) => void;
@@ -29,6 +29,7 @@ export class Player {
     private readonly eventHandlers: Partial<EventHandlerMap> = {};
     private readonly audio: HTMLAudioElement = new Audio();
     private readonly status: PlayerStatus;
+    private readonly playerId: string;
 
     private repeat: RepeatMode = 'none';
     private queue: PlayerTrack[] = [];
@@ -55,6 +56,8 @@ export class Player {
     private workletInitPromise: Promise<void> | null = null;
 
     constructor() {
+        this.playerId = Math.random().toString(36).substring(7);
+
         this.status = {
             playing: false,
             paused: false,
@@ -130,7 +133,7 @@ export class Player {
         });
 
         this.audio.addEventListener('pause', () => {
-            if (this.status.playing && !this.status.seeking) {
+            if (this.status.playing && !this.status.seeking && this.currentTrack) {
                 this.status.paused = true;
                 this._updateMediaSessionState('paused');
                 this.eventHandlers['pause']?.();
@@ -462,7 +465,7 @@ export class Player {
         if (this.endTime) {
             const absoluteMs = this.audio.currentTime * 1000;
             if (absoluteMs >= this.endTime.getTimeMs()) {
-                this._forceEnd();
+                this._handleEnded();
                 return;
             }
         }
@@ -474,15 +477,10 @@ export class Player {
         );
     }
 
-    private _forceEnd() {
-        this.audio.pause();
-        this.audio.currentTime = this.endTime ? this.endTime.getTimeS() : this.audio.duration;
-        this.audio.dispatchEvent(new Event('ended'));
-    }
-
     private _handleEnded() {
         this.status.playing = false;
         this.status.paused = false;
+
         this.eventHandlers['ended']?.();
 
         if (this.priorityTrack) {
@@ -530,7 +528,7 @@ export class Player {
     private _resetPlayer() {
         this.audio.pause();
         this.audio.currentTime = 0;
-        this.audio.removeAttribute('src');
+        this.audio.src = '';
 
         this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 
@@ -617,7 +615,7 @@ export class Player {
             });
 
             this.workletNode.port.onmessage = (event) => {
-                window.electron.sendAudioPacket(event.data);
+                window.electron.discord.sendAudioPacket(this.playerId, event.data);
             };
 
             this.workletNode.onprocessorerror = (err) => console.error("Worklet Error:", err);

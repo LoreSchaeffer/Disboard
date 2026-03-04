@@ -1,10 +1,24 @@
 import {useNavigation} from "./context/NavigationContext";
 import {PlayerProvider} from "./context/PlayerContext";
-import {ROUTES} from "./config/routes";
+import {AppProviderName, appProviderPriorities, ROUTES} from "./config/routes";
 import GridProfilesProvider, {useGridProfiles} from "./context/GridProfilesProvider";
-import {PropsWithChildren} from "react";
+import {FC, PropsWithChildren} from "react";
 
 const FallbackPage = () => <div>Page not found!</div>
+
+const PROVIDERS_MAP: Record<AppProviderName, FC<PropsWithChildren>> = {
+    player: ({children}) => <PlayerProvider>{children}</PlayerProvider>,
+    grid_profiles: ({children}) => (
+        <GridProfilesProvider>
+            <GridProfilesWrapper>{children}</GridProfilesWrapper>
+        </GridProfilesProvider>
+    ),
+    ambient_profiles: ({children}) => (
+        // <AmbientProfilesProvider>
+        <AmbientProfilesWrapper>{children}</AmbientProfilesWrapper>
+        // </AmbientProfilesProvider>
+    )
+};
 
 const Router = () => {
     const {visibleStack} = useNavigation();
@@ -19,29 +33,15 @@ const Router = () => {
                 }
 
                 const Component = route.component;
-                let content = route.usePlayer ? (
-                    <PlayerProvider>
-                        <Component/>
-                    </PlayerProvider>
-                ) : (
-                    <Component/>
-                );
 
-                if (route.useProfiles) {
-                    content = (
-                        <GridProfilesProvider>
-                            <GridProfilesWrapper>
-                                {content}
-                            </GridProfilesWrapper>
-                        </GridProfilesProvider>
-                    );
-                } else if (route.useSfxProfiles) {
-                    content = (
-                        <>
-                            {content} // TODO Replace with Ambient profiles wrapper
-                        </>
-                    );
-                }
+                const requiredContexts = route.contexts || [];
+                const sortedContexts = [...requiredContexts].sort((a, b) => appProviderPriorities[a] - appProviderPriorities[b]);
+
+                const content = sortedContexts.reduceRight((acc, contextName) => {
+                    const ProviderComponent = PROVIDERS_MAP[contextName];
+                    return <ProviderComponent>{acc}</ProviderComponent>;
+                }, <Component/>);
+
 
                 return (
                     <div
@@ -49,11 +49,17 @@ const Router = () => {
                         className="pageContainer"
                         style={{
                             zIndex: 10 + index,
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            overflow: 'hidden'
                         }}
                     >
                         {content}
                     </div>
-                )
+                );
             })}
         </>
     )
@@ -62,8 +68,13 @@ const Router = () => {
 const GridProfilesWrapper = ({children}: PropsWithChildren) => {
     const {ready} = useGridProfiles();
     if (!ready) return null;
-
-    return children;
+    return <>{children}</>;
 }
+
+const AmbientProfilesWrapper = ({children}: PropsWithChildren) => {
+    // const {ready} = useAmbientProfiles();
+    // if (!ready) return null;
+    return <>{children}</>;
+};
 
 export default Router;

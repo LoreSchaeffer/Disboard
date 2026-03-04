@@ -1,14 +1,17 @@
+import {DeepPartial} from "../../types";
+
 const isObject = (item: unknown): item is Record<string, unknown> => {
     return Boolean(item && typeof item === 'object' && !Array.isArray(item));
 }
 
-export const deepMerge = <T extends object>(target: T, source: Partial<T>): T => {
+export const deepMerge = <T extends object>(target: T, source: DeepPartial<T>): T => {
     const output = {...target};
 
     if (isObject(target) && isObject(source)) {
         Object.keys(source).forEach(key => {
             const k = key as keyof T;
-            const sourceValue = source[k];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sourceValue = (source as any)[k];
             const targetValue = target[k];
 
             if (isObject(sourceValue) && isObject(targetValue)) {

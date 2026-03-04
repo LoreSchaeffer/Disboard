@@ -8,7 +8,7 @@ import {useWindow} from "../../context/WindowContext";
 import Button from "../misc/Button";
 import {PiPlayFill} from "react-icons/pi";
 import {usePlayer} from "../../context/PlayerContext";
-import {PlayerTrack} from "../../../types/data";
+import {PlayerTrack} from "../../../types";
 import ProgressBar from "../forms/ProgressBar";
 
 const TEST_SOUND: PlayerTrack = {
@@ -19,6 +19,7 @@ const TEST_SOUND: PlayerTrack = {
     },
     title: 'Test Sound',
     duration: 0,
+    board: undefined,
     directStream: true,
     volumeOverride: 80
 }
@@ -53,13 +54,13 @@ const AudioSettingsPage = () => {
     const handleMainOutputChange = (value: string) => {
         setMainOutput(value);
         player.setOutputDevice(value);
-        window.electron.updateSettings({outputDevice: value});
+        window.electron.settings.set({outputDevice: value});
     }
 
     const handlePreviewOutputChange = (value: string) => {
         setPreviewOutput(value);
         previewPlayer.setOutputDevice(value);
-        window.electron.updateSettings({previewOutputDevice: value});
+        window.electron.settings.set({previewOutputDevice: value});
     }
 
     const handlePreview = (deviceId: 'main' | 'preview') => {
@@ -77,7 +78,7 @@ const AudioSettingsPage = () => {
         previewPlayer.setVolume(newValue);
 
         previewDebounceRef.current = setTimeout(() => {
-            window.electron.updateSettings({previewVolume: newValue});
+            window.electron.settings.set({previewVolume: newValue});
         }, 500);
     }
 

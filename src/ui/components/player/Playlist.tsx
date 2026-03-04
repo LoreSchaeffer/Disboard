@@ -3,7 +3,7 @@ import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
 import {usePlayer} from "../../context/PlayerContext";
 import {useClickOutside} from "../../hooks/useClickOutside";
 import React, {useEffect, useRef} from "react";
-import {PlayerTrack} from "../../../types/data";
+import {PlayerTrack} from "../../../types";
 import {clsx} from "clsx";
 import {PiBroomBold, PiXBold} from "react-icons/pi";
 

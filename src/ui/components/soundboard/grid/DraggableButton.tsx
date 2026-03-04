@@ -17,16 +17,16 @@ const ItemTypes = {
     BUTTON: 'button',
 };
 
-const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons}: DraggableButtonProps) => {
+const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons, ...restProps}: DraggableButtonProps) => {
     const ref = useRef<HTMLDivElement>(null);
 
-    const [{isDragging}, drag] = useDrag({
+    const [{isDragging}, drag] = useDrag(() => ({
         type: ItemTypes.BUTTON,
         item: {row, col, type: ItemTypes.BUTTON, exists: !!button},
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         })
-    }, [row, col, button]);
+    }), [row, col, button]);
 
     const [{isOver, canDrop}, drop] = useDrop({
         accept: ItemTypes.BUTTON,
@@ -56,6 +56,7 @@ const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons}
             isDropping={isOver && canDrop}
             onClick={onClick}
             onContextMenu={onContextMenu}
+            {...restProps}
         />
     );
 };

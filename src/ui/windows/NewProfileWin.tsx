@@ -4,41 +4,65 @@ import {useNavigation} from "../context/NavigationContext";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
 import Input from "../components/forms/Input";
-import React, {useState} from "react";
-import {removeNameInvalidChars} from "../../main/utils/validation";
-import {validateName} from "../utils/validation";
-import {useWindow} from "../context/WindowContext";
+import React, {useEffect, useState} from "react";
 import Button from "../components/misc/Button";
 import {clsx} from "clsx";
+import {removeNameInvalidChars, validateName} from "../../shared/validation";
+import {BoardType, SbAmbientProfile, SbGridProfile} from "../../types";
+
+export type NewProfileData = {
+    boardType: BoardType;
+}
 
 const NewProfileWin = () => {
-    const {profiles} = useWindow();
-    const {back} = useNavigation();
+    const {back, currentRoute} = useNavigation();
+    const data = currentRoute?.data as NewProfileData | undefined;
+    const boardType = data?.boardType;
     const [profileName, setProfileName] = useState<string>('');
     const [profileNameError, setProfileNameError] = useState<string | undefined>(undefined);
     const [rows, setRows] = useState<number>(8);
-    const [columns, setColumns] = useState<number>(10);
+    const [cols, setCols] = useState<number>(10);
+    const [profiles, setProfiles] = useState<SbGridProfile[] | SbAmbientProfile[] | undefined>(undefined);
+
+    useEffect(() => {
+        if (boardType === 'ambient') {
+            // TODO To implement
+            setProfiles([]);
+        } else {
+            window.electron.gridProfiles.getAll(boardType).then(setProfiles);
+        }
+    }, [boardType]);
+
+    if (!data || !boardType || !profiles) return null;
 
     const handleProfileNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = removeNameInvalidChars(e.target.value);
         setProfileName(value);
 
-        if (!validateName(value) || profiles.find(p => p.name.toLowerCase() === value.toLowerCase())) setProfileNameError('This name is not valid');
+        const isNameTaken = profiles.some(p => p.name.toLowerCase() === value.toLowerCase());
+
+        if (!validateName(value) || isNameTaken) setProfileNameError('This name is not valid or already exists');
         else setProfileNameError(undefined);
     }
 
     const handleSubmit = () => {
         if (profileNameError) return;
 
-        window.electron.createProfile({
-            name: profileName,
-            rows: rows,
-            cols: columns
-        }).then(res => {
-            if (res.success) back();
-            else console.error('Failed to create profile:', res.error);
-        });
+        if (boardType === 'ambient') {
+            // TODO To implement
+        } else {
+            window.electron.gridProfiles.create(boardType, {
+                name: profileName,
+                rows: rows,
+                cols: cols
+            }).then(res => {
+                if (res.success) back();
+                else console.error('Failed to create profile:', res.error);
+            });
+        }
     }
+
+    const isSubmitDisabled = profileNameError !== undefined || profileName.trim() === '';
 
     return (
         <div className={styles.wrapper}>
@@ -87,8 +111,8 @@ const NewProfileWin = () => {
                         <Col size={3}>
                             <Input
                                 type={'number'}
-                                value={columns}
-                                onChange={(e) => setColumns(Number(e.target.value))}
+                                value={cols}
+                                onChange={(e) => setCols(Number(e.target.value))}
                                 min={1}
                                 max={50}
                                 placeholder={'Columns'}
@@ -109,7 +133,7 @@ const NewProfileWin = () => {
                     <Button
                         variant={'success'}
                         icon={<PiFloppyDiskBold/>}
-                        disabled={profileNameError !== undefined}
+                        disabled={isSubmitDisabled}
                         onClick={handleSubmit}
                     >
                         Create

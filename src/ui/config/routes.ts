@@ -1,31 +1,39 @@
 import {ComponentType} from "react";
-import MainSoundboardWin from "../windows/MainSoundboardWin";
-import ButtonSettingsWin from "../windows/ButtonSettingsWin";
-import MediaSelectorWin from "../windows/MediaSelectorWin";
+import MusicBoardWin from "../windows/MainSoundboardWin";
 import SettingsWin from "../windows/SettingsWin";
 import NewProfileWin from "../windows/NewProfileWin";
 import DeleteConfirmationWin from "../windows/DeleteConfirmationWin";
-import {Route} from "../../types/routes";
+import {Route} from "../../types";
 import EmptyWin from "../windows/EmptyWin";
+import GridBtnSettingsWin from "../windows/GridBtnSettingsWin";
 
 export type RouteConfig = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     component: ComponentType<any>;
-    usePlayer?: boolean;
-    useProfiles?: boolean;
-    useSfxProfiles?: boolean;
+    contexts?: AppProviderName[];
 }
+
+export type AppProviderName = 'player' | 'grid_profiles' | 'ambient_profiles';
+
+export const appProviderPriorities: Record<AppProviderName, number> = {
+    player: 1,
+    grid_profiles: 2,
+    ambient_profiles: 2
+};
 
 export const ROUTES: Record<Route, RouteConfig> = {
     empty: {component: EmptyWin},
 
-    main: {component: MainSoundboardWin, usePlayer: true, useProfiles: true},
-    click: {component: MainSoundboardWin, usePlayer: true, useProfiles: true},
-    sfx: {component: MainSoundboardWin, usePlayer: true, useSfxProfiles: true},
-    button_settings: {component: ButtonSettingsWin, usePlayer: true},
-    media_selector: {component: MediaSelectorWin, usePlayer: true},
+    music_board: {component: MusicBoardWin, contexts: ['player', 'grid_profiles']},
+    sfx_board: {component: MusicBoardWin, contexts: ['player', 'grid_profiles']}, // TODO Replace with SFX Board
+    ambient_board: {component: EmptyWin, contexts: ['player', 'ambient_profiles']}, // TODO Replace with Ambient Board
 
-    settings: {component: SettingsWin, usePlayer: true},
+    grid_btn_settings: {component: GridBtnSettingsWin, contexts: ['player', 'grid_profiles']},
+    grid_media_selector: {component: EmptyWin, contexts: ['player', 'grid_profiles']},
+    ambient_btn_settings: {component: EmptyWin, contexts: ['player', 'ambient_profiles']},
+    ambient_media_selector: {component: EmptyWin, contexts: ['player', 'ambient_profiles']},
+
+    settings: {component: SettingsWin, contexts: ['player']},
     new_profile: {component: NewProfileWin},
     delete_confirmation: {component: DeleteConfirmationWin},
 }

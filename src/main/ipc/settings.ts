@@ -1,5 +1,5 @@
 import {ipcMain} from "electron";
-import {Settings} from "../../types";
+import {DeepPartial, Settings} from "../../types";
 import {state} from "../state";
 import {settingsStore} from "../storage/settings-store";
 import {deepMerge} from "../utils/objects";
@@ -10,7 +10,7 @@ export const setupSettingsHandlers = () => {
         return settingsStore.store;
     });
 
-    ipcMain.on('settings:set', (_, settings: Partial<Settings>) => {
+    ipcMain.on('settings:set', (_, settings: DeepPartial<Settings>) => {
         const oldSettings = settingsStore.store;
         const newSettings = deepMerge(oldSettings, settings);
         settingsStore.set(newSettings);

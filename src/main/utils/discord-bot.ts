@@ -4,10 +4,16 @@ import {PassThrough} from 'stream';
 import {DiscordData, DiscordStatus, Settings} from "../../types";
 import {settingsStore} from "../storage/settings-store";
 
+type AudioSource = {
+    buffer: Buffer[];
+    lastSeen: number;
+}
+
 export class DiscordBot {
     private client: Client;
     private player: AudioPlayer;
     private audioStream: PassThrough;
+    private audioQueues: Map<string, AudioSource> = new Map();
     private connection: VoiceConnection | null = null;
     private isReady: boolean = false;
     private isConnected: boolean = false;
@@ -114,15 +120,20 @@ export class DiscordBot {
         this._cleanupAudioResources();
     }
 
-    public writeAudioPacket(buffer: Buffer): void {
-        if (
-            this.isConnected &&
-            this.audioStream &&
-            !this.audioStream.destroyed &&
-            this.connection?.state.status === VoiceConnectionStatus.Ready
-        ) {
-            this.audioStream.write(buffer);
-        }
+    public writeAudioPacket(playerId: string, buffer: Buffer): void {
+        if (!this.isConnected || !this.audioStream || this.audioStream.destroyed) return;
+        if (this.connection?.state.status !== VoiceConnectionStatus.Ready) return;
+
+        const now = Date.now();
+        if (!this.audioQueues.has(playerId)) this.audioQueues.set(playerId, {buffer: [], lastSeen: now});
+
+        const source = this.audioQueues.get(playerId)!;
+        source.buffer.push(buffer);
+        source.lastSeen = now;
+
+        if (source.buffer.length > 5) source.buffer.shift();
+
+        this._tryMix();
     }
 
     public getStatus(): DiscordStatus {
@@ -243,6 +254,49 @@ export class DiscordBot {
         this._setupPlayerEvents();
     }
 
+    private _tryMix(): void {
+        const now = Date.now();
+        let readyToMix = true;
+        let hasActiveSources = false;
+
+        for (const [sourceId, source] of this.audioQueues.entries()) {
+            if (now - source.lastSeen > 100) {
+                this.audioQueues.delete(sourceId);
+                continue;
+            }
+
+            hasActiveSources = true;
+            if (source.buffer.length === 0) readyToMix = false;
+        }
+
+        if (!hasActiveSources || !readyToMix) return;
+
+        const chunksToMix: Buffer[] = [];
+        for (const source of this.audioQueues.values()) chunksToMix.push(source.buffer.shift()!);
+
+        if (chunksToMix.length === 1) {
+            this.audioStream.write(chunksToMix[0]);
+            return;
+        }
+
+        const packetLength = chunksToMix[0].length;
+        const mixed = Buffer.alloc(packetLength);
+
+        for (let i = 0; i < packetLength; i += 2) {
+            let sum = 0;
+            for (const chunk of chunksToMix) {
+                if (i < chunk.length) sum += chunk.readInt16LE(i);
+            }
+
+            if (sum > 32767) sum = 32767;
+            else if (sum < -32768) sum = -32768;
+
+            mixed.writeInt16LE(sum, i);
+        }
+
+        this.audioStream.write(mixed);
+    }
+
     private _cleanupAudioResources() {
         if (this.player) {
             this.player.stop();
@@ -255,6 +309,8 @@ export class DiscordBot {
             this.audioStream.removeAllListeners();
             this.audioStream = null;
         }
+
+        this.audioQueues.clear();
     }
 
     private _setupClientEvents() {
@@ -282,7 +338,7 @@ export class DiscordBot {
         });
     }
 
-    private _startStreaming(): void {
+    private _startStreaming() {
         if (!this.connection || !this.player || !this.audioStream) return;
 
         const resource = createAudioResource(this.audioStream, {

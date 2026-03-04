@@ -5,6 +5,8 @@ export type Route = 'empty' |
 
     'grid_btn_settings' |
     'grid_media_selector' |
+    'ambient_btn_settings' |
+    'ambient_media_selector' |
 
     'settings' |
     'new_profile' |

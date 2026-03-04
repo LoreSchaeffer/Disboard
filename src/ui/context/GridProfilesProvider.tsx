@@ -6,6 +6,7 @@ type ProfilesContextType = {
     ready: boolean;
     profiles: SbGridProfile[];
     activeProfile: SbGridProfile | null;
+    boardType: Exclude<BoardType, 'ambient'>;
 }
 
 const GridProfilesContext = createContext<ProfilesContextType | undefined>(undefined);
@@ -50,6 +51,7 @@ export default function GridProfilesProvider({children}: PropsWithChildren) {
             ready,
             profiles: profiles || [],
             activeProfile,
+            boardType
         }}>
             {children}
         </GridProfilesContext.Provider>

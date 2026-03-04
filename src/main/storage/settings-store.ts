@@ -6,7 +6,7 @@ import {broadcastData} from "../utils/broadcast";
 export const settingsStore: Store<Settings> = createValidatedStore<Settings>(
     'settings',
     SettingsSchema,
-    (settings) => broadcastData('settings:change', settings)
+    (settings) => broadcastData('settings:changed', settings)
 );
 
 export const getBoardSettings = (boardType: BoardType): BoardSettings => {

@@ -8,6 +8,11 @@ export type RepeatMode = z.infer<typeof RepeatModeSchema>;
 export type MediaType = 'audio' | 'audio/video' | 'images';
 export type MediaSelectorAction = 'update_button' | 'play_now';
 
+export type GridPos = {
+    row: number;
+    col: number;
+}
+
 export type ProbeResult = {
     format: string;
     codec: string;

@@ -1,5 +1,4 @@
 import {AmbientProfile, GridBtn, GridProfile, PlayerTrack, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
-import {getGridBtnId} from "../../shared/utils";
 import {tracksStore} from "../storage/tracks-store";
 import {getYoutubeStream} from "./music-api";
 import {generateUUID} from "./misc";
@@ -14,7 +13,6 @@ const getTracksRecord = (): Record<string, Track> => {
 const buildSbGridBtn = (gridBtn: GridBtn, track?: Track): SbGridBtn => {
     return {
         ...gridBtn,
-        id: getGridBtnId(gridBtn.row, gridBtn.col),
         track: track,
         title: gridBtn.title || track?.title,
     };
@@ -43,6 +41,7 @@ export const convertGridProfile2SbGridProfile = (gridProfile: GridProfile): SbGr
 
 export const convertSbGridBtn2GridBtn = (sbGridBtn: SbGridBtn): GridBtn => {
     return {
+        id: sbGridBtn.id,
         row: sbGridBtn.row,
         col: sbGridBtn.col,
         track: sbGridBtn.track.id,

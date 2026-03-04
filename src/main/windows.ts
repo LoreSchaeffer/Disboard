@@ -97,7 +97,7 @@ export const createBoardWin = (boardType: BoardType) => {
                 boardSettings.height = height;
 
                 settingsStore.set(boardType, boardSettings);
-                broadcastData('settings:change', settingsStore.store);
+                broadcastData('settings:changed', settingsStore.store);
             }, 250);
         },
         onReady: (win) => {

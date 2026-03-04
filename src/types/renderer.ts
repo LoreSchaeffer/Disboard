@@ -13,7 +13,6 @@ export const PlayerTrackSchema = TrackSchema.extend({
 export const SbGridBtnSchema = GridBtnSchema
     .omit({track: true})
     .extend({
-        id: z.string().optional(),
         track: TrackSchema.optional()
     });
 

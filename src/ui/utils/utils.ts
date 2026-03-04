@@ -1,8 +1,6 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
-import {PlayerTrack, SbBtn} from "../../types/data";
-import {Route} from "../../types/routes";
-import {Settings} from "../../types/settings";
+import {GridPos} from "../../types";
 
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
@@ -104,18 +102,6 @@ export const getVolumeIcon = (volume: number): ElementType => {
     return PiSpeakerHighBold;
 }
 
-export const generateButtonId = (row: number, col: number): string => {
-    return `btn_${row}_${col}`;
-}
-
-export const getPosFromButtonId = (buttonId: string): { row: number, col: number } | null => {
-    const match = buttonId.match(/^btn_(\d+)_(\d+)$/);
-    if (!match) return null;
-    const row = parseInt(match[1], 10);
-    const col = parseInt(match[2], 10);
-    return {row, col};
-}
-
 export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
     return {
         ...btn.track,
@@ -123,11 +109,4 @@ export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
         titleOverride: btn.title || undefined,
         volumeOverride: btn.volumeOverride || undefined
     }
-}
-
-export const getSettingsForRoute = (settings: Settings, route: Route) => {
-    if (route === 'main') return settings.mainSoundboard;
-    else if (route === 'click') return settings.clickSoundboard;
-    else if (route === 'sfx') return settings.sfxSoundboard;
-    else return null;
 }

@@ -4,8 +4,12 @@ import axios from "axios";
 import {THUMBNAILS_DIR, TRACKS_DIR, USER_AGENT} from "../constants";
 import sharp from "sharp";
 import {determineTitle, extractCoverImage, processAudio} from "./ffmpeg";
-import {BoardType, Track, TrackSource} from "../../types";
+import {BoardType, Track, TrackSource, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
+import {getBestThumbnail, getYoutubeStream} from "./music-api";
+import {getGridProfilesStore} from "../storage/profiles-store";
+import {broadcastData} from "./broadcast";
+import {convertGridProfile2SbGridProfile} from "./data-converters";
 
 const downloadImageFromUrl = async (url: string, outputDir: string, trackId: string): Promise<boolean> => {
     if (!url || !url.startsWith('http')) return false;
@@ -62,10 +66,10 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
 }
 
 export const downloadTrack = async (
+    boardType: Exclude<BoardType, 'ambient'>,
     id: string,
     uri: string,
     source: TrackSource,
-    board: Exclude<BoardType, 'ambient'>,
     title?: string,
     cover?: string,
 ): Promise<Track> => {
@@ -95,7 +99,7 @@ export const downloadTrack = async (
             source: source,
             title: finalTitle,
             duration: duration,
-            board: board
+            board: boardType
         };
 
         const tracks = tracksStore.get('tracks') || [];
@@ -119,3 +123,71 @@ export const downloadTrack = async (
         throw new Error(errorMessage);
     }
 };
+
+export const downloadTrackAndUpdateButton = async (
+    boardType: Exclude<BoardType, 'ambient'>,
+    profileId: string,
+    buttonId: string,
+    trackId: string,
+    source: Exclude<TrackSourceName, 'list'>,
+    media: YTSearchResult | string,
+    customTitle?: string
+) => {
+    let downloadSuccessful = true;
+    try {
+        let uri = typeof media === 'string' ? media : null;
+
+        if (source === 'youtube') {
+            const stream = await getYoutubeStream((media as YTSearchResult).id);
+            if (!stream) throw new Error('stream_not_found');
+            uri = stream;
+        }
+
+        const title = customTitle !== '' ? customTitle : (source === 'youtube' ? (media as YTSearchResult).name : undefined)
+
+        const track = await downloadTrack(
+            boardType,
+            trackId,
+            uri,
+            {
+                type: source,
+                src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
+            },
+            title,
+            source === 'youtube' ? getBestThumbnail((media as YTSearchResult).thumbnails) : undefined
+        );
+
+        if (!track) throw new Error('download_failed');
+
+        console.log(`[Main] Track ${track.id} downloaded.`);
+    } catch (e) {
+        console.warn(`[Main] Failed to download track: ${e.message}`);
+        downloadSuccessful = false;
+    }
+
+    const profilesStore = getGridProfilesStore(boardType);
+    const profiles = profilesStore.get('profiles');
+
+    const profileIdx = profiles.findIndex(p => p.id === profileId);
+    if (profileIdx === -1) {
+        console.warn(`[Main] Profile with id ${profileId} not found in ${boardType} board while updating button ${buttonId}`);
+        return;
+    }
+    const profile = profiles[profileIdx];
+
+    const btnIdx = profile.buttons.findIndex(b => b.id === buttonId);
+    if (btnIdx === -1) {
+        console.warn(`[Main] Button with id ${buttonId} not found in profile ${profileId} on ${boardType} board while updating after download`);
+        return;
+    }
+    const btn = profile.buttons[btnIdx];
+
+    if (downloadSuccessful) {
+        delete btn.title;
+    } else {
+        profile.buttons.splice(btnIdx, 1);
+    }
+
+    profilesStore.set('profiles', profiles);
+    broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+}

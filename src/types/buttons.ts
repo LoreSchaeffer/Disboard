@@ -26,6 +26,7 @@ export const CropOptionsSchema = z.object({
 });
 
 export const GridBtnSchema = z.object({
+    id: z.uuid(),
     row: z.number().int().min(0).max(49),
     col: z.number().int().min(0).max(49),
     track: z.uuid(),

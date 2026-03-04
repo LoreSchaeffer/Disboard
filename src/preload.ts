@@ -6,7 +6,7 @@ import {
     BoardType,
     DiscordData,
     DiscordStatus,
-    GridBtn,
+    GridBtn, GridPos,
     GridProfile,
     IpcResponse,
     MediaType,
@@ -50,22 +50,23 @@ const settingsApi = {
 }
 
 const gridProfilesApi = {
-    getAll: (boardType: BoardType): Promise<SbGridProfile[]> => ipcRenderer.invoke('grid_profiles:get_all', boardType),
-    get: (boardType: BoardType, id: string): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get', boardType, id),
-    create: (boardType: BoardType, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:create', boardType, profile),
-    update: (boardType: BoardType, id: string, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:update', boardType, id, profile),
-    delete: (boardType: BoardType, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:delete', boardType, id),
-    import: (boardType: BoardType) => ipcRenderer.send('grid_profiles:import', boardType),
-    export: (boardType: BoardType, id: string) => ipcRenderer.send('grid_profiles:export', boardType, id),
-    exportAll: (boardType: BoardType) => ipcRenderer.send('grid_profiles:export_all', boardType),
+    getAll: (boardType: Exclude<BoardType, 'ambient'>): Promise<SbGridProfile[]> => ipcRenderer.invoke('grid_profiles:get_all', boardType),
+    get: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get', boardType, id),
+    create: (boardType: Exclude<BoardType, 'ambient'>, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:create', boardType, profile),
+    update: (boardType: Exclude<BoardType, 'ambient'>, id: string, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:update', boardType, id, profile),
+    delete: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:delete', boardType, id),
+    import: (boardType: Exclude<BoardType, 'ambient'>) => ipcRenderer.send('grid_profiles:import', boardType),
+    export: (boardType: Exclude<BoardType, 'ambient'>, id: string) => ipcRenderer.send('grid_profiles:export', boardType, id),
+    exportAll: (boardType: Exclude<BoardType, 'ambient'>) => ipcRenderer.send('grid_profiles:export_all', boardType),
 
     onMusicChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:music:changed', func),
     onSfxChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:sfx:changed', func),
 
     buttons: {
-        get: (boardType: BoardType, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
-        update: (boardType: BoardType, profileId: string, buttonId: string, updates: Partial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
-        delete: (boardType: BoardType, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
+        get: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
+        update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: Partial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
+        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
+        delete: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
     }
 }
 

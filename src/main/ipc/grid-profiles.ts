@@ -2,7 +2,7 @@ import {app, dialog, ipcMain} from "electron";
 import {clamp} from "../../shared/utils";
 import path from "path";
 import fs from "node:fs/promises";
-import {BoardType, GridBtn, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, SbGridProfileSchema} from "../../types";
+import {BoardType, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, SbGridProfileSchema, TrackSourceName, YTSearchResult} from "../../types";
 import {getGridProfilesStore} from "../storage/profiles-store";
 import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile, convertSbGridBtns2GridBtns} from "../utils/data-converters";
 import {removeNameInvalidChars, validateName} from "../../shared/validation";
@@ -10,8 +10,9 @@ import {fixActiveProfile, generateUUID, generateValidFileName} from "../utils/mi
 import {settingsStore} from "../storage/settings-store";
 import {broadcastData} from "../utils/broadcast";
 import {cacheStore} from "../storage/cache-store";
-import {getPosFromButtonId} from "../../ui/utils/utils";
 import {deepMerge, pruneNulls} from "../utils/objects";
+import {tracksStore} from "../storage/tracks-store";
+import {downloadTrackAndUpdateButton} from "../utils/downloads";
 
 export const setupGridProfilesHandlers = () => {
     ipcMain.handle('grid_profiles:get_all', (_, boardType: Exclude<BoardType, 'ambient'>): SbGridProfile[] => {
@@ -256,10 +257,7 @@ export const setupGridProfilesHandlers = () => {
         const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === profileId);
         if (!profile) return null;
 
-        const buttonPos = getPosFromButtonId(buttonId);
-        if (!buttonPos) return null;
-
-        const btn = profile.buttons.find(b => b.row === buttonPos.row && b.col === buttonPos.col);
+        const btn = profile.buttons.find(b => b.id === buttonId);
         if (!btn) return null;
 
         return convertGridBtn2SbGridBtn(btn);
@@ -271,31 +269,77 @@ export const setupGridProfilesHandlers = () => {
 
         const profileIdx = profiles.findIndex(p => p.id === profileId);
         if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
-
         const profile = profiles[profileIdx];
-        const buttonPos = getPosFromButtonId(buttonId);
-        if (!buttonPos) return {success: false, error: 'invalid_button_id'};
 
-        const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
-        const targetButton: GridBtn = existingButtonIdx !== -1
-            ? profile.buttons[existingButtonIdx]
-            : {row: buttonPos.row, col: buttonPos.col, track: ''};
+        const btnIdx = profile.buttons.findIndex(b => b.id === buttonId);
+        if (btnIdx === -1) return {success: false, error: 'button_not_found'};
+        const existingButton = profile.buttons[btnIdx];
+
 
         if (updates.title) updates.title = removeNameInvalidChars(updates.title);
         if (updates.title === '') delete updates.title;
         if (typeof updates.row === 'number') updates.row = clamp(updates.row, 0, 49);
         if (typeof updates.col === 'number') updates.col = clamp(updates.col, 0, 49);
 
-        const finalButton: GridBtn = pruneNulls(deepMerge(targetButton, updates));
-
-        if (existingButtonIdx !== -1) {
-            profile.buttons[existingButtonIdx] = finalButton;
-        } else {
-            if (finalButton.track && finalButton.track.length > 0) profile.buttons.push(finalButton);
-        }
+        const finalButton: GridBtn = pruneNulls(deepMerge(existingButton, updates));
+        if (!finalButton.track || finalButton.track.length === 0) profile.buttons.splice(btnIdx, 1);
+        else profile.buttons[btnIdx] = finalButton;
 
         profilesStore.set('profiles', profiles);
         broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:buttons:update_track', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): IpcResponse<void> => {
+        if (!profileId || !gridPos || !source || !media) return {success: false, error: 'invalid_parameters'};
+        if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
+        if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
+
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles');
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const btnIdx = profile.buttons.findIndex(b => b.row === gridPos.row && b.col === gridPos.col);
+        const existingBtn = btnIdx !== -1 ? profile.buttons[btnIdx] : null;
+        const btnId = existingBtn ? existingBtn.id : generateUUID();
+
+        const targetBtn: GridBtn = {
+            ...(existingBtn || {}),
+            id: btnId,
+            row: gridPos.row,
+            col: gridPos.col,
+            track: undefined
+        };
+
+        const save = () => {
+            if (existingBtn) profile.buttons[btnIdx] = targetBtn;
+            else profile.buttons.push(targetBtn);
+
+            profilesStore.set('profiles', profiles);
+            broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        }
+
+        if (source === 'list') {
+            const track = tracksStore.get('tracks').find(t => t.id === media);
+            if (!track) return {success: false, error: 'track_not_found'};
+
+            targetBtn.track = track.id;
+
+            save();
+            return {success: true};
+        }
+
+        const trackId = generateUUID();
+        targetBtn.title = 'Importing...';
+        targetBtn.track = trackId;
+
+        save();
+
+        downloadTrackAndUpdateButton(boardType, profileId, btnId, trackId, source, media, customTitle).catch(e => console.error('[Main] Background download error:', e));
 
         return {success: true};
     });
@@ -306,12 +350,9 @@ export const setupGridProfilesHandlers = () => {
 
         const profileIdx = profiles.findIndex(p => p.id === profileId);
         if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
-
         const profile = profiles[profileIdx];
-        const buttonPos = getPosFromButtonId(buttonId);
-        if (!buttonPos) return {success: false, error: 'invalid_button_id'};
 
-        const existingButtonIdx = profile.buttons.findIndex(b => b.row === buttonPos.row && b.col === buttonPos.col);
+        const existingButtonIdx = profile.buttons.findIndex(b => b.id === buttonId);
         if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
 
         profile.buttons.splice(existingButtonIdx, 1);

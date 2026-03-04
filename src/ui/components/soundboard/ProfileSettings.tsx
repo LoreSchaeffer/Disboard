@@ -7,7 +7,7 @@ import {validateName} from "../../utils/validation";
 import {useEffect, useRef, useState} from "react";
 import {useClickOutside} from "../../hooks/useClickOutside";
 import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
-import {useProfiles} from "../../context/ProfilesProvider";
+import {useGridProfiles} from "../../context/GridProfilesProvider";
 
 type ProfileSettingsProps = {
     show: boolean;
@@ -15,7 +15,7 @@ type ProfileSettingsProps = {
 }
 
 const ProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
-    const {activeProfile, profiles} = useProfiles();
+    const {activeProfile, profiles} = useGridProfiles();
     const {shouldRender, transitionProps} = useAnimatedUnmount(show);
 
     const [profileName, setProfileName] = useState<string>("");

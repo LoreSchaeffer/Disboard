@@ -84,6 +84,9 @@ export const createBoardWin = (boardType: BoardType) => {
         height: boardSettings.height,
         minWidth: 1080,
         minHeight: 608,
+        data: {
+            boardType: boardType
+        },
         onResize: (win) => {
             clearTimeout(resizeTimeout);
 

@@ -10,6 +10,7 @@ import {DiscordBot} from "./main/utils/discord-bot";
 import {settingsStore} from "./main/storage/settings-store";
 import {createBoardWin} from "./main/windows";
 import {BoardType} from "./types";
+import {setupLogger} from "./main/utils/logger";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -37,6 +38,8 @@ const setupCorsHandler = () => {
 };
 
 const initApp = async () => {
+    setupLogger();
+
     console.log('[Main] Running initialization sequence...');
     setAppPriority();
 

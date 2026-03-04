@@ -1,18 +1,13 @@
-import {useWindow} from "./context/WindowContext";
 import {useNavigation} from "./context/NavigationContext";
 import {PlayerProvider} from "./context/PlayerContext";
 import {ROUTES} from "./config/routes";
-import ProfilesProvider, {useProfiles} from "./context/ProfilesProvider";
-import SfxProfilesProvider, {useSfxProfiles} from "./context/SfxProfilesProvider";
-import {PropsWithChildren, useEffect, useState} from "react";
+import GridProfilesProvider, {useGridProfiles} from "./context/GridProfilesProvider";
+import {PropsWithChildren} from "react";
 
 const FallbackPage = () => <div>Page not found!</div>
 
 const Router = () => {
-    const {ready} = useWindow();
     const {visibleStack} = useNavigation();
-
-    if (!ready) return null;
 
     return (
         <>
@@ -34,19 +29,17 @@ const Router = () => {
 
                 if (route.useProfiles) {
                     content = (
-                        <ProfilesProvider>
-                            <ProfilesWrapper>
+                        <GridProfilesProvider>
+                            <GridProfilesWrapper>
                                 {content}
-                            </ProfilesWrapper>
-                        </ProfilesProvider>
+                            </GridProfilesWrapper>
+                        </GridProfilesProvider>
                     );
                 } else if (route.useSfxProfiles) {
                     content = (
-                        <SfxProfilesProvider>
-                            <SfxProfilesWrapper>
-                                {content}
-                            </SfxProfilesWrapper>
-                        </SfxProfilesProvider>
+                        <>
+                            {content} // TODO Replace with Ambient profiles wrapper
+                        </>
                     );
                 }
 
@@ -66,15 +59,8 @@ const Router = () => {
     )
 }
 
-const ProfilesWrapper = ({children}: PropsWithChildren) => {
-    const {ready} = useProfiles();
-    if (!ready) return null;
-
-    return children;
-}
-
-const SfxProfilesWrapper = ({children}: PropsWithChildren) => {
-    const {ready} = useSfxProfiles();
+const GridProfilesWrapper = ({children}: PropsWithChildren) => {
+    const {ready} = useGridProfiles();
     if (!ready) return null;
 
     return children;

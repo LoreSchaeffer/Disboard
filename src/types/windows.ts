@@ -18,8 +18,9 @@ export type WindowInfo = {
 }
 
 export type StaticWindowData<T> = {
-    type: Route;
-    data: T;
+    type?: Route;
+    boardType?: BoardType;
+    data?: T;
 }
 
 // Static Window Data

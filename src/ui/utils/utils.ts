@@ -1,6 +1,6 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
-import {GridPos} from "../../types";
+import {PlayerTrack, SbGridBtn} from "../../types";
 
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
@@ -102,7 +102,7 @@ export const getVolumeIcon = (volume: number): ElementType => {
     return PiSpeakerHighBold;
 }
 
-export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
+export const playerTrackFromBtn = (btn: SbGridBtn): PlayerTrack => {
     return {
         ...btn.track,
         cropOptions: btn.cropOptions || undefined,

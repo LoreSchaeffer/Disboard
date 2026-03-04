@@ -14,11 +14,11 @@ import ProfileSettings from "../components/soundboard/ProfileSettings";
 import {useNavigation} from "../context/NavigationContext";
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
-import {useProfiles} from "../context/ProfilesProvider";
+import {useGridProfiles} from "../context/GridProfilesProvider";
 
 const MainSoundboardWin = () => {
     const {settings, updateSettingsAsync} = useWindow();
-    const {profiles, activeProfile} = useProfiles();
+    const {profiles, activeProfile} = useGridProfiles();
     const {player} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
     const {showContextMenu} = useContextMenu();

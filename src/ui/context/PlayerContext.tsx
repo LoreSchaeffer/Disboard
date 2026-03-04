@@ -1,8 +1,7 @@
 import {Player, PlayerStatus} from "../utils/player";
 import {createContext, PropsWithChildren, useContext, useEffect, useState} from "react";
 import {Time} from "../utils/time";
-import {RepeatMode} from "../../types/common";
-import {PlayerTrack} from "../../types/data";
+import {PlayerTrack, RepeatMode} from "../../types";
 import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
@@ -162,9 +161,10 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         };
     }, [previewPlayer]);
 
-    useEffect(() => {
-        if (settings) player.setRepeatMode(settings.repeat);
-    }, [settings]);
+    // TODO Move this only to music board
+    // useEffect(() => {
+    //     if (settings) player.setRepeatMode(settings.music.repeat);
+    // }, [settings]);
 
     return (
         <PlayerContext.Provider value={{

@@ -1,7 +1,5 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
-import {Settings} from "../../types/settings";
-import {StaticWindowData} from "../../types/windows";
-import {Route} from "../../types/routes";
+import {Route, Settings, StaticWindowData, WindowInfo} from "../../types";
 
 type WindowContextType = {
     ready: boolean;
@@ -9,7 +7,7 @@ type WindowContextType = {
     resizable: boolean;
     route: Route | null;
     settings: Settings | null;
-    updateSettingsAsync?: (settings: Partial<Settings>) => void;
+    updateSettingsAsync: (settings: Partial<Settings>) => void;
     data: StaticWindowData<unknown> | null;
 }
 
@@ -27,19 +25,18 @@ export default function WindowProvider({children}: PropsWithChildren) {
 
     useEffect(() => {
         const loadInitialData = async () => {
-            const winData = await window.electron.getWindow();
-            setParent(winData.parent);
-            setResizable(winData.resizable);
-            setRoute(winData.route);
-            setData(winData.data || null);
+            const winInfo: WindowInfo = await window.electron.window.getInfo();
+            setParent(winInfo.parent);
+            setResizable(winInfo.resizable);
+            setRoute(winInfo.route);
+            setData(winInfo.data || null);
 
-            const initialSettings = await window.electron.getSettings();
-            setSettings(initialSettings);
+            setSettings(await window.electron.settings.get());
         };
 
         loadInitialData();
 
-        const unsubSettings = window.electron.onSettingsChanged(settings => {
+        const unsubSettings = window.electron.settings.onChanged((settings: Settings) => {
             setSettings(settings);
         });
 
@@ -62,12 +59,13 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const updateSettingsAsync = (newSettings: Partial<Settings>) => {
         if (!settings) return;
 
-        const updatedSettings = {...settings, ...newSettings};
-        setSettings(updatedSettings);
+        setSettings(prevSettings =>
+            prevSettings ? {...prevSettings, ...newSettings} : null
+        );
 
         if (saveSettingsTimeoutRef.current) clearTimeout(saveSettingsTimeoutRef.current);
         saveSettingsTimeoutRef.current = setTimeout(() => {
-            window.electron.updateSettings(newSettings);
+            window.electron.settings.set(newSettings);
             saveSettingsTimeoutRef.current = null;
         }, 250);
     }

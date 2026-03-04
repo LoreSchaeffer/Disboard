@@ -1,6 +1,6 @@
 import {createContext, PropsWithChildren, useCallback, useContext, useEffect, useRef, useState} from "react";
 import {useWindow} from "./WindowContext";
-import {Route} from "../../types/routes";
+import {Route} from "../../types";
 
 export type NavigationOptions = {
     replace?: boolean;

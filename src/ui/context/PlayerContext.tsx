@@ -1,7 +1,7 @@
 import {Player, PlayerStatus} from "../utils/player";
 import {createContext, PropsWithChildren, useContext, useEffect, useState} from "react";
 import {Time} from "../utils/time";
-import {PlayerTrack, RepeatMode} from "../../types";
+import {BoardType, PlayerTrack, RepeatMode} from "../../types";
 import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
@@ -24,7 +24,7 @@ type PlayerContextType = {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider = ({children}: PropsWithChildren) => {
-    const {settings} = useWindow();
+    const {data} = useWindow();
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 
@@ -90,9 +90,15 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setDuration(new Time(0, 'ms'));
         });
 
-        const unsub = window.electron.player.onPreviewStopped(() => {
+        const unsubStopped = window.electron.player.onPreviewStopped(() => {
             if (!previewPlayer) return;
             previewPlayer.stop();
+        });
+
+        const unsubPlayNow = window.electron.player.onPlayNow((boardType: BoardType, track: PlayerTrack) => {
+            if (!data || data.boardType !== boardType) return;
+            if (!player) return;
+            player.playNow(track);
         });
 
         return () => {
@@ -108,7 +114,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             player.off('error');
             player.off('reset');
 
-            unsub();
+            unsubStopped();
+            unsubPlayNow();
         }
     }, [player]);
 

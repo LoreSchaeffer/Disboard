@@ -10,7 +10,7 @@ import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBo
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
 import {useProfiles} from "../../context/ProfilesProvider";
-import {RepeatMode} from "../../../types";
+import {GridMediaSelectorWin, RepeatMode} from "../../../types";
 
 type PlayerProps = {
     showProfileSettings?: () => void;
@@ -46,7 +46,7 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     };
 
     const search = () => {
-        window.electron.window.open('grid_media_selector', {action: 'play_now'});
+        window.electron.window.open('grid_media_selector', {boardType: boardType, action: 'play_now'} as GridMediaSelectorWin);
     };
 
     const changeVolume = (_: number, newValue: number) => {

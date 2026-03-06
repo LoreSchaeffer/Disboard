@@ -110,3 +110,9 @@ export const playerTrackFromBtn = (btn: SbGridBtn): PlayerTrack => {
         volumeOverride: btn.volumeOverride || undefined
     }
 }
+
+export const getBestThumbnail = (thumbnails: ({ url: string; width: number; height: number })[]): string | null => {
+    if (thumbnails.length === 0) return null;
+    const sorted = thumbnails.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    return sorted[0].url;
+}

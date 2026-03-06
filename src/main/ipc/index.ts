@@ -6,12 +6,14 @@ import {setupSystemHandlers} from "./system";
 import {setupMusicApiHandlers} from "./music-api";
 import {setupDiscordBridgeHandlers} from "./discord";
 import {setupPlayerHandlers} from "./player";
+import {setupAmbientProfilesHandlers} from "./ambient-profiles";
 
 export const registerIpcHandlers = () => {
     setupDiscordBridgeHandlers();
     setupMusicApiHandlers();
     setupPlayerHandlers();
     setupGridProfilesHandlers();
+    setupAmbientProfilesHandlers();
     setupSettingsHandlers();
     setupSystemHandlers();
     setupTracksHandlers();

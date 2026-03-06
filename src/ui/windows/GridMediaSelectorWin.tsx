@@ -8,11 +8,11 @@ import Button from "../components/misc/Button";
 import Separator from "../components/misc/Separator";
 import Input from "../components/forms/Input";
 import {formatTime, Time} from "../utils/time";
-import {getBestThumbnail} from "../../main/utils/music-api";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
 import {BoardType, GridMediaSelectorWinData, Track, TrackSourceName, YTSearchResult} from "../../types";
-import {removeNameInvalidChars} from "../../shared/validation";
+import {removeNameInvalidChars} from "../utils/validation";
+import {getBestThumbnail} from "../utils/utils";
 
 const GridMediaSelectorWin = () => {
         const {data} = useWindow();

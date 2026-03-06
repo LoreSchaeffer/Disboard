@@ -48,7 +48,11 @@ const MusicBoardWin = () => {
     }, [settings]);
 
     useEffect(() => {
-        setTitlebarContent(<ProfileSelector/>);
+        setTitlebarContent(<ProfileSelector
+            boardType={'music'}
+            gridProfiles={gridProfiles}
+            activeGridProfile={activeGridProfile}
+        />);
     }, [gridProfiles, activeGridProfile]);
 
     return (

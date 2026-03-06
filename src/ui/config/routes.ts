@@ -6,6 +6,7 @@ import DeleteConfirmationWin from "../windows/DeleteConfirmationWin";
 import {Route} from "../../types";
 import EmptyWin from "../windows/EmptyWin";
 import GridBtnSettingsWin from "../windows/GridBtnSettingsWin";
+import GridMediaSelectorWin from "../windows/GridMediaSelectorWin";
 
 export type RouteConfig = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,7 +29,7 @@ export const ROUTES: Record<Route, RouteConfig> = {
     ambient_board: {component: EmptyWin, contexts: ['player', 'profiles']},
 
     grid_btn_settings: {component: GridBtnSettingsWin, contexts: ['player', 'profiles']},
-    grid_media_selector: {component: EmptyWin, contexts: ['player', 'profiles']},
+    grid_media_selector: {component: GridMediaSelectorWin, contexts: ['player', 'profiles']},
     ambient_btn_settings: {component: EmptyWin, contexts: ['player', 'profiles']},
     ambient_media_selector: {component: EmptyWin, contexts: ['player', 'profiles']},
 

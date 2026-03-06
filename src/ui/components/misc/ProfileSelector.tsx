@@ -4,14 +4,20 @@ import {FaChevronDown} from "react-icons/fa6";
 import React, {useState} from "react";
 import {useContextMenu} from "../../context/ContextMenuContext";
 import {useNavigation} from "../../context/NavigationContext";
-import {useProfiles} from "../../context/ProfilesProvider";
 import {ContextMenuItemData} from "../context_menu/ContextMenuItem";
 import {BoardType, SbAmbientProfile, SbGridProfile} from "../../../types";
 import {IoMdRadioButtonOff, IoMdRadioButtonOn} from "react-icons/io";
 import {PiArrowSquareInBold, PiArrowSquareOutBold, PiPlusBold, PiTrashBold} from "react-icons/pi";
 
-const ProfileSelector = () => {
-    const {boardType, activeGridProfile, activeAmbientProfile, gridProfiles, ambientProfiles} = useProfiles();
+type ProfileSelectorProps = {
+    boardType: BoardType,
+    activeGridProfile?: SbGridProfile,
+    activeAmbientProfile?: SbAmbientProfile,
+    gridProfiles?: SbGridProfile[],
+    ambientProfiles?: SbAmbientProfile[]
+}
+
+const ProfileSelector = ({boardType, activeGridProfile, activeAmbientProfile, gridProfiles, ambientProfiles}: ProfileSelectorProps) => {
     const {showContextMenu} = useContextMenu();
     const {navigate} = useNavigation();
 

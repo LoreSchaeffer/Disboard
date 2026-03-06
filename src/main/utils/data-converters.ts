@@ -1,4 +1,4 @@
-import {AmbientProfile, GridBtn, GridProfile, PlayerTrack, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {AmbientBtn, AmbientProfile, GridBtn, GridProfile, PlayerTrack, SbAmbientBtn, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
 import {getYoutubeStream} from "./music-api";
 import {generateUUID} from "./misc";
@@ -56,11 +56,27 @@ export const convertSbGridBtns2GridBtns = (sbGridBtns: SbGridBtn[]): GridBtn[] =
     return sbGridBtns.map(convertSbGridBtn2GridBtn);
 }
 
+export const convertAmbientBtn2SbAmbientBtn = (ambientBtn: AmbientBtn): SbAmbientBtn => {
+    return null;
+}
+
+export const convertAmbientBtns2SbAmbientBtns = (ambientBtns: AmbientBtn[]): SbAmbientBtn[] => {
+    return null;
+}
+
 export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientProfile): SbAmbientProfile => {
     return {
         ...ambientProfile,
         // TODO
     }
+}
+
+export const convertSbAmbientBtn2AmbientBtn = (sbAmbientBtn: SbAmbientBtn): AmbientBtn => {
+    return null;
+}
+
+export const convertSbAmbientBtns2AmbientBtns = (sbAmbientBtns: SbAmbientBtn[]): AmbientBtn[] => {
+    return null;
 }
 
 export const createPlayerTrack = async (source: TrackSourceName, media: YTSearchResult | string): Promise<PlayerTrack | null> => {

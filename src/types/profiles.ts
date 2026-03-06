@@ -16,6 +16,9 @@ export const GridProfileSchema = z.object({
 export const AmbientProfileSchema = z.object({
     id: z.uuid(),
     name: z.string(),
+    type: BoardTypeSchema.refine(val => val === 'ambient', {
+        message: "'ambient' type is the only type allowed as an ambient profile type",
+    }),
     buttons: z.array(AmbientBtnSchema)
 });
 

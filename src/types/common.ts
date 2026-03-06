@@ -26,19 +26,6 @@ export type IpcResponse<T> = {
     error?: string;
 }
 
-export type GridMediaSelectorWin = {
-    boardType: Exclude<BoardType, 'ambient'>;
-    action: MediaSelectorAction;
-    profileId?: string;
-    buttonId?: string;
-}
-
-export type GridBtnSettingsWin = {
-    boardType: Exclude<BoardType, 'ambient'>;
-    profileId: string;
-    buttonId: string;
-}
-
 export type DeepPartial<T> = T extends object ? {
     [P in keyof T]?: DeepPartial<T[P]>;
 } : T;

@@ -1,22 +1,17 @@
 import {useNavigation} from "./context/NavigationContext";
 import {PlayerProvider} from "./context/PlayerContext";
 import {AppProviderName, appProviderPriorities, ROUTES} from "./config/routes";
-import GridProfilesProvider, {useGridProfiles} from "./context/GridProfilesProvider";
+import ProfilesProvider, {useProfiles} from "./context/ProfilesProvider";
 import {FC, PropsWithChildren} from "react";
 
 const FallbackPage = () => <div>Page not found!</div>
 
 const PROVIDERS_MAP: Record<AppProviderName, FC<PropsWithChildren>> = {
     player: ({children}) => <PlayerProvider>{children}</PlayerProvider>,
-    grid_profiles: ({children}) => (
-        <GridProfilesProvider>
-            <GridProfilesWrapper>{children}</GridProfilesWrapper>
-        </GridProfilesProvider>
-    ),
-    ambient_profiles: ({children}) => (
-        // <AmbientProfilesProvider>
-        <AmbientProfilesWrapper>{children}</AmbientProfilesWrapper>
-        // </AmbientProfilesProvider>
+    profiles: ({children}) => (
+        <ProfilesProvider>
+            <ProfilesWrapper>{children}</ProfilesWrapper>
+        </ProfilesProvider>
     )
 };
 
@@ -65,16 +60,10 @@ const Router = () => {
     )
 }
 
-const GridProfilesWrapper = ({children}: PropsWithChildren) => {
-    const {ready} = useGridProfiles();
+const ProfilesWrapper = ({children}: PropsWithChildren) => {
+    const {ready} = useProfiles();
     if (!ready) return null;
     return <>{children}</>;
 }
-
-const AmbientProfilesWrapper = ({children}: PropsWithChildren) => {
-    // const {ready} = useAmbientProfiles();
-    // if (!ready) return null;
-    return <>{children}</>;
-};
 
 export default Router;

@@ -4,7 +4,7 @@ import React, {ReactNode, useEffect, useState} from "react";
 import {useNavigation} from "../context/NavigationContext";
 import {clsx} from "clsx";
 import Button from "../components/misc/Button";
-import {BoardType, SbGridBtn} from "../../types";
+import {BoardType, SbAmbientBtn, SbGridBtn} from "../../types";
 
 export type ResourceType = 'profile' | 'button';
 
@@ -54,7 +54,20 @@ const DeleteConfirmationWin = () => {
                 });
             }
         } else if (data.boardType === 'ambient') {
-            // TODO To be implemented later
+            if (data.resource === 'profile') {
+                window.electron.ambientProfiles.get(data.id).then(profile => {
+                    if (isMounted) setDisplayName(profile?.name || data.id);
+                });
+            } else if (data.resource === 'button') {
+                window.electron.ambientProfiles.getActive().then(profile => {
+                    if (!profile) return;
+
+                    const btn: SbAmbientBtn | undefined = profile.buttons.find(b => b.id === data.id);
+                    if (!btn) return;
+
+                    if (isMounted) setDisplayName(btn.title || 'Unknown Button');
+                })
+            }
         }
 
         return () => {

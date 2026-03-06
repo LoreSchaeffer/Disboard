@@ -26,8 +26,7 @@ const NewProfileWin = () => {
 
     useEffect(() => {
         if (boardType === 'ambient') {
-            // TODO To implement
-            setProfiles([]);
+            window.electron.ambientProfiles.getAll().then(setProfiles);
         } else {
             window.electron.gridProfiles.getAll(boardType).then(setProfiles);
         }
@@ -49,7 +48,12 @@ const NewProfileWin = () => {
         if (profileNameError) return;
 
         if (boardType === 'ambient') {
-            // TODO To implement
+            window.electron.ambientProfiles.create({
+                name: profileName
+            }).then(res => {
+                if (res.success) back();
+                else console.error('Failed to create profile:', res.error);
+            })
         } else {
             window.electron.gridProfiles.create(boardType, {
                 name: profileName,

@@ -11,12 +11,12 @@ import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayFill, PiPlayli
 import {FaRegPaste} from "react-icons/fa6";
 import {playerTrackFromBtn} from "../../../utils/utils";
 import {useNavigation} from "../../../context/NavigationContext";
-import {useGridProfiles} from "../../../context/GridProfilesProvider";
-import {BtnStyle, SbGridBtn} from "../../../../types";
+import {useProfiles} from "../../../context/ProfilesProvider";
+import {BoardType, BtnStyle, SbGridBtn} from "../../../../types";
 
 const GridSoundboard = () => {
     const {settings} = useWindow();
-    const {activeProfile, boardType} = useGridProfiles();
+    const {activeGridProfile, boardType} = useProfiles();
     const {showContextMenu} = useContextMenu();
     const {player, previewPlayer} = usePlayer();
     const {navigate} = useNavigation();
@@ -24,18 +24,18 @@ const GridSoundboard = () => {
     const [copiedButton, setCopiedButton] = useState<SbGridBtn | null>(null);
     const [copiedStyle, setCopiedStyle] = useState<BtnStyle | null>(null);
 
-    const rows = activeProfile?.rows || 8;
-    const cols = activeProfile?.cols || 10;
+    const rows = activeGridProfile?.rows || 8;
+    const cols = activeGridProfile?.cols || 10;
 
     const buttonMap = useMemo(() => {
         const map = new Map<string, SbGridBtn>();
-        if (!activeProfile?.buttons) return map;
+        if (!activeGridProfile?.buttons) return map;
 
-        for (const btn of activeProfile.buttons) {
+        for (const btn of activeGridProfile.buttons) {
             map.set(`${btn.row}-${btn.col}`, btn);
         }
         return map;
-    }, [activeProfile?.buttons]);
+    }, [activeGridProfile?.buttons]);
 
     const onClick = (_: MouseEvent, button: SbGridBtn) => {
         if (!button || !button.track) return
@@ -85,9 +85,9 @@ const GridSoundboard = () => {
                 label: 'Choose track',
                 icon: <PiFileBold/>,
                 onClick: () => window.electron.window.open('grid_media_selector', {
+                    boardType: boardType as Exclude<BoardType, 'ambient'>,
                     action: 'update_button',
-                    profileId: activeProfile.id,
-                    buttonId: btn.id !== '' ? btn.id : undefined,
+                    profileId: activeGridProfile.id,
                     gridPos: {row: btn.row, col: btn.col},
                 })
             });
@@ -98,7 +98,7 @@ const GridSoundboard = () => {
                         label: 'Settings',
                         icon: <PiGearSixBold/>,
                         onClick: () => window.electron.window.open('grid_btn_settings', {
-                            profileId: activeProfile.id,
+                            profileId: activeGridProfile.id,
                             buttonId: btn.id
                         })
                     },
@@ -118,7 +118,7 @@ const GridSoundboard = () => {
                         label: 'Paste button',
                         icon: <FaRegPaste/>,
                         onClick: () => {
-                            window.electron.gridProfiles.buttons.update(boardType, activeProfile.id, btn.id, {
+                            window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id, {
                                 row: btn.row,
                                 col: btn.col,
                                 track: copiedButton.track?.id
@@ -142,13 +142,13 @@ const GridSoundboard = () => {
                     {
                         label: 'Paste style',
                         icon: <FaRegPaste/>,
-                        onClick: () => window.electron.gridProfiles.buttons.update(boardType, activeProfile.id, btn.id, {style: {...copiedStyle}}),
+                        onClick: () => window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id, {style: {...copiedStyle}}),
                         disabled: !copiedStyle
                     },
                     {
                         label: 'Clear style',
                         icon: <PiBroomBold/>,
-                        onClick: () => window.electron.gridProfiles.buttons.update(boardType, activeProfile.id, btn.id, {style: null}),
+                        onClick: () => window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id, {style: null}),
                         disabled: !btn.style
                     },
                     {separator: true},
@@ -158,14 +158,14 @@ const GridSoundboard = () => {
                         variant: 'danger',
                         onClick: () => {
                             if (settings && !settings.confirmButtonDeletion) {
-                                window.electron.gridProfiles.buttons.delete(boardType, activeProfile.id, btn.id);
+                                window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id);
                             } else {
                                 navigate('delete_confirmation', {
                                     replace: false,
                                     data: {
                                         resource: 'button',
                                         id: btn.id,
-                                        onConfirm: () => window.electron.gridProfiles.buttons.delete(boardType, activeProfile.id, btn.id)
+                                        onConfirm: () => window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id)
                                     }
                                 });
                             }
@@ -178,7 +178,7 @@ const GridSoundboard = () => {
         }
 
         showContextMenu({items: getItems(), event});
-    }, [activeProfile?.id, boardType, copiedButton, copiedStyle, navigate, player, previewPlayer, settings, showContextMenu]);
+    }, [activeGridProfile?.id, boardType, copiedButton, copiedStyle, navigate, player, previewPlayer, settings, showContextMenu]);
 
     const swapButtons = useCallback((fromRow: number, fromCol: number, toRow: number, toCol: number) => {
         const fromButton = buttonMap.get(`${fromRow}-${fromCol}`);
@@ -197,10 +197,10 @@ const GridSoundboard = () => {
         //     toButton.col = fromCol;
         // }
 
-        window.electron.gridProfiles.buttons.swap(boardType, activeProfile.id, {row: fromRow, col: fromCol}, {row: toRow, col: toCol});
-    }, [activeProfile?.id, boardType, buttonMap]);
+        window.electron.gridProfiles.buttons.swap(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {row: fromRow, col: fromCol}, {row: toRow, col: toCol});
+    }, [activeGridProfile?.id, boardType, buttonMap]);
 
-    if (!activeProfile) return null;
+    if (!activeGridProfile) return null;
 
     return (
         <DndProvider backend={HTML5Backend}>

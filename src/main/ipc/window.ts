@@ -44,8 +44,8 @@ export const setupWindowHandlers = () => {
 
         switch (route) {
             case 'grid_media_selector': {
-                const {boardType, action, profileId, buttonId} = (args || {}) as GridMediaSelectorWin;
-                createGridMediaSelectorWin(boardType, parentId, action, profileId, buttonId);
+                const {boardType, action, profileId, gridPos} = (args || {}) as GridMediaSelectorWin;
+                createGridMediaSelectorWin(boardType, parentId, action, profileId, gridPos);
                 break;
             }
             case 'grid_btn_settings': {

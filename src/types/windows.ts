@@ -7,33 +7,44 @@ export type WindowOptions = BrowserWindowConstructorOptions & {
     onLoaded?: (win: BrowserWindow) => void;
     onReady?: (win: BrowserWindow) => void;
     onResize?: (win: BrowserWindow) => void;
-    data?: StaticWindowData<unknown>;
+    data?: StaticWinData<unknown>;
 }
 
 export type WindowInfo = {
     parent: number | null;
     resizable: boolean;
     route: Route;
-    data?: StaticWindowData<unknown>;
+    data?: StaticWinData<unknown>;
 }
 
-export type StaticWindowData<T> = {
+export type StaticWinData<T> = {
     type?: Route;
     boardType?: BoardType;
     data?: T;
 }
 
-// Static Window Data
-export type GridBtnWindowData = {
+// Open Window Data
+export type GridMediaSelectorWin = {
+    boardType: Exclude<BoardType, 'ambient'>;
+    action: MediaSelectorAction;
+    profileId?: string;
+    gridPos?: GridPos;
+}
+
+export type GridBtnSettingsWin = {
     boardType: Exclude<BoardType, 'ambient'>;
     profileId: string;
     buttonId: string;
 }
 
-export type GridMediaSelectorWindowData = {
-    boardType: Exclude<BoardType, 'ambient'>;
+// Static Window Data
+export type GridBtnWinData = {
+    profileId: string;
+    buttonId: string;
+}
+
+export type GridMediaSelectorWinData = {
     action: MediaSelectorAction;
     profileId: string;
-    buttonId?: string;
     gridPos: GridPos;
 }

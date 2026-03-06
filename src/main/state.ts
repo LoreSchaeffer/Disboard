@@ -1,4 +1,4 @@
-import {StaticWindowData, WindowOptions} from "../types";
+import {StaticWinData, WindowOptions} from "../types";
 import {MusicApi} from "./utils/music-api";
 import {DiscordBot} from "./utils/discord-bot";
 
@@ -7,7 +7,7 @@ class StateManager {
     public discordBot: DiscordBot | null = null;
 
     public winOptions = new Map<number, WindowOptions>();
-    public winStaticData = new Map<number, StaticWindowData<unknown>>();
+    public winStaticData = new Map<number, StaticWinData<unknown>>();
 }
 
 export const state = new StateManager();

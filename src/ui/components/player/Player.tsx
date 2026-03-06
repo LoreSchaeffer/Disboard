@@ -9,7 +9,7 @@ import {formatTime} from "../../utils/time";
 import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
-import {useGridProfiles} from "../../context/GridProfilesProvider";
+import {useProfiles} from "../../context/ProfilesProvider";
 import {RepeatMode} from "../../../types";
 
 type PlayerProps = {
@@ -19,7 +19,7 @@ type PlayerProps = {
 
 const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const {settings, updateSettingsAsync} = useWindow();
-    const {boardType} = useGridProfiles();
+    const {boardType} = useProfiles();
     const {player, status, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
 
     const [volume, setVolume] = useState<number>(settings[boardType].volume);

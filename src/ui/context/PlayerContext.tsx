@@ -90,6 +90,11 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setDuration(new Time(0, 'ms'));
         });
 
+        const unsub = window.electron.player.onPreviewStopped(() => {
+            if (!previewPlayer) return;
+            previewPlayer.stop();
+        });
+
         return () => {
             player.off('play');
             player.off('pause');
@@ -102,6 +107,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             player.off('repeatupdate');
             player.off('error');
             player.off('reset');
+
+            unsub();
         }
     }, [player]);
 

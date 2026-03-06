@@ -1,13 +1,9 @@
-import styles from './MediaSelectorWin.module.css';
+import styles from './GridMediaSelectorWin.module.css';
 import React, {useEffect, useMemo, useState} from "react";
 import {PiFloppyDiskBold, PiFolderOpenBold, PiGlobeBold, PiMagnifyingGlassBold, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopFill, PiXBold, PiYoutubeLogoFill} from "react-icons/pi";
 import {clsx} from "clsx";
 import {useWindow} from "../context/WindowContext";
 import {usePlayer} from "../context/PlayerContext";
-import {MediaSelectorAction} from "../../types/common";
-import {Track, TrackSource} from "../../types/data";
-import {YTSearchResult} from "../../types/music-api";
-import {MediaSelectorWindowData} from "../../types/windows";
 import Button from "../components/misc/Button";
 import Separator from "../components/misc/Separator";
 import Input from "../components/forms/Input";
@@ -15,25 +11,35 @@ import {formatTime, Time} from "../utils/time";
 import {getBestThumbnail} from "../../main/utils/music-api";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
-import {removeNameInvalidChars} from "../../main/utils/validation";
+import {BoardType, GridMediaSelectorWinData, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {removeNameInvalidChars} from "../../shared/validation";
 
-const MediaSelectorWin = () => {
+const GridMediaSelectorWin = () => {
         const {data} = useWindow();
         const {previewPlayer, previewStatus} = usePlayer();
-        const [action, setAction] = useState<MediaSelectorAction>(null);
-        const [mode, setMode] = useState<TrackSource>('youtube');
+        const [winData, setWinData] = useState<GridMediaSelectorWinData | null>(null);
         const [useMusicApi, setUseMusicApi] = useState<boolean>(false);
-        const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string>(null);
+        const [mode, setMode] = useState<TrackSourceName>('youtube');
+        const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string | null>(null);
         const [customTitle, setCustomTitle] = useState<string>('');
 
+        const handleModeChange = (newMode: TrackSourceName) => {
+            if (newMode === mode) return;
+            setMode(newMode);
+            setSelectedMedia(null);
+            setCustomTitle('');
+        }
+
         useEffect(() => {
-            window.electron.useMusicApi().then(setUseMusicApi);
+            window.electron.music.useApi().then(res => {
+                setUseMusicApi(res);
+                if (!res) handleModeChange('file');
+            });
         }, []);
 
         useEffect(() => {
-            if (!data || data.type !== 'media_selector') return;
-            const winData = data.data as MediaSelectorWindowData;
-            setAction(winData.action);
+            if (!data || data.type !== 'grid_media_selector') return;
+            setWinData(data.data as GridMediaSelectorWinData);
         }, [data]);
 
         const handleOnChange = (selected: YTSearchResult | string) => {
@@ -52,33 +58,46 @@ const MediaSelectorWin = () => {
 
             if (!selectedMedia) return;
 
-            const res = await window.electron.getVolatileTrack(mode, selectedMedia);
+            window.electron.player.stopPreview();
+
+            const res = await window.electron.tracks.getVolatile(mode, selectedMedia);
             if (!res.success) return;
-            else previewPlayer.playNow(res.data);
+
+            previewPlayer.playNow(res.data);
         }
 
         const canSubmit = useMemo(() => {
             if (!selectedMedia) return false;
-            if (mode === 'youtube' && !(selectedMedia as YTSearchResult).id) return false;
-            return !(mode !== 'youtube' && (selectedMedia as string).trim().length < 2);
+
+            if (mode === 'youtube') return typeof selectedMedia === 'object' && 'id' in selectedMedia;
+            if (typeof selectedMedia === 'string') return selectedMedia.trim().length >= 2;
+
+            return false;
         }, [selectedMedia, mode]);
 
-        const handleSubmit = () => {
-            if (!data || data.type !== 'media_selector') return;
-            const winData = data.data as MediaSelectorWindowData;
+        const handleSubmit = async () => {
             if (!canSubmit) return;
 
-            if (action === 'play_now') {
-                window.electron.playNow(mode, selectedMedia, customTitle);
-                window.electron.close();
+            if (winData.action === 'play_now') {
+                const res = await window.electron.player.playNow(data.boardType as Exclude<BoardType, 'ambient'>, mode, selectedMedia, customTitle);
+                if (res.success) window.electron.window.close();
+                else console.error('Failed to play track:', res.error);
             } else {
-                window.electron.addTrack(mode, selectedMedia, customTitle,  winData.profileId, winData.buttonId)
-                    .then((res) => {
-                    if (res.success) window.electron.close();
-                    else console.log('Failed to add track:', res.error);
-                });
+                const res = await window.electron.gridProfiles.buttons.updateTrack(
+                    data.boardType as Exclude<BoardType, 'ambient'>,
+                    winData.profileId,
+                    winData.gridPos,
+                    mode,
+                    selectedMedia,
+                    customTitle
+                );
+
+                if (res.success) window.electron.window.close();
+                else console.error('Failed to save track:', res.error);
             }
         }
+
+        if (!winData) return null;
 
         return (
             <div className={'bordered'}>
@@ -87,28 +106,28 @@ const MediaSelectorWin = () => {
                         variant={mode === 'youtube' ? 'primary' : 'secondary'}
                         icon={<PiYoutubeLogoFill/>}
                         disabled={!useMusicApi}
-                        onClick={() => setMode('youtube')}
+                        onClick={() => handleModeChange('youtube')}
                     >
                         YouTube
                     </Button>
                     <Button
                         variant={mode === 'file' ? 'primary' : 'secondary'}
                         icon={<PiFolderOpenBold/>}
-                        onClick={() => setMode('file')}
+                        onClick={() => handleModeChange('file')}
                     >
                         File
                     </Button>
                     <Button
                         variant={mode === 'url' ? 'primary' : 'secondary'}
                         icon={<PiGlobeBold/>}
-                        onClick={() => setMode('url')}
+                        onClick={() => handleModeChange('url')}
                     >
                         URL
                     </Button>
                     <Button
                         variant={mode === 'list' ? 'primary' : 'secondary'}
                         icon={<PiPlaylistBold/>}
-                        onClick={() => setMode('list')}
+                        onClick={() => handleModeChange('list')}
                     >
                         List
                     </Button>
@@ -151,17 +170,17 @@ const MediaSelectorWin = () => {
                     <Button
                         variant={'danger'}
                         icon={<PiXBold/>}
-                        onClick={() => window.electron.close()}
+                        onClick={() => window.electron.window.close()}
                     >
                         Cancel
                     </Button>
                     <Button
                         variant={'success'}
-                        icon={action === 'play_now' ? <PiPlayBold/> : <PiFloppyDiskBold/>}
+                        icon={winData.action === 'play_now' ? <PiPlayBold/> : <PiFloppyDiskBold/>}
                         disabled={!canSubmit}
                         onClick={handleSubmit}
                     >
-                        {action === 'play_now' ? 'Play Now' : 'Save'}
+                        {winData.action === 'play_now' ? 'Play Now' : 'Save'}
                     </Button>
                 </div>
             </div>
@@ -176,10 +195,16 @@ type SelectorProps = {
 const ListSelector = ({onChange}: SelectorProps) => {
     const [tracks, setTracks] = useState<Track[]>([]);
     const [query, setQuery] = useState<string>('');
-    const [selected, setSelected] = useState<string>(null);
+    const [selected, setSelected] = useState<string | null>(null);
 
     useEffect(() => {
-        window.electron.getTracks().then(setTracks);
+        window.electron.tracks.getAll().then(setTracks);
+
+        const unsub = window.electron.tracks.onChanged(setTracks);
+
+        return () => {
+            unsub();
+        }
     }, []);
 
     const handleSelect = (trackId: string) => {
@@ -247,7 +272,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
     const [query, setQuery] = useState<string>('');
     const [results, setResults] = useState<YTSearchResult[]>([]);
     const [searched, setSearched] = useState<boolean>(false);
-    const [selected, setSelected] = useState<YTSearchResult>(null);
+    const [selected, setSelected] = useState<YTSearchResult | null>(null);
 
     const handleSelect = (result: YTSearchResult) => {
         setSelected(result);
@@ -269,7 +294,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
 
                         setSearched(false);
 
-                        window.electron.searchMusic(query).then(res => {
+                        window.electron.music.search(query).then(res => {
                             if (res.success) setResults(res.data);
                             else setResults([]);
                             setSearched(true);
@@ -301,7 +326,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
                             />
                             <div className={styles.resultInfo}>
                                 <span className={styles.resultTitle}>{result.name}</span>
-                                <span className={styles.resultSource} onClick={() => window.electron.openLink(result.url)}>
+                                <span className={styles.resultSource} onClick={() => window.electron.system.openLink(result.url)}>
                                     {result.url}
                                 </span>
                             </div>
@@ -325,7 +350,7 @@ const FileSelector = ({onChange}: SelectorProps) => {
     }
 
     const handleSearch = () => {
-        window.electron.openFileMediaSelector().then(res => {
+        window.electron.system.openFileMediaSelector().then(res => {
             if (res.success) handleChange(res.data);
             else handleChange('');
         });
@@ -379,4 +404,4 @@ const URLSelector = ({onChange}: SelectorProps) => {
     );
 }
 
-export default MediaSelectorWin;
+export default GridMediaSelectorWin;

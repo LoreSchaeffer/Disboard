@@ -17,8 +17,9 @@ import {hexToHsl, hslToHex} from "../utils/utils";
 import {Time} from "../utils/time";
 import {usePlayer} from "../context/PlayerContext";
 import ResettableColorPicker from "../components/forms/color_picker/ResettableColorPicker";
-import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWindowData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
+import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWinData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
 import {validateName} from "../../shared/validation";
+import {useProfiles} from "../context/ProfilesProvider";
 
 const timeUnitOptions: { value: TimeUnit, label: string }[] = [
     {value: 's', label: 'Seconds'},
@@ -33,10 +34,10 @@ const timeEndTypeOptions: { value: EndTimeType, label: string }[] = [
 
 const GridBtnSettingsWin = () => {
     const {data} = useWindow();
+    const {boardType, gridProfiles} = useProfiles();
     const {previewPlayer, previewStatus} = usePlayer();
     const {setTitlebarContent} = useTitlebar();
 
-    const [boardType, setBoardType] = useState<Exclude<BoardType, 'ambient'>>(undefined);
     const [profile, setProfile] = useState<SbGridProfile | undefined>(undefined);
     const [button, setButton] = useState<SbGridBtn | undefined>(undefined);
     const [loading, setLoading] = useState<boolean>(true);
@@ -47,43 +48,42 @@ const GridBtnSettingsWin = () => {
     useEffect(() => {
         if (!data || data.type !== 'grid_btn_settings') return;
 
-        const {boardType, profileId, buttonId} = data.data as GridBtnWindowData;
+        const {profileId, buttonId} = data.data as GridBtnWinData;
 
-        if (!boardType || !profileId || !buttonId) {
-            setError('Board Type, Profile Id or Button Id missing!');
+        if (!profileId || !buttonId) {
+            setError('Profile id and Button id are mandatory!');
             setLoading(false);
             return;
         }
 
         setLoading(true);
-        setBoardType(boardType)
 
-        Promise.all([
-            window.electron.gridProfiles.get(boardType, profileId),
-            window.electron.gridProfiles.buttons.get(boardType, profileId, buttonId)
-        ]).then(([fetchedProfile, fetchedButton]) => {
-            if (!fetchedProfile) throw new Error("Profile not found");
-            if (!fetchedButton) throw new Error("Button not found");
-
-            setProfile(fetchedProfile);
-            setButton(fetchedButton);
-
-            setNewButton({});
-
-            setTitlebarContent(
-                <div className={styles.tbData}>
-                    <span className={styles.tbProfile}>{fetchedProfile.name}</span>
-                    <span className={styles.tbButton}>{fetchedButton.row} - {fetchedButton.col}</span>
-                </div>,
-                'centered'
-            );
-        }).catch((err) => {
-            console.error(err);
-            setError(err.message || "An error occurred while fetching data.");
-        }).finally(() => {
+        const prof = gridProfiles.find(p => p.id === profileId);
+        if (!prof) {
+            setError(`Profile ${profileId} not found!`);
             setLoading(false);
-        });
-    }, [data]);
+            return;
+        }
+
+        const btn = prof.buttons.find(b => b.id === buttonId);
+        if (!btn) {
+            setError(`Button ${buttonId} not found!`);
+            setLoading(false);
+            return;
+        }
+
+        setProfile(prof);
+        setButton(btn);
+        setNewButton({});
+
+        setTitlebarContent(
+            <div className={styles.tbData}>
+                <span className={styles.tbProfile}>{prof.name}</span>
+                <span className={styles.tbButton}>{btn.row} - {btn.col}</span>
+            </div>,
+            'centered'
+        )
+    }, [data, gridProfiles, setTitlebarContent]);
 
     const previewBtnData: SbGridBtn | null = useMemo(() => {
         if (!button) return null;
@@ -497,7 +497,7 @@ const GridBtnSettingsWin = () => {
     const handleSubmit = () => {
         if (!canSubmit() || !profile || !button || !boardType) return;
 
-        const payload: DeepPartial<GridBtn> = JSON.parse(JSON.stringify(newButton));
+        const payload: DeepPartial<SbGridBtn> = structuredClone(newButton);
         if (payload.track) delete payload.track;
 
         if (payload.cropOptions) {
@@ -513,7 +513,7 @@ const GridBtnSettingsWin = () => {
             return;
         }
 
-        window.electron.gridProfiles.buttons.update(boardType, profile.id, button.id, payload).then((res) => {
+        window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, profile.id, button.id, payload as GridBtn).then((res) => {
             if (res.success) window.electron.window.close();
             else console.error("[Settings] Error updating button:", res.error);
         });

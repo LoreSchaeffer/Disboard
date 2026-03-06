@@ -3,10 +3,12 @@ import {BroadcastChannelMap} from "./main/utils/broadcast";
 import {
     AmbientBtn,
     AmbientProfile,
-    BoardType, DeepPartial,
+    BoardType,
+    DeepPartial,
     DiscordData,
     DiscordStatus,
-    GridBtn, GridPos,
+    GridBtn,
+    GridPos,
     GridProfile,
     IpcResponse,
     MediaType,
@@ -23,12 +25,13 @@ import {
     YTSearchResult
 } from "./types";
 
-type ListenerCallback<K extends keyof BroadcastChannelMap> = BroadcastChannelMap[K] extends void ? () => void : (data: BroadcastChannelMap[K]) => void;
+type ListenerCallback<K extends keyof BroadcastChannelMap> = (...args: BroadcastChannelMap[K]) => void;
 
 const createListener = <K extends keyof BroadcastChannelMap>(channel: K, callback: ListenerCallback<K>) => {
-    const subscription = (_event: IpcRendererEvent, data: unknown) => {
-        const safeCallback = callback as (payload?: unknown) => void;
-        safeCallback(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscription = (_event: IpcRendererEvent, ...args: any[]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (callback as (...args: any[]) => void)(...args);
     };
 
     ipcRenderer.on(channel, subscription);
@@ -76,6 +79,7 @@ const gridProfilesApi = {
 const ambientProfilesApi = {
     getAll: (): Promise<SbAmbientProfile[]> => ipcRenderer.invoke('ambient_profiles:get_all'),
     get: (id: string): Promise<SbAmbientProfile | null> => ipcRenderer.invoke('ambient_profiles:get', id),
+    getActive: (): Promise<SbAmbientProfile | null> => ipcRenderer.invoke('ambient_profiles:get_active'),
     create: (profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:create', profile),
     update: (id: string, profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:update', id, profile),
     delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:delete', id),
@@ -118,6 +122,14 @@ const discordApi = {
     getChannels: (guildId: string): Promise<DiscordData[]> => ipcRenderer.invoke('discord:channels', guildId),
 }
 
+const playerApi = {
+    stopPreview: () => ipcRenderer.send('player:preview_stopped'),
+    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
+
+    onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
+    onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
+}
+
 const api = {
     window: windowApi,
     settings: settingsApi,
@@ -126,7 +138,8 @@ const api = {
     tracks: tracksApi,
     system: systemApi,
     music: musicApi,
-    discord: discordApi
+    discord: discordApi,
+    player: playerApi,
 };
 
 contextBridge.exposeInMainWorld('electron', api);

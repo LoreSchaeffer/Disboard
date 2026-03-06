@@ -1,23 +1,26 @@
 import {BrowserWindow} from "electron";
-import {SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
+import {BoardType, PlayerTrack, SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
 
 export type BroadcastChannelMap = {
-    'settings:changed': Settings,
+    'settings:changed': [settings: Settings],
 
-    'grid_profiles:music:changed': SbGridProfile[],
-    'grid_profiles:sfx:changed': SbGridProfile[],
-    'ambient_profiles:changed': SbAmbientProfile[],
+    'grid_profiles:music:changed': [profiles: SbGridProfile[]],
+    'grid_profiles:sfx:changed': [profiles: SbGridProfile[]],
+    'ambient_profiles:changed': [profiles: SbAmbientProfile[]],
 
-    'tracks:changed': Track[],
+    'tracks:changed': [tracks: Track[]],
+
+    'player:preview_stopped': [],
+    'player:on_play_now': [boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack],
 }
 
 export const broadcastData = <K extends keyof BroadcastChannelMap>(
     channel: K,
-    ...args: BroadcastChannelMap[K] extends void ? [] : [data: BroadcastChannelMap[K]]
+    ...args: BroadcastChannelMap[K]
 ) => {
-    const data = args[0];
-
     BrowserWindow.getAllWindows().forEach(win => {
-        if (!win.isDestroyed()) win.webContents.send(channel, data);
+        if (!win.isDestroyed()) {
+            win.webContents.send(channel, ...args);
+        }
     });
 }

@@ -6,8 +6,9 @@ import Input from "../../forms/Input";
 import {useEffect, useRef, useState} from "react";
 import {useClickOutside} from "../../../hooks/useClickOutside";
 import {useAnimatedUnmount} from "../../../hooks/useAnimatedUnmount";
-import {useGridProfiles} from "../../../context/GridProfilesProvider";
+import {useProfiles} from "../../../context/ProfilesProvider";
 import {validateName} from "../../../../shared/validation";
+import {BoardType} from "../../../../types";
 
 type ProfileSettingsProps = {
     show: boolean;
@@ -15,7 +16,7 @@ type ProfileSettingsProps = {
 }
 
 const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
-    const {activeProfile, profiles, boardType} = useGridProfiles();
+    const {activeGridProfile, gridProfiles, boardType} = useProfiles();
     const {shouldRender, transitionProps} = useAnimatedUnmount(show);
 
     const [profileName, setProfileName] = useState<string>("");
@@ -30,18 +31,18 @@ const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
     });
 
     useEffect(() => {
-        if (activeProfile) {
-            setProfileName(activeProfile.name);
-            setProfileRows(activeProfile.rows);
-            setProfileCols(activeProfile.cols);
+        if (activeGridProfile) {
+            setProfileName(activeGridProfile.name);
+            setProfileRows(activeGridProfile.rows);
+            setProfileCols(activeGridProfile.cols);
             setProfileNameError(undefined);
         }
-    }, [activeProfile]);
+    }, [activeGridProfile]);
 
     const handleNameChange = (value: string) => {
         if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
 
-        if (!activeProfile) return;
+        if (!activeGridProfile) return;
 
         setProfileName(value);
         setProfileNameError(undefined);
@@ -56,26 +57,26 @@ const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
             return;
         }
 
-        if (profiles.filter(p => p.id !== activeProfile.id).find(p => p.name.toLowerCase() === value.trim().toLowerCase())) {
+        if (gridProfiles.filter(p => p.id !== activeGridProfile.id).find(p => p.name.toLowerCase() === value.trim().toLowerCase())) {
             setProfileNameError("A profile with this name already exists");
             return;
         }
 
         titleTimeoutRef.current = setTimeout(() => {
-            window.electron.gridProfiles.update(boardType, activeProfile.id, {name: value});
+            window.electron.gridProfiles.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {name: value});
         }, 500);
     }
 
     const handleRowsChange = (value: number) => {
-        if (!activeProfile) return;
+        if (!activeGridProfile) return;
         setProfileRows(value);
-        window.electron.gridProfiles.update(boardType, activeProfile.id, {rows: value});
+        window.electron.gridProfiles.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {rows: value});
     }
 
     const handleColsChange = (value: number) => {
-        if (!activeProfile) return;
+        if (!activeGridProfile) return;
         setProfileCols(value);
-        window.electron.gridProfiles.update(boardType, activeProfile.id, {cols: value});
+        window.electron.gridProfiles.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {cols: value});
     }
 
     if (!shouldRender) return null;

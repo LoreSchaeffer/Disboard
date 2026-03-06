@@ -1,4 +1,4 @@
-import {BoardType, GridBtnWindowData, GridMediaSelectorWindowData, MediaSelectorAction, WindowOptions} from "../types";
+import {BoardType, GridBtnWinData, GridMediaSelectorWinData, GridPos, MediaSelectorAction, WindowOptions} from "../types";
 import {BrowserWindow} from "electron";
 import path from "path";
 import {state} from "./state";
@@ -139,12 +139,12 @@ export const createGridBtnSettingsWin = (
         height: 600,
         resizable: false,
         data: {
+            boardType: boardType,
             type: 'grid_btn_settings',
             data: {
-                boardType,
                 profileId,
                 buttonId
-            } as GridBtnWindowData
+            } as GridBtnWinData
         }
     });
 }
@@ -154,7 +154,7 @@ export const createGridMediaSelectorWin = (
     parent: number,
     action: MediaSelectorAction,
     profileId: string,
-    buttonId: string
+    gridPos: GridPos
 ): BrowserWindow | null => {
     return createModalWin(parent, {
         route: 'grid_media_selector',
@@ -162,13 +162,13 @@ export const createGridMediaSelectorWin = (
         height: 600,
         resizable: false,
         data: {
+            boardType: boardType,
             type: 'grid_media_selector',
             data: {
-                boardType,
                 action,
                 profileId,
-                buttonId
-            } as GridMediaSelectorWindowData
+                gridPos
+            } as GridMediaSelectorWinData
         }
     });
 }

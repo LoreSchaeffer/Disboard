@@ -76,7 +76,7 @@ const ProfileSelector = ({boardType, activeGridProfile, activeAmbientProfile, gr
             {
                 label: 'New profile',
                 icon: <PiPlusBold/>,
-                onClick: () => navigate('new_profile', {replace: false}),
+                onClick: () => navigate('new_profile', {replace: false, data: {boardType: boardType}}),
             },
             {separator: true},
             {

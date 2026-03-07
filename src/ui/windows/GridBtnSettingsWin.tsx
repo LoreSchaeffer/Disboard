@@ -75,15 +75,22 @@ const GridBtnSettingsWin = () => {
         setProfile(prof);
         setButton(btn);
         setNewButton({});
+        setLoading(false);
+    }, [data, gridProfiles]);
+
+    useEffect(() => {
+        if (!profile || !button) return;
 
         setTitlebarContent(
             <div className={styles.tbData}>
-                <span className={styles.tbProfile}>{prof.name}</span>
-                <span className={styles.tbButton}>{btn.row} - {btn.col}</span>
+                <span className={styles.tbProfile}>{profile.name}</span>
+                <span className={styles.tbButton}>{button.row} - {button.col}</span>
             </div>,
             'centered'
-        )
-    }, [data, gridProfiles, setTitlebarContent]);
+        );
+
+        return () => setTitlebarContent(null);
+    }, [profile, button]);
 
     const previewBtnData: SbGridBtn | null = useMemo(() => {
         if (!button) return null;

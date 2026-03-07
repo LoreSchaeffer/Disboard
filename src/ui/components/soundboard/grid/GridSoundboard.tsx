@@ -12,7 +12,7 @@ import {FaRegPaste} from "react-icons/fa6";
 import {playerTrackFromBtn} from "../../../utils/utils";
 import {useNavigation} from "../../../context/NavigationContext";
 import {useProfiles} from "../../../context/ProfilesProvider";
-import {BoardType, BtnStyle, SbGridBtn} from "../../../../types";
+import {BoardType, BtnStyle, GridBtnSettingsWin, SbGridBtn} from "../../../../types";
 
 const GridSoundboard = () => {
     const {settings} = useWindow();
@@ -98,9 +98,10 @@ const GridSoundboard = () => {
                         label: 'Settings',
                         icon: <PiGearSixBold/>,
                         onClick: () => window.electron.window.open('grid_btn_settings', {
+                            boardType: boardType,
                             profileId: activeGridProfile.id,
                             buttonId: btn.id
-                        })
+                        } as GridBtnSettingsWin)
                     },
                     {separator: true},
                     {
@@ -163,6 +164,7 @@ const GridSoundboard = () => {
                                 navigate('delete_confirmation', {
                                     replace: false,
                                     data: {
+                                        boardType: boardType,
                                         resource: 'button',
                                         id: btn.id,
                                         onConfirm: () => window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id)

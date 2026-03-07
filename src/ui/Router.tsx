@@ -37,10 +37,10 @@ const Router = () => {
                     return <ProviderComponent>{acc}</ProviderComponent>;
                 }, <Component/>);
 
-
                 return (
                     <div
                         key={entry.route}
+                        id={entry.route}
                         className="pageContainer"
                         style={{
                             zIndex: 10 + index,

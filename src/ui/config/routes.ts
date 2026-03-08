@@ -7,6 +7,7 @@ import {Route} from "../../types";
 import EmptyWin from "../windows/EmptyWin";
 import GridBtnSettingsWin from "../windows/GridBtnSettingsWin";
 import GridMediaSelectorWin from "../windows/GridMediaSelectorWin";
+import SfxBoardWin from "../windows/SfxBoardWin";
 
 export type RouteConfig = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +26,7 @@ export const ROUTES: Record<Route, RouteConfig> = {
     empty: {component: EmptyWin},
 
     music_board: {component: MusicBoardWin, contexts: ['player', 'profiles']},
-    sfx_board: {component: EmptyWin, contexts: ['player', 'profiles']},
+    sfx_board: {component: SfxBoardWin, contexts: ['player', 'profiles']},
     ambient_board: {component: EmptyWin, contexts: ['player', 'profiles']},
 
     grid_btn_settings: {component: GridBtnSettingsWin, contexts: ['player', 'profiles']},

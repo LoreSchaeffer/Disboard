@@ -1,4 +1,4 @@
-import styles from "./SoundboardButton.module.css";
+import styles from "./GridButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {clamp} from "../../../../shared/utils";
 import {clsx} from "clsx";
@@ -24,11 +24,12 @@ type CustomCSSProperties = CSSProperties & {
     '--sb-image-radius'?: string;
 }
 
-export type SoundboardButtonProps = {
+export type GridButtonProps = {
     row: number;
     col: number;
     button?: SbGridBtn;
     active?: boolean;
+    progress?: number;
     zoom?: number;
     showImages?: boolean;
     className?: string;
@@ -38,12 +39,13 @@ export type SoundboardButtonProps = {
     onContextMenu?: (e: React.MouseEvent, btn: SbGridBtn, row: number, col: number) => void;
 };
 
-const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
+const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
     {
         row,
         col,
         button,
         active = false,
+        progress = 0,
         zoom = 1,
         showImages = true,
         className,
@@ -75,6 +77,8 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             '--sb-border': btn.style?.borderColor || undefined,
             '--sb-border-hover': btn.style?.borderColorHover || btn.style?.borderColor || undefined,
             '--sb-border-active': btn.style?.borderColorActive || btn.style?.borderColor || undefined,
+
+            '--sb-progress': btn.style?.borderColorActive || btn.style?.borderColor || 'var(--primary)',
 
             '--sb-font-size': `${11 * zoomFactor}pt`,
             '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,
@@ -117,8 +121,14 @@ const SoundboardButton = forwardRef<HTMLDivElement, SoundboardButtonProps>((
             <span className={styles.text}>
                 {btn.title}
             </span>
+            <div
+                className={styles.progress}
+                style={{
+                    width: `${progress}%`
+            }}
+            ></div>
         </div>
     );
 });
 
-export default React.memo(SoundboardButton);
+export default React.memo(GridButton);

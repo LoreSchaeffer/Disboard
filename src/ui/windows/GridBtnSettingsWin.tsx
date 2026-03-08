@@ -6,7 +6,7 @@ import {useTitlebar} from "../context/TitlebarContext";
 import Input from "../components/forms/Input";
 import {PiArrowCounterClockwiseBold, PiFloppyDiskBold, PiPlayFill, PiStopFill, PiXBold} from "react-icons/pi";
 import Button from "../components/misc/Button";
-import SoundboardButton from "../components/soundboard/grid/SoundboardButton";
+import SoundboardButton from "../components/soundboard/grid/GridButton";
 import Separator from "../components/misc/Separator";
 import Select from "../components/forms/Select";
 import Row from "../components/layout/Row";

@@ -2,7 +2,7 @@ import styles from "./GridSoundboard.module.css";
 import React, {MouseEvent, useCallback, useMemo, useState} from "react";
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
-import DraggableButton from "./DraggableButton";
+import DraggableGridButton from "./DraggableGridButton";
 import {useWindow} from "../../../context/WindowContext";
 import {usePlayer} from "../../../context/PlayerContext";
 import {useContextMenu} from "../../../context/ContextMenuContext";
@@ -14,11 +14,15 @@ import {useNavigation} from "../../../context/NavigationContext";
 import {useProfiles} from "../../../context/ProfilesProvider";
 import {BoardType, BtnStyle, GridBtnSettingsWin, SbGridBtn} from "../../../../types";
 
-const GridSoundboard = () => {
+type GridSoundboardProps = {
+    gridHeight?: string;
+}
+
+const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px)',}: GridSoundboardProps) => {
     const {settings} = useWindow();
-    const {activeGridProfile, boardType} = useProfiles();
+    const {boardType, activeGridProfile} = useProfiles();
     const {showContextMenu} = useContextMenu();
-    const {player, previewPlayer} = usePlayer();
+    const {player, previewPlayer, activeSfx} = usePlayer();
     const {navigate} = useNavigation();
 
     const [copiedButton, setCopiedButton] = useState<SbGridBtn | null>(null);
@@ -39,7 +43,12 @@ const GridSoundboard = () => {
 
     const onClick = (_: MouseEvent, button: SbGridBtn) => {
         if (!button || !button.track) return
-        player.playNow(playerTrackFromBtn(button));
+
+        if (boardType === 'sfx') {
+            player.toggleSfx(button.id, playerTrackFromBtn(button));
+        } else {
+            player.playNow(playerTrackFromBtn(button));
+        }
     }
 
     const onContextMenu = useCallback((event: MouseEvent, targetButton: SbGridBtn, row: number, col: number) => {
@@ -50,18 +59,28 @@ const GridSoundboard = () => {
             const items: ContextMenuItemData[] = [];
 
             if (!isButtonNotSet) {
-                items.push(
-                    {
-                        label: 'Play Now',
-                        icon: <PiPlayFill/>,
-                        onClick: () => player.playNow(playerTrackFromBtn(btn))
-                    },
-                    {
-                        label: 'Add to playlist',
-                        icon: <PiPlaylistBold/>,
-                        onClick: () => player.addToQueue(playerTrackFromBtn(btn))
-                    }
-                );
+                if (boardType === 'sfx') {
+                    const isSfxPlaying = btn.id ? activeSfx[btn.id]?.playing : false;
+
+                    items.push({
+                        label: isSfxPlaying ? 'Stop SFX' : 'Play Now',
+                        icon: isSfxPlaying ? <PiStopFill/> : <PiPlayFill/>,
+                        onClick: () => player.toggleSfx(btn.id, playerTrackFromBtn(btn))
+                    });
+                } else {
+                    items.push(
+                        {
+                            label: 'Play Now',
+                            icon: <PiPlayFill/>,
+                            onClick: () => player.playNow(playerTrackFromBtn(btn))
+                        },
+                        {
+                            label: 'Add to playlist',
+                            icon: <PiPlaylistBold/>,
+                            onClick: () => player.addToQueue(playerTrackFromBtn(btn))
+                        }
+                    );
+                }
             }
 
             const isPreviewing = previewPlayer.getStatus().playing;
@@ -180,24 +199,13 @@ const GridSoundboard = () => {
         }
 
         showContextMenu({items: getItems(), event});
-    }, [activeGridProfile?.id, boardType, copiedButton, copiedStyle, navigate, player, previewPlayer, settings, showContextMenu]);
+    }, [activeGridProfile?.id, boardType, copiedButton, copiedStyle, navigate, player, previewPlayer, settings, showContextMenu, activeSfx]);
 
     const swapButtons = useCallback((fromRow: number, fromCol: number, toRow: number, toCol: number) => {
         const fromButton = buttonMap.get(`${fromRow}-${fromCol}`);
         const toButton = buttonMap.get(`${toRow}-${toCol}`);
 
         if (!fromButton && !toButton) return;
-
-        // TODO Check if this is not necessary
-        // if (fromButton && toButton) {
-        //     [fromButton.row, fromButton.col, toButton.row, toButton.col] = [toButton.row, toButton.col, fromButton.row, fromButton.col];
-        // } else if (fromButton && !toButton) {
-        //     fromButton.row = toRow;
-        //     fromButton.col = toCol;
-        // } else if (toButton && !fromButton) {
-        //     toButton.row = fromRow;
-        //     toButton.col = fromCol;
-        // }
 
         window.electron.gridProfiles.buttons.swap(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {row: fromRow, col: fromCol}, {row: toRow, col: toCol});
     }, [activeGridProfile?.id, boardType, buttonMap]);
@@ -210,7 +218,8 @@ const GridSoundboard = () => {
                 className={styles.soundboard}
                 style={{
                     gridTemplateRows: `repeat(${rows}, 1fr)`,
-                    gridTemplateColumns: `repeat(${cols}, 1fr)`
+                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                    height: gridHeight
                 }}
             >
                 {Array.from({length: rows}).map((_, row) =>
@@ -219,8 +228,12 @@ const GridSoundboard = () => {
                         const hasTrack = button && !!button.track;
                         const isDownloading = hasTrack && button.track.downloading;
 
+                        const currentSfxState = button ? activeSfx[button.id] : undefined;
+                        const isActive = currentSfxState?.playing || false;
+                        const progress = currentSfxState?.progress || 0;
+
                         return (
-                            <DraggableButton
+                            <DraggableGridButton
                                 key={`btn-${row}-${col}`}
                                 row={row}
                                 col={col}
@@ -230,6 +243,8 @@ const GridSoundboard = () => {
                                 swapButtons={swapButtons}
                                 zoom={settings?.zoom || 1}
                                 showImages={settings?.showImages || true}
+                                active={isActive}
+                                progress={progress}
                             />
                         );
                     })

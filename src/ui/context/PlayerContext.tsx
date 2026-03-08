@@ -1,4 +1,4 @@
-import {Player, PlayerStatus} from "../utils/player";
+import {Player, PlayerState, SfxState} from "../utils/player";
 import {createContext, PropsWithChildren, useContext, useEffect, useState} from "react";
 import {Time} from "../utils/time";
 import {BoardType, PlayerTrack, RepeatMode} from "../../types";
@@ -6,16 +6,17 @@ import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
     player: Player;
-    status: PlayerStatus;
+    status: PlayerState;
     repeat: RepeatMode;
     queue: PlayerTrack[];
     index: number;
     currentTrack: PlayerTrack | null;
     duration: Time;
     currentTime: Time;
+    activeSfx: Record<string, SfxState>;
 
     previewPlayer: Player;
-    previewStatus: PlayerStatus;
+    previewStatus: PlayerState;
     previewCurrentTrack: PlayerTrack | null;
     previewDuration: Time;
     previewCurrentTime: Time;
@@ -28,15 +29,16 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 
-    const [status, setStatus] = useState<PlayerStatus>(player.getStatus());
+    const [status, setStatus] = useState<PlayerState>(player.getStatus());
     const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
     const [queue, setQueue] = useState<PlayerTrack[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
     const [currentPlayerTrack, setCurrentPlayerTrack] = useState<PlayerTrack | null>(player.getCurrentTrack());
     const [duration, setDuration] = useState<Time>(new Time(0, 'ms'));
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
+    const [activeSfx, setActiveSfx] = useState<Record<string, SfxState>>({});
 
-    const [previewStatus, setPreviewStatus] = useState<PlayerStatus>(previewPlayer.getStatus());
+    const [previewStatus, setPreviewStatus] = useState<PlayerState>(previewPlayer.getStatus());
     const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentTrack());
     const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
     const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
@@ -90,6 +92,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setDuration(new Time(0, 'ms'));
         });
 
+        player.on('sfxupdate', setActiveSfx);
+
         const unsubStopped = window.electron.player.onPreviewStopped(() => {
             if (!previewPlayer) return;
             previewPlayer.stop();
@@ -113,6 +117,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             player.off('repeatupdate');
             player.off('error');
             player.off('reset');
+            player.off('sfxupdate');
 
             unsubStopped();
             unsubPlayNow();
@@ -175,11 +180,6 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         };
     }, [previewPlayer]);
 
-    // TODO Move this only to music board
-    // useEffect(() => {
-    //     if (settings) player.setRepeatMode(settings.music.repeat);
-    // }, [settings]);
-
     return (
         <PlayerContext.Provider value={{
             player,
@@ -190,6 +190,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             currentTrack: currentPlayerTrack,
             duration,
             currentTime,
+            activeSfx,
 
             previewPlayer,
             previewStatus,

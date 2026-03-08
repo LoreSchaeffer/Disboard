@@ -1,8 +1,8 @@
 import React, {useRef} from "react";
 import {useDrag, useDrop} from 'react-dnd';
-import SoundboardButton, {SoundboardButtonProps} from "./SoundboardButton";
+import SoundboardButton, {GridButtonProps} from "./GridButton";
 
-type DraggableButtonProps = SoundboardButtonProps & {
+type DraggableGridButtonProps = GridButtonProps & {
     swapButtons: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
 };
 
@@ -17,7 +17,7 @@ const ItemTypes = {
     BUTTON: 'button',
 };
 
-const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons, ...restProps}: DraggableButtonProps) => {
+const DraggableGridButton = ({row, col, button, onClick, onContextMenu, swapButtons, ...restProps}: DraggableGridButtonProps) => {
     const ref = useRef<HTMLDivElement>(null);
 
     const [{isDragging}, drag] = useDrag(() => ({
@@ -61,4 +61,4 @@ const DraggableButton = ({row, col, button, onClick, onContextMenu, swapButtons,
     );
 };
 
-export default DraggableButton;
+export default DraggableGridButton;

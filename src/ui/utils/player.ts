@@ -446,6 +446,18 @@ export class Player {
         }
     }
 
+    public stopAllSfx() {
+        this.activeSfx.forEach((sfx) => {
+            sfx.audio.pause();
+            sfx.audio.src = '';
+            sfx.source.disconnect();
+        });
+
+        this.activeSfx.clear();
+        this.sfxStates = {};
+        this._emitSfx();
+    }
+
 
     public setVolume(volume: number) {
         this.masterVolume = clamp(volume, 0, 100);

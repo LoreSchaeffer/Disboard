@@ -6,6 +6,7 @@ import GridProfileSettings from "../components/soundboard/grid/GridProfileSettin
 import {usePlayer} from "../context/PlayerContext";
 import {useProfiles} from "../context/ProfilesProvider";
 import ProfileSelector from "../components/misc/ProfileSelector";
+import SfxControls from "../components/soundboard/grid/sfx/SfxControls";
 
 const SfxBoardWin = () => {
     const {settings, updateSettingsAsync} = useWindow();
@@ -52,11 +53,13 @@ const SfxBoardWin = () => {
 
     return (
         <>
-            <GridSoundboard/>
+            <GridSoundboard gridHeight={'calc(100vh - var(--titlebar-height) - var(--sfx-controls-height) - 10px)'}/>
+            <SfxControls showProfileSettings={() => setProfileSettingsOpen(true)}/>
 
             <GridProfileSettings
                 show={profileSettingsOpen}
                 onClose={() => setProfileSettingsOpen(false)}
+                mb={'calc(var(--sfx-controls-height) + 10px)'}
             />
         </>
     )

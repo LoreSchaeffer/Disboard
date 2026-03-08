@@ -67,6 +67,7 @@ const MusicBoardWin = () => {
             <GridProfileSettings
                 show={profileSettingsOpen}
                 onClose={() => setProfileSettingsOpen(false)}
+                mb={'calc(var(--player-height) + 10px)'}
             />
 
             <Playlist

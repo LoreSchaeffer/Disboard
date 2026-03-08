@@ -13,9 +13,10 @@ import {BoardType} from "../../../../types";
 type ProfileSettingsProps = {
     show: boolean;
     onClose: () => void;
+    mb?: string;
 }
 
-const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
+const GridProfileSettings = ({show, onClose, mb = '0px'}: ProfileSettingsProps) => {
     const {activeGridProfile, gridProfiles, boardType} = useProfiles();
     const {shouldRender, transitionProps} = useAnimatedUnmount(show);
 
@@ -81,11 +82,17 @@ const GridProfileSettings = ({show, onClose}: ProfileSettingsProps) => {
 
     if (!shouldRender) return null;
 
+    console.log(mb);
+
     return (
         <div
             ref={ref}
             className={clsx(styles.profileSettings, 'bordered')}
             {...transitionProps}
+            style={{
+                ...(transitionProps.style || {}),
+                bottom: mb
+            }}
         >
             <Row className={styles.margin}>
                 <Col size={5}>

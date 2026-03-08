@@ -1,0 +1,155 @@
+.tableTop {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.searchWrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 0 1 auto;
+}
+
+.pageSizeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageSizeLabel {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.pageSizeSelect {
+    width: 80px;
+}
+
+.paginationControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pageInfo {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.tableContainer {
+    background-color: var(--background-secondary);
+    border-radius: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    margin-top: 16px;
+    border: 1px solid var(--border-on-secondary);
+    margin-bottom: 1px;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+}
+
+.table th,
+.table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--neutral-74);
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr[onClick],
+.table tbody tr[onclick] {
+    cursor: pointer;
+}
+
+.table tbody tr:hover {
+    background-color: var(--background-secondary-hover);
+}
+
+.table thead th:first-child,
+.table tbody td:first-child {
+    padding-left: 20px;
+}
+
+.table thead th:last-child,
+.table tbody td:last-child {
+    padding-right: 20px;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.singleCell {
+    text-align: center;
+    padding: 3rem;
+}
+
+.dataTable.sticky .tableTop {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--background-primary);
+    padding-bottom: 16px;
+    padding-top: 16px;
+}
+
+.dataTable.sticky .tableContainer {
+    margin-top: 0;
+}
+
+@media (max-width: 768px) {
+    .tableTop {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .searchWrapper {
+        max-width: 100%;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .pageSizeContainer {
+        justify-content: space-between;
+    }
+
+    .pageSizeSelect {
+        justify-content: space-between;
+    }
+
+    .paginationControls {
+        justify-content: center;
+    }
+
+    .table thead th:first-child {
+        padding-left: 12px;
+    }
+
+    .table thead th:last-child {
+        padding-right: 12px;
+    }
+}

@@ -1,0 +1,48 @@
+.th {
+    background-color: var(--background-secondary) !important;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 16px 12px;
+    border-bottom: 2px solid var(--blurple-20) !important;
+    transition: all 300ms ease;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sortable {
+    cursor: pointer;
+}
+
+.sortable:hover {
+    background-color: var(--background-secondary-hover) !important;
+}
+
+.sortIconWrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.sortIcon {
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    .th {
+        padding: 12px 8px;
+        font-size: 0.75rem;
+    }
+
+    .sortIcon {
+        font-size: 0.75rem;
+    }
+}

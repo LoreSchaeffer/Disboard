@@ -6,7 +6,7 @@ import {clsx} from "clsx";
 import Button from "../components/misc/Button";
 import {BoardType, SbAmbientBtn, SbGridBtn} from "../../types";
 
-export type ResourceType = 'profile' | 'button';
+export type ResourceType = 'profile' | 'button' | 'track';
 
 export type DeleteConfirmationData = {
     boardType: BoardType;
@@ -23,6 +23,10 @@ const stringsMap: Record<ResourceType, { header: string, message: (displayId: st
     button: {
         header: 'Delete Button?',
         message: (displayId) => <>Are you sure you want to delete the button <span className={styles.messageId}>{displayId}</span>?<br/>This action cannot be undone.</>
+    },
+    track: {
+        header: 'Delete Track?',
+        message: (displayId) => <>Are you sure you want to delete the track <span className={styles.messageId}>{displayId}</span>?<br/>This action cannot be undone.</>
     }
 }
 
@@ -51,6 +55,10 @@ const DeleteConfirmationWin = () => {
                         const titleFallback = btn.title || btn.track?.title || 'Unknown Button';
                         setDisplayName(`${titleFallback} (${btn.row}-${btn.col})`);
                     }
+                });
+            } else if (data.resource === 'track') {
+                window.electron.tracks.get(data.id).then(track => {
+                    if (isMounted) setDisplayName(track?.title || data.id);
                 });
             }
         } else if (data.boardType === 'ambient') {

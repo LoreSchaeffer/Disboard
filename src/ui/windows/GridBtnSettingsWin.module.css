@@ -61,3 +61,28 @@
 .previewBtn {
     margin-right: auto;
 }
+
+.volumeBlock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.volumeSlider {
+    min-width: 100px;
+    height: 5px;
+    transition: width 500ms ease;
+}
+
+.volumeResetIcons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.volumeResetIcon {
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+}

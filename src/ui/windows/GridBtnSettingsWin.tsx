@@ -20,6 +20,7 @@ import ResettableColorPicker from "../components/forms/color_picker/ResettableCo
 import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWinData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
 import {validateName} from "../../shared/validation";
 import {useProfiles} from "../context/ProfilesProvider";
+import ProgressBar from "../components/forms/ProgressBar";
 
 const timeUnitOptions: { value: TimeUnit, label: string }[] = [
     {value: 's', label: 'Seconds'},
@@ -179,6 +180,22 @@ const GridBtnSettingsWin = () => {
             const updated = {...prev};
             delete updated.title;
             return updated;
+        });
+    }
+
+    const handleVolumeChange = (val: number | null) => {
+        if (!button) return;
+
+        const originalVol = button.volumeOverride ?? null;
+
+        setNewButton(prev => {
+            if (val === originalVol) {
+                const updated = {...prev};
+                delete updated.volumeOverride;
+                return updated;
+            }
+
+            return {...prev, volumeOverride: val};
         });
     }
 
@@ -493,8 +510,8 @@ const GridBtnSettingsWin = () => {
 
 
     const isModified = (field: keyof SbGridBtn) => field in newButton;
-
     const isCropModified = (field: keyof CropOptions) => newButton.cropOptions && field in newButton.cropOptions;
+
 
     const canSubmit = () => {
         return button && profile;
@@ -547,7 +564,7 @@ const GridBtnSettingsWin = () => {
     return (
         <div className={'bordered'}>
             <section id='basicSettings'>
-                <Row>
+                <Row className={styles.space}>
                     <Col size={2}>
                         <label className={styles.label}>Title</label>
                     </Col>
@@ -566,6 +583,49 @@ const GridBtnSettingsWin = () => {
                             }}
                             placeholder={"Title"}
                         />
+                    </Col>
+                </Row>
+                <Row>
+                    <Col size={4}>
+                        <label className={styles.label}>Volume Override</label>
+                    </Col>
+                    <Col>
+                        <div className={styles.volumeBlock}>
+                            <ProgressBar
+                                className={styles.volumeSlider}
+                                min={0}
+                                max={100}
+                                val={getValue('volumeOverride') ?? 50}
+                                seekable
+                                onChange={(_, val) => handleVolumeChange(val === -1 ? null : val)}
+                            />
+                            <div className={styles.volumeResetIcons}>
+                                <PiArrowCounterClockwiseBold
+                                    className={styles.volumeResetIcon}
+                                    onClick={isModified('volumeOverride')
+                                        ? () => handleVolumeChange(button?.volumeOverride ?? null)
+                                        : undefined
+                                    }
+                                    title={isModified('volumeOverride') ? 'Reset to original' : undefined}
+                                    style={{
+                                        opacity: isModified('volumeOverride') ? 1 : 0.5,
+                                        cursor: isModified('volumeOverride') ? 'pointer' : 'default',
+                                    }}
+                                />
+                                <PiXBold
+                                    className={styles.volumeResetIcon}
+                                    onClick={(getValue('volumeOverride') ?? null) !== null
+                                        ? () => handleVolumeChange(null)
+                                        : undefined
+                                    }
+                                    title={(getValue('volumeOverride') ?? null) !== null ? 'Remove override' : undefined}
+                                    style={{
+                                        opacity: (getValue('volumeOverride') ?? null) !== null ? 1 : 0.5,
+                                        cursor: (getValue('volumeOverride') ?? null) !== null ? 'pointer' : 'default'
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </Col>
                 </Row>
                 <Separator/>

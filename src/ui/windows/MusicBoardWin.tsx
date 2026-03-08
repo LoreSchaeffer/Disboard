@@ -8,6 +8,7 @@ import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
 import {useProfiles} from "../context/ProfilesProvider";
 import ProfileSelector from "../components/misc/ProfileSelector";
+import {useNavigation} from "../context/NavigationContext";
 
 const MusicBoardWin = () => {
     const {settings, updateSettingsAsync} = useWindow();
@@ -19,6 +20,12 @@ const MusicBoardWin = () => {
     const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);
 
     const zoomRef = useRef<number>(settings.zoom || 1);
+
+    // TODO Only for debug purpuse
+    const {navigate} = useNavigation();
+    useEffect(() => {
+        navigate('settings', {replace: false});
+    }, []);
 
     useEffect(() => {
         player.setCaptureMediaKeys(true);

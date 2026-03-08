@@ -156,7 +156,7 @@ const GridMediaSelectorWin = () => {
                 {mode === 'youtube' && <YouTubeSelector onChange={handleOnChange}/>}
                 {mode === 'file' && <FileSelector onChange={handleOnChange}/>}
                 {mode === 'url' && <URLSelector onChange={handleOnChange}/>}
-                {mode === 'list' && <ListSelector onChange={handleOnChange}/>}
+                {mode === 'list' && <ListSelector boardType={data.boardType} onChange={handleOnChange}/>}
 
                 <div className={'windowButtons'}>
                     <Button
@@ -192,13 +192,27 @@ type SelectorProps = {
     onChange?: (selected: YTSearchResult | string) => void;
 }
 
-const ListSelector = ({onChange}: SelectorProps) => {
+type ListSelectorProps = SelectorProps & {
+    boardType: BoardType;
+}
+
+const ListSelector = ({boardType, onChange}: ListSelectorProps) => {
     const [tracks, setTracks] = useState<Track[]>([]);
     const [query, setQuery] = useState<string>('');
     const [selected, setSelected] = useState<string | null>(null);
 
     useEffect(() => {
-        window.electron.tracks.getAll().then(setTracks);
+        window.electron.tracks.getAll().then((tracks: Track[]) => {
+            setTracks(tracks.sort((a, b) => {
+                const aIsCurrent = a.board === boardType;
+                const bIsCurrent = b.board === boardType;
+
+                if (aIsCurrent && !bIsCurrent) return -1;
+                if (!aIsCurrent && bIsCurrent) return 1;
+
+                return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+            }));
+        });
 
         const unsub = window.electron.tracks.onChanged(setTracks);
 

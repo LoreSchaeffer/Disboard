@@ -44,6 +44,7 @@ const windowApi = {
     close: () => ipcRenderer.send('window:close'),
     getInfo: (): Promise<WindowInfo> => ipcRenderer.invoke('window:info'),
     open: (route: Route, args?: unknown) => ipcRenderer.send('window:open', route, args),
+    isBoardOpen: (boardType: BoardType): Promise<boolean> => ipcRenderer.invoke('window:is_board_open', boardType),
 }
 
 const settingsApi = {

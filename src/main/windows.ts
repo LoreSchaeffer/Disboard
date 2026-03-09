@@ -61,6 +61,7 @@ const createWin = (options: WindowOptions): BrowserWindow => {
     });
 
     win.on('closed', () => {
+        if (options.onClosed) options.onClosed(win);
         state.winOptions.delete(win.id);
         state.winStaticData.delete(win.id);
     });
@@ -104,6 +105,18 @@ export const createBoardWin = (boardType: BoardType) => {
             }, 250);
         },
         onReady: (win) => {
+            switch (boardType) {
+                case 'music':
+                    state.musicBoardId = win.id;
+                    break;
+                case 'sfx':
+                    state.sfxBoardId = win.id;
+                    break;
+                case 'ambient':
+                    state.ambientBoardId = win.id;
+                    break;
+            }
+
             const pid = win.webContents.getOSProcessId();
             if (pid) {
                 try {
@@ -112,6 +125,19 @@ export const createBoardWin = (boardType: BoardType) => {
                 } catch (e) {
                     console.error(`[Main] Failed to set priority for ${boardType} window renderer process (PID: ${pid}):`, e);
                 }
+            }
+        },
+        onClosed: () => {
+            switch (boardType) {
+                case 'music':
+                    state.musicBoardId = null;
+                    break;
+                case 'sfx':
+                    state.sfxBoardId = null;
+                    break;
+                case 'ambient':
+                    state.ambientBoardId = null;
+                    break;
             }
         }
     });

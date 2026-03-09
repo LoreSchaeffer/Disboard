@@ -1,7 +1,7 @@
 import {BrowserWindow, ipcMain, IpcMainEvent, IpcMainInvokeEvent} from 'electron';
-import {GridBtnSettingsWin, GridMediaSelectorWin, Route, WindowInfo} from "../../types";
-import {state} from "../state";
-import {createGridBtnSettingsWin, createGridMediaSelectorWin} from "../windows";
+import {BoardType, GridBtnSettingsWin, GridMediaSelectorWin, Route, WindowInfo} from "../../types";
+import {isBoardOpen, state} from "../state";
+import {createBoardWin, createGridBtnSettingsWin, createGridMediaSelectorWin} from "../windows";
 
 export const setupWindowHandlers = () => {
     ipcMain.on('window:minimize', (e: IpcMainEvent) => {
@@ -53,9 +53,25 @@ export const setupWindowHandlers = () => {
                 createGridBtnSettingsWin(boardType, parentId, profileId, buttonId);
                 break;
             }
+            case 'music_board':
+                if (isBoardOpen('music')) break;
+                createBoardWin('music');
+                break;
+            case 'sfx_board':
+                if (isBoardOpen('sfx')) break;
+                createBoardWin('sfx');
+                break;
+            case 'ambient_board':
+                if (isBoardOpen('ambient')) break;
+                createBoardWin('ambient');
+                break;
             default:
                 console.error('[Main] Unknown window ID:', route);
                 break;
         }
+    });
+
+    ipcMain.handle('window:is_board_open', (_, boardType: BoardType): boolean => {
+        return isBoardOpen(boardType);
     });
 }

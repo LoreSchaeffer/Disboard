@@ -20,20 +20,20 @@ export const BoardSettingsSchema = z.object({
     height: z.number().min(608).max(10000).default(768),
     volume: z.number().min(0).max(100).default(50),
     activeProfile: z.uuid().nullable().default(null),
+    zoom: z.number().min(0.5).max(3).default(1),
 });
 
 export const SettingsSchema = z.object({
     openOnStartup: z.array(BoardTypeSchema).default(['music']),
 
-    music: BoardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, repeat: 'none'}),
-    sfx: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
-    ambient: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null}),
+    music: BoardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1, repeat: 'none'}),
+    sfx: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1}),
+    ambient: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1}),
 
     previewVolume: z.number().min(0).max(100).default(50),
     outputDevice: z.string().default('default'),
     previewOutputDevice: z.string().default('default'),
 
-    zoom: z.number().min(0.5).max(3).default(1),
     showImages: z.boolean().default(true),
     confirmButtonDeletion: z.boolean().default(true),
 

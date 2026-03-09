@@ -1,5 +1,6 @@
 import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
 import {DeepPartial, Route, Settings, StaticWinData, WindowInfo} from "../../types";
+import {deepMerge} from "../../main/utils/objects";
 
 type WindowContextType = {
     ready: boolean;
@@ -56,11 +57,9 @@ export default function WindowProvider({children}: PropsWithChildren) {
         }
     }, [settings, route]);
 
-    const updateSettingsAsync = (newSettings: Partial<Settings>) => {
-        if (!settings) return;
-
+    const updateSettingsAsync = (newSettings: DeepPartial<Settings>) => {
         setSettings(prevSettings =>
-            prevSettings ? {...prevSettings, ...newSettings} : null
+            prevSettings ? deepMerge(prevSettings, newSettings) : null
         );
 
         if (saveSettingsTimeoutRef.current) clearTimeout(saveSettingsTimeoutRef.current);

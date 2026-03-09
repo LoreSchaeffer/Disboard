@@ -30,6 +30,7 @@ export const getDefGridProfile = (boardType: Exclude<BoardType, 'ambient'>): Gri
 export const getDefAmbientProfile = (): AmbientProfile => ({
     id: generateUUID(),
     name: 'Default',
+    type: 'ambient',
     buttons: []
 });
 
@@ -64,7 +65,7 @@ export const fixActiveProfile = (boardType: BoardType) => {
 
 // eslint-disable-next-line no-control-regex
 const fileNameInvalidCharsRegex = /[<>:"/\\|?*\x00-\x1F]/g;
-export const generateValidFileName = (name: string, def?: string, ext: string = '.json') => {
+export const generateValidFileName = (name: string, def?: string, ext: string = '.zip') => {
     if (name.toLowerCase().endsWith(ext.toLowerCase())) name = name.substring(0, name.length - ext.length);
 
     let validName = name.replace(fileNameInvalidCharsRegex, '_').trim();

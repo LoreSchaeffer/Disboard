@@ -19,7 +19,7 @@ const buildSbGridBtn = (gridBtn: GridBtn, track?: Track): SbGridBtn => {
 };
 
 export const convertGridBtn2SbGridBtn = (gridBtn: GridBtn): SbGridBtn => {
-    const track = tracksStore.get('tracks').find(t => t.id === gridBtn.track);
+    const track = (tracksStore.get('tracks') || []).find(t => t.id === gridBtn.track) || null;
     return buildSbGridBtn(gridBtn, track);
 };
 
@@ -39,23 +39,6 @@ export const convertGridProfile2SbGridProfile = (gridProfile: GridProfile): SbGr
     }
 }
 
-export const convertSbGridBtn2GridBtn = (sbGridBtn: SbGridBtn): GridBtn => {
-    return {
-        id: sbGridBtn.id,
-        row: sbGridBtn.row,
-        col: sbGridBtn.col,
-        track: sbGridBtn.track.id,
-        title: sbGridBtn.title,
-        volumeOverride: sbGridBtn.volumeOverride,
-        style: sbGridBtn.style,
-        cropOptions: sbGridBtn.cropOptions
-    }
-}
-
-export const convertSbGridBtns2GridBtns = (sbGridBtns: SbGridBtn[]): GridBtn[] => {
-    return sbGridBtns.map(convertSbGridBtn2GridBtn);
-}
-
 export const convertAmbientBtn2SbAmbientBtn = (ambientBtn: AmbientBtn): SbAmbientBtn => {
     return null;
 }
@@ -69,14 +52,6 @@ export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientPr
         ...ambientProfile,
         // TODO
     }
-}
-
-export const convertSbAmbientBtn2AmbientBtn = (sbAmbientBtn: SbAmbientBtn): AmbientBtn => {
-    return null;
-}
-
-export const convertSbAmbientBtns2AmbientBtns = (sbAmbientBtns: SbAmbientBtn[]): AmbientBtn[] => {
-    return null;
 }
 
 export const createPlayerTrack = async (source: TrackSourceName, media: YTSearchResult | string): Promise<PlayerTrack | null> => {

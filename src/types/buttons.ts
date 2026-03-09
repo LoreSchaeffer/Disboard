@@ -29,7 +29,7 @@ export const GridBtnSchema = z.object({
     id: z.uuid(),
     row: z.number().int().min(0).max(49),
     col: z.number().int().min(0).max(49),
-    track: z.uuid(),
+    track: z.uuid().optional(),
     title: z.string().optional(),
     volumeOverride: z.number().min(0).max(100).optional(),
     style: BtnStyleSchema.optional(),

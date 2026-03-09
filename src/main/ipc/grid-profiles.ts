@@ -1,10 +1,9 @@
 import {app, dialog, ipcMain} from "electron";
 import {clamp} from "../../shared/utils";
 import path from "path";
-import fs from "node:fs/promises";
-import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, SbGridProfileSchema, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, TrackSourceName, YTSearchResult} from "../../types";
 import {getGridProfilesStore} from "../storage/profiles-store";
-import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile, convertSbGridBtns2GridBtns} from "../utils/data-converters";
+import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile} from "../utils/data-converters";
 import {removeNameInvalidChars, validateName} from "../../shared/validation";
 import {fixActiveProfile, generateUUID, generateValidFileName} from "../utils/misc";
 import {getBoardSettings, settingsStore} from "../storage/settings-store";
@@ -12,7 +11,8 @@ import {broadcastData} from "../utils/broadcast";
 import {cacheStore} from "../storage/cache-store";
 import {deepMerge, pruneNulls} from "../utils/objects";
 import {tracksStore} from "../storage/tracks-store";
-import {downloadTrackAndUpdateButton} from "../utils/downloads";
+import {createAndDownloadTrack} from "../utils/downloads";
+import {exportGridProfile, exportGridProfilesBatch, importGridProfilesBatch} from "../utils/profiles-io";
 
 export const setupGridProfilesHandlers = () => {
     ipcMain.handle('grid_profiles:get_all', (_, boardType: Exclude<BoardType, 'ambient'>): SbGridProfile[] => {
@@ -122,68 +122,19 @@ export const setupGridProfilesHandlers = () => {
             defaultPath: defaultPath,
             properties: ['openFile', 'multiSelections'],
             filters: [
-                {name: 'JSON Profile', extensions: ['json']},
+                {name: 'ZIP Profile', extensions: ['zip']},
             ]
         });
 
         if (canceled || !filePaths || filePaths.length === 0) return;
+
         cacheStore.set('profilesDir', path.dirname(filePaths[0]));
 
-        const profilesStore = getGridProfilesStore(boardType);
-        const profiles = profilesStore.get('profiles');
-
-        const importedProfiles = [];
-        for (const filePath of filePaths) {
-            let json: unknown;
-            try {
-                const fileContent = await fs.readFile(filePath, 'utf-8');
-                json = JSON.parse(fileContent);
-            } catch (e) {
-                console.error('[Main] JSON Parse Exception:', e);
-                continue;
-            }
-
-            const result = SbGridProfileSchema.safeParse(json);
-            if (!result.success) {
-                console.error(`[Main] Profile '${path.basename(filePath)}' validation failed:`, result.error);
-                continue;
-            }
-
-            const importedProfile: SbGridProfile = result.data;
-            if (importedProfile.type !== boardType) {
-                console.error(`[Main] Profile '${path.basename(filePath)}' has mismatching type '${importedProfile.type}' (expected '${boardType}')`);
-                continue;
-            }
-
-            let newName = removeNameInvalidChars(importedProfile.name);
-            let counter = 1;
-
-            while (profiles.some(p => p.name.toLowerCase() === newName.toLowerCase())) {
-                newName = `${removeNameInvalidChars(importedProfile.name)} (${counter})`;
-                counter++;
-            }
-
-            const newProfile: GridProfile = {
-                id: generateUUID(),
-                name: newName,
-                type: boardType,
-                rows: importedProfile.rows,
-                cols: importedProfile.cols,
-                buttons: convertSbGridBtns2GridBtns(importedProfile.buttons)
-            }
-
-            // TODO Submit download of missing tracks
-
-            profiles.push(newProfile);
-            importedProfiles.push(newProfile);
-        }
-
-        if (importedProfiles.length > 0) {
-            profilesStore.set('profiles', profiles);
-            broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
-
-            settingsStore.set(`${boardType}.activeProfile`, importedProfiles[0].id);
-            broadcastData('settings:changed', settingsStore.store);
+        try {
+            await importGridProfilesBatch(filePaths, boardType);
+            console.log(`[Main] Successfully imported ${filePaths.length} profile(s).`);
+        } catch (e) {
+            console.error('[Main] Error during bulk import:', e);
         }
     });
 
@@ -200,21 +151,22 @@ export const setupGridProfilesHandlers = () => {
             title: `Export profile ${profile.name}`,
             defaultPath: path.join(cacheStore.get('profilesDir') || app.getPath('documents'), safeFileName),
             filters: [
-                {name: 'JSON', extensions: ['json']},
+                {name: 'ZIP', extensions: ['zip']},
             ]
         });
 
         if (canceled || !filePath) {
-            console.info('Export canceled');
+            console.info('[Main] Export canceled');
             return;
         }
 
         cacheStore.set('profilesDir', path.dirname(filePath));
 
         try {
-            await fs.writeFile(filePath, JSON.stringify(convertGridProfile2SbGridProfile(profile), null, 2));
+            await exportGridProfile(profile, filePath);
+            console.log(`[Main] Profile ${profile.name} (${profile.id}) exported successfully!`);
         } catch (e) {
-            console.error('[Main] Error exporting profile:', e.message);
+            console.error(`[Main] Exception occurred exporting profile ${profile.name} (${profile.id}):`, e);
         }
     });
 
@@ -229,37 +181,19 @@ export const setupGridProfilesHandlers = () => {
         });
 
         if (canceled || !filePaths || filePaths.length === 0) {
-            console.info('Export canceled');
+            console.info('[Main] Export canceled');
             return;
         }
 
         const exportDir = filePaths[0];
         cacheStore.set('profilesDir', exportDir);
 
-        const exportPromises = profiles.map(async (profile) => {
-            try {
-                let finalFileName = generateValidFileName(profile.name, profile.id);
-                let counter = 1;
-
-                let fileExists = true;
-                while (fileExists) {
-                    try {
-                        await fs.access(path.join(exportDir, finalFileName));
-                        finalFileName = generateValidFileName(`${profile.name} (${counter})`, profile.id);
-                        counter++;
-                    } catch {
-                        fileExists = false;
-                    }
-                }
-
-                await fs.writeFile(path.join(exportDir, finalFileName), JSON.stringify(convertGridProfile2SbGridProfile(profile), null, 2));
-            } catch (e) {
-                console.error(`[Main] Error during profile ${profile.name} export:`, e);
-            }
-        });
-
-        await Promise.all(exportPromises);
-        console.log(`[Main] Exported ${profiles.length} profiles.`);
+        try {
+            await exportGridProfilesBatch(profiles, exportDir);
+            console.log(`[Main] Exported ${profiles.length} profiles.`);
+        } catch (e) {
+            console.error(`[Main] Error during bulk export:`, e);
+        }
     });
 
 
@@ -336,7 +270,7 @@ export const setupGridProfilesHandlers = () => {
         if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
 
         const profilesStore = getGridProfilesStore(boardType);
-        const profiles = profilesStore.get('profiles');
+        const profiles = profilesStore.get('profiles') || [];
 
         const profileIdx = profiles.findIndex(p => p.id === profileId);
         if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
@@ -363,7 +297,7 @@ export const setupGridProfilesHandlers = () => {
         }
 
         if (source === 'list') {
-            const track = tracksStore.get('tracks').find(t => t.id === media);
+            const track = (tracksStore.get('tracks') || []).find(t => t.id === media);
             if (!track) return {success: false, error: 'track_not_found'};
 
             targetBtn.track = track.id;
@@ -373,13 +307,11 @@ export const setupGridProfilesHandlers = () => {
         }
 
         const trackId = generateUUID();
-        targetBtn.title = 'Importing...';
         targetBtn.track = trackId;
 
         save();
 
-        downloadTrackAndUpdateButton(boardType, profileId, btnId, trackId, source, media, customTitle).catch(e => console.error('[Main] Background download error:', e));
-
+        createAndDownloadTrack(boardType, trackId, source, media, customTitle);
         return {success: true};
     });
 

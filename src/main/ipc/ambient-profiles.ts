@@ -1,14 +1,11 @@
-import {app, dialog, ipcMain} from "electron";
-import path from "path";
-import fs from "node:fs/promises";
-import {AmbientBtn, AmbientProfile, BoardType, DeepPartial, IpcResponse, SbAmbientBtn, SbAmbientProfile, SbAmbientProfileSchema} from "../../types";
+import {ipcMain} from "electron";
+import {AmbientBtn, AmbientProfile, BoardType, DeepPartial, IpcResponse, SbAmbientBtn, SbAmbientProfile} from "../../types";
 import {ambientBoardStore} from "../storage/profiles-store";
-import {convertAmbientBtn2SbAmbientBtn, convertAmbientProfile2SbAmbientProfile, convertSbAmbientBtns2AmbientBtns} from "../utils/data-converters";
+import {convertAmbientBtn2SbAmbientBtn, convertAmbientProfile2SbAmbientProfile} from "../utils/data-converters";
 import {removeNameInvalidChars, validateName} from "../../shared/validation";
-import {fixActiveProfile, generateUUID, generateValidFileName} from "../utils/misc";
+import {fixActiveProfile, generateUUID} from "../utils/misc";
 import {getBoardSettings, settingsStore} from "../storage/settings-store";
 import {broadcastData} from "../utils/broadcast";
-import {cacheStore} from "../storage/cache-store";
 import {deepMerge, pruneNulls} from "../utils/objects";
 
 export const setupAmbientProfilesHandlers = () => {
@@ -100,148 +97,15 @@ export const setupAmbientProfilesHandlers = () => {
     });
 
     ipcMain.on('ambient_profiles:import', async () => {
-        const defaultPath: string = cacheStore.get('profilesDir') || app.getPath('documents');
 
-        const {canceled, filePaths} = await dialog.showOpenDialog({
-            title: 'Import Profile(s)',
-            defaultPath: defaultPath,
-            properties: ['openFile', 'multiSelections'],
-            filters: [
-                {name: 'JSON Profile', extensions: ['json']},
-            ]
-        });
-
-        if (canceled || !filePaths || filePaths.length === 0) return;
-        cacheStore.set('profilesDir', path.dirname(filePaths[0]));
-
-        const profiles = ambientBoardStore.get('profiles');
-
-        const importedProfiles = [];
-        for (const filePath of filePaths) {
-            let json: unknown;
-            try {
-                const fileContent = await fs.readFile(filePath, 'utf-8');
-                json = JSON.parse(fileContent);
-            } catch (e) {
-                console.error('[Main] JSON Parse Exception:', e);
-                continue;
-            }
-
-            const result = SbAmbientProfileSchema.safeParse(json);
-            if (!result.success) {
-                console.error(`[Main] Profile '${path.basename(filePath)}' validation failed:`, result.error);
-                continue;
-            }
-
-            const importedProfile: SbAmbientProfile = result.data;
-            if (importedProfile.type !== 'ambient') {
-                console.error(`[Main] Profile '${path.basename(filePath)}' has mismatching type '${importedProfile.type}' (expected 'ambient')`);
-                continue;
-            }
-
-            let newName = removeNameInvalidChars(importedProfile.name);
-            let counter = 1;
-
-            while (profiles.some(p => p.name.toLowerCase() === newName.toLowerCase())) {
-                newName = `${removeNameInvalidChars(importedProfile.name)} (${counter})`;
-                counter++;
-            }
-
-            const newProfile: AmbientProfile = {
-                id: generateUUID(),
-                name: newName,
-                type: 'ambient',
-                buttons: convertSbAmbientBtns2AmbientBtns(importedProfile.buttons)
-            }
-
-            // TODO Submit download of missing tracks
-
-            profiles.push(newProfile);
-            importedProfiles.push(newProfile);
-        }
-
-        if (importedProfiles.length > 0) {
-            ambientBoardStore.set('profiles', profiles);
-            broadcastData('ambient_profiles:changed', profiles.map(convertAmbientProfile2SbAmbientProfile));
-
-            settingsStore.set('ambient.activeProfile', importedProfiles[0].id);
-            broadcastData('settings:changed', settingsStore.store);
-        }
     });
 
     ipcMain.on('ambient_profiles:export', async (_, id: string) => {
-        const profile = ambientBoardStore.get('profiles').find(p => p.id === id);
-        if (!profile) {
-            console.error('[Main] Profile not found');
-            return;
-        }
 
-        const safeFileName = generateValidFileName(profile.name, 'profile');
-
-        const {canceled, filePath} = await dialog.showSaveDialog({
-            title: `Export profile ${profile.name}`,
-            defaultPath: path.join(cacheStore.get('profilesDir') || app.getPath('documents'), safeFileName),
-            filters: [
-                {name: 'JSON', extensions: ['json']},
-            ]
-        });
-
-        if (canceled || !filePath) {
-            console.info('Export canceled');
-            return;
-        }
-
-        cacheStore.set('profilesDir', path.dirname(filePath));
-
-        try {
-            await fs.writeFile(filePath, JSON.stringify(convertAmbientProfile2SbAmbientProfile(profile), null, 2));
-        } catch (e) {
-            console.error('[Main] Error exporting profile:', e.message);
-        }
     });
 
     ipcMain.on('ambient_profiles:export_all', async () => {
-        const profiles = ambientBoardStore.get('profiles');
-        if (!profiles || profiles.length === 0) return;
 
-        const {canceled, filePaths} = await dialog.showOpenDialog({
-            title: 'Select Export Directory',
-            defaultPath: cacheStore.get('profilesDir') || app.getPath('documents'),
-            properties: ['openDirectory', 'createDirectory']
-        });
-
-        if (canceled || !filePaths || filePaths.length === 0) {
-            console.info('Export canceled');
-            return;
-        }
-
-        const exportDir = filePaths[0];
-        cacheStore.set('profilesDir', exportDir);
-
-        const exportPromises = profiles.map(async (profile) => {
-            try {
-                let finalFileName = generateValidFileName(profile.name, profile.id);
-                let counter = 1;
-
-                let fileExists = true;
-                while (fileExists) {
-                    try {
-                        await fs.access(path.join(exportDir, finalFileName));
-                        finalFileName = generateValidFileName(`${profile.name} (${counter})`, profile.id);
-                        counter++;
-                    } catch {
-                        fileExists = false;
-                    }
-                }
-
-                await fs.writeFile(path.join(exportDir, finalFileName), JSON.stringify(convertAmbientProfile2SbAmbientProfile(profile), null, 2));
-            } catch (e) {
-                console.error(`[Main] Error during profile ${profile.name} export:`, e);
-            }
-        });
-
-        await Promise.all(exportPromises);
-        console.log(`[Main] Exported ${profiles.length} profiles.`);
     });
 
 

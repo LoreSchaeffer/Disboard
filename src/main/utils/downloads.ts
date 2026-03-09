@@ -3,34 +3,109 @@ import fs from "node:fs/promises";
 import axios from "axios";
 import {THUMBNAILS_DIR, TRACKS_DIR, USER_AGENT} from "../constants";
 import sharp from "sharp";
-import {determineTitle, extractCoverImage, processAudio} from "./ffmpeg";
-import {BoardType, Track, TrackSource, TrackSourceName, YTSearchResult} from "../../types";
+import {determineTitle, downloadAudio, extractCoverImage} from "./ffmpeg";
+import {BoardType, GridProfiles, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
-import {getBestThumbnail, getYoutubeStream} from "./music-api";
-import {getGridProfilesStore} from "../storage/profiles-store";
+import {getBestThumbnail, getVideoId, getYoutubeStream} from "./music-api";
+import {musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
 import {broadcastData} from "./broadcast";
 import {convertGridProfile2SbGridProfile} from "./data-converters";
+import Store from "electron-store";
 
-const downloadImageFromUrl = async (url: string, outputDir: string, trackId: string): Promise<boolean> => {
-    if (!url || !url.startsWith('http')) return false;
+const updateTracksStore = (track: Track) => {
+    const tracks = tracksStore.get('tracks') || [];
+    const idx = tracks.findIndex(t => t.id === track.id);
 
-    const outputPath = path.join(outputDir, `${trackId}.jpg`);
+    if (idx !== -1) tracks[idx] = track;
+    else tracks.push(track);
 
+    tracksStore.set('tracks', tracks);
+    broadcastData('tracks:changed', tracks);
+}
+
+export const removeTrackFromStore = (id: string): boolean => {
+    const tracks = tracksStore.get('tracks') || [];
+
+    const idx = tracks.findIndex(t => t.id === id);
+    if (idx === -1) return false;
+    tracks.splice(idx, 1);
+
+    tracksStore.set('tracks', tracks);
+    broadcastData('tracks:changed', tracks);
+
+    const cleanButtonsContainingTrack = (boardType: Exclude<BoardType, 'ambient'>, profilesStore: Store<GridProfiles>) => {
+        const profiles = profilesStore.get('profiles') || [];
+
+        let profilesChanged = false;
+        for (const profile of profiles) {
+            for (const btn of profile.buttons) {
+                if (btn.track === id) {
+                    btn.track = null;
+                    profilesChanged = true;
+                }
+            }
+        }
+
+        if (profilesChanged) {
+            profilesStore.set('profiles', profiles);
+            broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        }
+    }
+
+    cleanButtonsContainingTrack('music', musicBoardStore);
+    cleanButtonsContainingTrack('sfx', sfxBoardStore);
+
+    return true;
+}
+
+const downloadTrack = async (track: Track): Promise<void> => {
     try {
-        await fs.mkdir(outputDir, {recursive: true});
-        console.log(`[Main] Downloading image for ${trackId} from ${url}...`);
+        const uri = track.source.type === 'youtube'
+            ? await getYoutubeStream(getVideoId(track.source.src))
+            : track.source.src;
 
-        const response = await axios({
-            method: 'GET',
-            url: url,
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': USER_AGENT
-            },
-            timeout: 20000
+        track.duration = await downloadAudio(uri, TRACKS_DIR, track.id);
+        track.downloading = false;
+
+        updateTracksStore(track);
+    } catch (e) {
+        console.error(`[Downloader] Download of track ${track.title} (${track.id}) failed:`, e);
+
+        const audioFile = path.join(TRACKS_DIR, `${track.id}.mp3`);
+        await fs.unlink(audioFile).catch(() => {
+            // Ignored
         });
 
-        const image = sharp(response.data);
+        removeTrackFromStore(track.id);
+
+        const errorMessage = e instanceof Error ? e.message : 'track_download_error';
+        throw new Error(errorMessage);
+    }
+}
+
+const downloadImage = async (track: Track, url?: string): Promise<void> => {
+    const dstFile = path.join(THUMBNAILS_DIR, `${track.id}.jpg`);
+
+    try {
+        let data: Buffer;
+
+        if (track.source.type !== 'youtube') {
+            await extractCoverImage(track.source.src, THUMBNAILS_DIR, track.id);
+            data = await fs.readFile(dstFile);
+        } else {
+            if (!url || !url.startsWith('http')) throw new Error('The url of the best thumbnail should be provided');
+
+            const response = await axios({
+                method: 'GET',
+                url: url,
+                responseType: 'arraybuffer',
+                headers: {'User-Agent': USER_AGENT},
+                timeout: 20000
+            });
+            data = response.data;
+        }
+
+        const image = sharp(data);
         const metadata = await image.metadata();
         const width = metadata.width;
         const height = metadata.height;
@@ -41,8 +116,6 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
         const leftOffset = Math.round((width - minDimension) / 2);
         const topOffset = Math.round((height - minDimension) / 2);
 
-        console.log(`[Main] Cropping image for ${trackId} to ${minDimension}x${minDimension} square.`);
-
         await image
             .extract({
                 left: leftOffset,
@@ -51,143 +124,128 @@ const downloadImageFromUrl = async (url: string, outputDir: string, trackId: str
                 height: minDimension
             })
             .jpeg({quality: 90, mozjpeg: true})
-            .toFile(outputPath);
+            .toFile(dstFile);
 
-        return true;
+    } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.warn(`[Main] Thumbnail not generated for ${track.title} (${track.id}): ${errMsg}`);
 
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.warn(`[Main] Failed to download or process cover for ${trackId}: ${errorMessage}`);
-        await fs.unlink(outputPath).catch(() => {
+        await fs.unlink(dstFile).catch(() => {
+            // Ignored
         });
-
-        return false;
+        throw e;
     }
 }
 
-export const downloadTrack = async (
+export const createAndDownloadTrack = async (
     boardType: Exclude<BoardType, 'ambient'>,
-    id: string,
-    uri: string,
-    source: TrackSource,
-    title?: string,
-    cover?: string,
-): Promise<Track> => {
-    const audioTask = processAudio(uri, TRACKS_DIR, id);
-    const titleTask = determineTitle(uri, title);
-
-    let coverTask: Promise<boolean>;
-    if (source.type === 'youtube' && cover) {
-        coverTask = downloadImageFromUrl(cover, THUMBNAILS_DIR, id)
-            .catch(err => {
-                console.warn('[Downloader] Failed to download YT cover:', err);
-                return false;
-            });
-    } else {
-        coverTask = extractCoverImage(uri, THUMBNAILS_DIR, id);
-    }
-
-    try {
-        const [duration, finalTitle] = await Promise.all([
-            audioTask,
-            titleTask,
-            coverTask
-        ]);
-
-        const track: Track = {
-            id: id,
-            source: source,
-            title: finalTitle,
-            duration: duration,
-            board: boardType
-        };
-
-        const tracks = tracksStore.get('tracks') || [];
-        tracks.push(track);
-        tracksStore.set('tracks', tracks);
-
-        return track;
-    } catch (error) {
-        console.error(`[Downloader] Critical error for ${id}:`, error);
-
-        const audioFile = path.join(TRACKS_DIR, `${id}.mp3`);
-        await fs.unlink(audioFile).catch(() => {
-        });
-
-        const tracks = tracksStore.get('tracks') || [];
-        if (tracks.some(t => t.id === id)) {
-            tracksStore.set('tracks', tracks.filter(t => t.id !== id));
-        }
-
-        const errorMessage = error instanceof Error ? error.message : 'download_error';
-        throw new Error(errorMessage);
-    }
-};
-
-export const downloadTrackAndUpdateButton = async (
-    boardType: Exclude<BoardType, 'ambient'>,
-    profileId: string,
-    buttonId: string,
     trackId: string,
     source: Exclude<TrackSourceName, 'list'>,
     media: YTSearchResult | string,
     customTitle?: string
-) => {
-    let downloadSuccessful = true;
+): Promise<Track> => {
+    const track: Track = {
+        id: trackId,
+        source: {
+            type: source,
+            src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
+        },
+        title: customTitle || (source === 'youtube' ? (media as YTSearchResult).name : undefined),
+        duration: undefined,
+        board: boardType,
+        downloading: true
+    };
+
+    if (!track.title && source !== 'youtube') track.title = await determineTitle(track);
+
+    updateTracksStore(track);
+
     try {
-        let uri = typeof media === 'string' ? media : null;
+        const thumbUrl = source === 'youtube' ? getBestThumbnail((media as YTSearchResult).thumbnails) : undefined;
+        await downloadImage(track, thumbUrl);
+    } catch {
+        // Ignored
+    }
 
-        if (source === 'youtube') {
-            const stream = await getYoutubeStream((media as YTSearchResult).id);
-            if (!stream) throw new Error('stream_not_found');
-            uri = stream;
-        }
-
-        const title = customTitle !== '' ? customTitle : (source === 'youtube' ? (media as YTSearchResult).name : undefined)
-
-        const track = await downloadTrack(
-            boardType,
-            trackId,
-            uri,
-            {
-                type: source,
-                src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
-            },
-            title,
-            source === 'youtube' ? getBestThumbnail((media as YTSearchResult).thumbnails) : undefined
-        );
-
-        if (!track) throw new Error('download_failed');
-
-        console.log(`[Main] Track ${track.id} downloaded.`);
+    try {
+        await downloadTrack(track);
     } catch (e) {
-        console.warn(`[Main] Failed to download track: ${e.message}`);
-        downloadSuccessful = false;
+        await fs.unlink(path.join(THUMBNAILS_DIR, `${track.id}.jpg`)).catch(() => {
+            // Ignored
+        });
+
+        throw e;
     }
 
-    const profilesStore = getGridProfilesStore(boardType);
-    const profiles = profilesStore.get('profiles');
+    return track;
+};
 
-    const profileIdx = profiles.findIndex(p => p.id === profileId);
-    if (profileIdx === -1) {
-        console.warn(`[Main] Profile with id ${profileId} not found in ${boardType} board while updating button ${buttonId}`);
-        return;
+const getFallbackThumbnailUrl = (track: Track): string | undefined => {
+    if (track.source.type === 'youtube') {
+        try {
+            const videoId = getVideoId(track.source.src);
+            return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+        } catch {
+            return undefined;
+        }
     }
-    const profile = profiles[profileIdx];
+    return undefined;
+}
 
-    const btnIdx = profile.buttons.findIndex(b => b.id === buttonId);
-    if (btnIdx === -1) {
-        console.warn(`[Main] Button with id ${buttonId} not found in profile ${profileId} on ${boardType} board while updating after download`);
-        return;
+const downloadMissingTrack = async (track: Track, downloadThumb: boolean) => {
+    track.downloading = true;
+    updateTracksStore(track);
+
+    if (downloadThumb) {
+        try {
+            await downloadImage(track, getFallbackThumbnailUrl(track));
+        } catch (e) {
+            console.warn(`[Main] Could not restore thumbnail for ${track.title} (${track.id}):`, e.message);
+        }
     }
-    const btn = profile.buttons[btnIdx];
 
-    if (downloadSuccessful) {
-        delete btn.title;
-    } else {
-        profile.buttons.splice(btnIdx, 1);
+    await downloadTrack(track);
+}
+
+const checkFileExists = async (filePath: string): Promise<boolean> => {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
     }
+};
 
-    profilesStore.set('profiles', profiles);
-    broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+export const fixMissingTracks = async () => {
+    const tracks: Track[] = tracksStore.get('tracks') || [];
+
+    for (const track of tracks) {
+        const trackFile = path.join(TRACKS_DIR, `${track.id}.mp3`);
+        const thumbFile = path.join(THUMBNAILS_DIR, `${track.id}.jpg`);
+
+        const trackExists = await checkFileExists(trackFile);
+        const thumbExists = await checkFileExists(thumbFile);
+
+        if (trackExists && thumbExists) continue;
+
+        if (!trackExists) {
+            console.warn(`[Main] Track audio ${track.title} (${track.id}) is missing...`);
+
+            try {
+                await downloadMissingTrack(track, !thumbExists);
+                console.info(`[Main] Track audio ${track.title} (${track.id}) restored.`)
+            } catch (e) {
+                console.error(`[Main] Failed to restore audio for ${track.id}`, e);
+            }
+        } else if (!thumbExists) {
+            console.warn(`[Main] Thumbnail for ${track.title} (${track.id}) is missing...`);
+
+            try {
+                await downloadImage(track, getFallbackThumbnailUrl(track));
+                console.info(`[Main] Thumbnail for ${track.title} (${track.id}) restored.`)
+            } catch (e) {
+                console.warn(`[Main] Failed to restore thumbnail for ${track.id}`, e.message);
+            }
+        }
+    }
 }

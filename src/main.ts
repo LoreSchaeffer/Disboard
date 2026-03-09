@@ -11,6 +11,7 @@ import {settingsStore} from "./main/storage/settings-store";
 import {createBoardWin} from "./main/windows";
 import {BoardType} from "./types";
 import {setupLogger} from "./main/utils/logger";
+import {fixMissingTracks} from "./main/utils/downloads";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 if (require('electron-squirrel-startup')) app.quit();
@@ -64,7 +65,7 @@ const initApp = async () => {
     const musicApiCredentials = settingsStore.get('musicApiCredentials');
     if (musicApiEndpoint && musicApiCredentials && musicApiCredentials.clientId && musicApiCredentials.clientSecret) {
         console.log('[Main] Initializing Music API...');
-        setTimeout(() => state.musicApi = new MusicApi(musicApiEndpoint, musicApiCredentials), 0);
+        state.musicApi = new MusicApi(musicApiEndpoint, musicApiCredentials);
     } else {
         console.log('[Main] Music API not configured.');
     }
@@ -84,6 +85,11 @@ const initApp = async () => {
     boardsToOpen.forEach(boardType => {
         console.log(`[Main] Opening ${boardType} board on startup...`);
         createBoardWin(boardType);
+    });
+
+    // 8. Fix missing tracks
+    fixMissingTracks().catch(e => {
+        console.error('[Main] Critical error during background track fix:', e);
     });
 };
 

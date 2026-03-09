@@ -1,13 +1,11 @@
 import {ipcMain} from "electron";
-import {BoardType, GridProfiles, IpcResponse, PlayerTrack, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {IpcResponse, PlayerTrack, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
-import {broadcastData} from "../utils/broadcast";
-import {musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
-import Store from "electron-store";
-import {convertGridProfile2SbGridProfile, createPlayerTrack} from "../utils/data-converters";
+import {createPlayerTrack} from "../utils/data-converters";
 import fs from "node:fs/promises";
 import path from "path";
 import {THUMBNAILS_DIR, TRACKS_DIR} from "../constants";
+import {removeTrackFromStore} from "../utils/downloads";
 
 export const setupTracksHandlers = () => {
     ipcMain.handle('tracks:get_all', (): Track[] => tracksStore.get('tracks'));
@@ -28,37 +26,16 @@ export const setupTracksHandlers = () => {
     });
 
     ipcMain.handle('tracks:delete', async (_, id: string): Promise<IpcResponse<void>> => {
-        const tracks = tracksStore.get('tracks');
-        const trackIndex = tracks.findIndex(t => t.id === id);
-        if (trackIndex === -1) return {success: false, error: 'track_not_found'};
-
-        tracks.splice(trackIndex, 1);
-        tracksStore.set('tracks', tracks);
-        broadcastData('tracks:changed', tracks);
+        const res = removeTrackFromStore(id);
+        if (!res) {
+            console.warn(`[Main] Attempted to delete non-existent track with id ${id}`);
+            return {success: false};
+        }
 
         await fs.unlink(path.join(TRACKS_DIR, `${id}.mp3`)).catch(() => {
         });
         await fs.unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {
         });
-
-        const removeButtonsContainingTrack = (boardType: Exclude<BoardType, 'ambient'>, profilesStore: Store<GridProfiles>) => {
-            const profiles = profilesStore.get('profiles');
-            let profilesChanged = false;
-
-            for (const profile of profiles) {
-                const initialLength = profile.buttons.length;
-                profile.buttons = profile.buttons.filter(btn => btn.track !== id);
-                if (profile.buttons.length !== initialLength) profilesChanged = true;
-            }
-
-            if (profilesChanged) {
-                profilesStore.set('profiles', profiles);
-                broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
-            }
-        }
-
-        removeButtonsContainingTrack('music', musicBoardStore);
-        removeButtonsContainingTrack('sfx', sfxBoardStore);
 
         return {success: true};
     });

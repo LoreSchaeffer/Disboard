@@ -241,7 +241,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                                 onClick={hasTrack && !isDownloading ? onClick : undefined}
                                 onContextMenu={!isDownloading || !hasTrack ? onContextMenu : undefined}
                                 swapButtons={swapButtons}
-                                zoom={settings?.zoom || 1}
+                                zoom={settings?.[boardType].zoom || 1}
                                 showImages={settings?.showImages || true}
                                 active={isActive}
                                 progress={progress}

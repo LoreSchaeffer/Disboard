@@ -1,4 +1,4 @@
-import {Tracks, TracksSchema} from "../../types";
+import {Track, Tracks, TracksSchema} from "../../types";
 import {createValidatedStore} from "./store";
 import Store from "electron-store";
 import {broadcastData} from "../utils/broadcast";
@@ -8,3 +8,10 @@ export const tracksStore: Store<Tracks> = createValidatedStore<Tracks>(
     TracksSchema,
     (tracks: Tracks) => broadcastData('tracks:changed', tracks.tracks)
 );
+
+export const getTracksRecord = (): Record<string, Track> => {
+    return (tracksStore.get('tracks') || []).reduce((acc: Record<string, Track>, track: Track) => {
+        acc[track.id] = track;
+        return acc;
+    }, {});
+}

@@ -1,0 +1,86 @@
+.thumbnailContainer {
+    position: relative;
+    width: 30px;
+    height: 30px;
+}
+
+.thumbnail {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: all 200ms ease-in-out;
+}
+
+.thumbnailPlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 200ms ease-in-out;
+    z-index: 100;
+}
+
+.thumbnailPlaying {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    cursor: pointer;
+}
+
+.thumbnailContainer:hover .thumbnail,
+.thumbnail.playing {
+    filter: brightness(60%);
+}
+
+.thumbnailContainer:hover .thumbnailPlay {
+    opacity: 1;
+}
+
+.tableSpan {
+    font-size: 0.875rem;
+}
+
+.tableIcon {
+    cursor: pointer;
+    transition: all 200ms ease-in-out;
+    font-size: 1.2rem;
+}
+
+.youtubeIcon {
+    fill: var(--red-50);
+}
+
+.youtubeIcon:hover {
+    fill: var(--red-40);
+}
+
+.fileIcon {
+    fill: var(--yellow-50);
+}
+
+.fileIcon:hover {
+    fill: var(--yellow-40);
+}
+
+.urlIcon {
+    fill: var(--blurple-50);
+}
+
+.urlIcon:hover {
+    fill: var(--blurple-40);
+}
+
+.trashIcon {
+    fill: var(--neutral-40);
+}
+
+.trashIcon:hover {
+    fill: var(--red-40);
+}

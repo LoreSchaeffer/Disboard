@@ -1,0 +1,91 @@
+:root {
+    --sb-bg: var(--background-primary);
+    --sb-bg-hover: var(--background-primary-hover);
+    --sb-bg-active: var(--background-primary-active);
+    --sb-text: var(--text-primary);
+    --sb-text-hover: var(--text-primary-hover);
+    --sb-text-active: var(--text-primary-active);
+    --sb-border: transparent;
+    --sb-border-hover: transparent;
+    --sb-border-active: transparent;
+    --sb-progress: var(--primary);
+    --sb-font-size: 11pt;
+    --sb-line-height: calc(11pt * 1.2);
+    --sb-image-size: 30px;
+    --sb-image-radius: 5px;
+}
+
+.btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 2px 5px;
+    font-weight: 400;
+    border: 1px solid;
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition: all 100ms ease;
+
+    background-color: var(--sb-bg);
+    color: var(--sb-text);
+    border-color: var(--sb-border);
+}
+
+.btn.active {
+    background-color: var(--sb-bg-active);
+    border-color: var(--sb-border-active);
+}
+
+.btn:hover:not(.dropping) {
+    background-color: var(--sb-bg-hover);
+    color: var(--sb-text-hover);
+    border-color: var(--sb-border-hover);
+}
+
+.btn.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.btn.dropping {
+    filter: brightness(150%);
+}
+
+.image {
+    width: var(--sb-image-size);
+    height: var(--sb-image-size);
+    object-fit: cover;
+    border-radius: var(--sb-image-radius);
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.text {
+    text-overflow: ellipsis;
+    white-space: normal;
+    max-width: 100%;
+    margin-right: 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    font-size: var(--sb-font-size);
+    line-height: var(--sb-line-height);
+}
+
+.btn.active .text {
+    color: var(--sb-text-active);
+}
+
+.progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background-color: var(--sb-progress);
+    height: 3px;
+}

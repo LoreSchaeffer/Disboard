@@ -1,16 +1,15 @@
 import styles from './DeleteConfirmationWin.module.css';
 import {PiTrashBold, PiXBold} from "react-icons/pi";
-import React, {ReactNode} from "react";
+import React, {ReactNode, useEffect, useState} from "react";
 import {useNavigation} from "../context/NavigationContext";
-import {useWindow} from "../context/WindowContext";
 import {clsx} from "clsx";
 import Button from "../components/misc/Button";
-import {SbBtn} from "../../types/data";
-import {getPosFromButtonId} from "../utils/utils";
+import {BoardType, SbAmbientBtn, SbGridBtn} from "../../types";
 
-export type ResourceType = 'profile' | 'button';
+export type ResourceType = 'profile' | 'button' | 'track';
 
 export type DeleteConfirmationData = {
+    boardType: BoardType;
     resource: ResourceType;
     id: string;
     onConfirm?: () => void;
@@ -24,38 +23,67 @@ const stringsMap: Record<ResourceType, { header: string, message: (displayId: st
     button: {
         header: 'Delete Button?',
         message: (displayId) => <>Are you sure you want to delete the button <span className={styles.messageId}>{displayId}</span>?<br/>This action cannot be undone.</>
+    },
+    track: {
+        header: 'Delete Track?',
+        message: (displayId) => <>Are you sure you want to delete the track <span className={styles.messageId}>{displayId}</span>?<br/>This action cannot be undone.</>
     }
 }
 
 const DeleteConfirmationWin = () => {
-    const {activeProfile, profiles} = useWindow();
-    const {back, currentPage} = useNavigation();
-    const data: DeleteConfirmationData = currentPage?.data as DeleteConfirmationData;
+    const {back, currentRoute} = useNavigation();
+    const data: DeleteConfirmationData = currentRoute?.data as DeleteConfirmationData;
+    const [displayName, setDisplayName] = useState<string | undefined>(undefined);
 
-    if (!data) return null;
+    useEffect(() => {
+        if (!data) return;
 
-    let displayName;
-    switch (data.resource) {
-        case 'profile':
-            displayName = profiles.find(p => p.id === data.id)?.name || data.id;
-            break;
-        case 'button': {
-            const btn: SbBtn = activeProfile?.buttons.find(b => b.id === data.id);
-            const pos = getPosFromButtonId(data.id);
+        let isMounted = true;
+        if (data.boardType === 'music' || data.boardType === 'sfx') {
+            if (data.resource === 'profile') {
+                window.electron.gridProfiles.get(data.boardType, data.id).then(profile => {
+                    if (isMounted) setDisplayName(profile?.name || data.id);
+                });
+            } else if (data.resource === 'button') {
+                window.electron.gridProfiles.getActive(data.boardType).then(profile => {
+                    if (!profile) return;
 
-            if (btn) {
-                displayName = (btn.title || btn.track.title) + ` (${pos.row}-${pos.col})`;
-            } else {
-                displayName = `Button ${pos.row}-${pos.col}`;
+                    const btn: SbGridBtn | undefined = profile.buttons.find(b => b.id === data.id);
+                    if (!btn) return;
+
+                    if (isMounted) {
+                        const titleFallback = btn.title || btn.track?.title || 'Unknown Button';
+                        setDisplayName(`${titleFallback} (${btn.row}-${btn.col})`);
+                    }
+                });
+            } else if (data.resource === 'track') {
+                window.electron.tracks.get(data.id).then(track => {
+                    if (isMounted) setDisplayName(track?.title || data.id);
+                });
             }
-            break;
-        }
-        default:
-            displayName = undefined;
-            break;
-    }
+        } else if (data.boardType === 'ambient') {
+            if (data.resource === 'profile') {
+                window.electron.ambientProfiles.get(data.id).then(profile => {
+                    if (isMounted) setDisplayName(profile?.name || data.id);
+                });
+            } else if (data.resource === 'button') {
+                window.electron.ambientProfiles.getActive().then(profile => {
+                    if (!profile) return;
 
-    if (!displayName) return null;
+                    const btn: SbAmbientBtn | undefined = profile.buttons.find(b => b.id === data.id);
+                    if (!btn) return;
+
+                    if (isMounted) setDisplayName(btn.title || 'Unknown Button');
+                })
+            }
+        }
+
+        return () => {
+            isMounted = false;
+        };
+    }, [data]);
+
+    if (!data || !displayName) return null;
 
     return (
         <div className={styles.wrapper}>

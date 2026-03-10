@@ -9,7 +9,8 @@ import {formatTime} from "../../utils/time";
 import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
-import {PlayerTrack} from "../../../types/data";
+import {useProfiles} from "../../context/ProfilesProvider";
+import {GridMediaSelectorWin, RepeatMode} from "../../../types";
 
 type PlayerProps = {
     showProfileSettings?: () => void;
@@ -17,59 +18,41 @@ type PlayerProps = {
 };
 
 const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
-    const {settings, updateSettings} = useWindow();
-    const {player, status, currentTrack, duration, currentTime, queue} = usePlayer();
+    const {settings, updateSettingsAsync} = useWindow();
+    const {boardType} = useProfiles();
+    const {player, status, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
 
-    const [volume, setVolume] = useState<number>(settings.volume);
+    const [volume, setVolume] = useState<number>(settings[boardType].volume);
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
-        const unsubPlayNow = window.electron.onPlayNow((track: PlayerTrack) => {
-            player.playNow(track)
-        });
-        const unsubPause = window.electron.onPause(() => player.pause());
-        const unsubPlay = window.electron.onPlay(() => player.play());
-        const unsubPlayPause = window.electron.onPlayPause(() => player.playPause());
-        const unsubStop = window.electron.onStop(() => player.stop());
-        const unsubNext = window.electron.onNext(() => player.next());
-        const unsubPrev = window.electron.onPrev(() => player.previous());
-
-        return () => {
-            unsubPlayNow();
-            unsubPause();
-            unsubPlay();
-            unsubPlayPause();
-            unsubStop();
-            unsubNext();
-            unsubPrev();
-        }
-    }, []);
-
-    useEffect(() => {
-        setVolume(settings.volume);
-    }, [settings.volume]);
+        setVolume(settings[boardType].volume);
+    }, [settings[boardType].volume]);
 
     useEffect(() => {
         if (muted) player.setVolume(0);
         else player.setVolume(volume);
     }, [volume, muted, player]);
 
-    const changeRepeatMode = () => {
-        if (player.getRepeatMode() === 'none') player.setRepeatMode('all');
-        else if (player.getRepeatMode() === 'all') player.setRepeatMode('one');
-        else player.setRepeatMode('none');
+    if (boardType !== 'music') return null;
 
-        updateSettings({repeat: player.getRepeatMode()})
+    const changeRepeatMode = () => {
+        let nextMode: RepeatMode = 'none';
+        if (repeat === 'none') nextMode = 'all';
+        else if (repeat === 'all') nextMode = 'one';
+        player.setRepeatMode(nextMode);
+
+        window.electron.settings.set({music: {repeat: nextMode}});
     };
 
     const search = () => {
-        window.electron.openWindow('media_selector', {action: 'play_now'});
+        window.electron.window.open('grid_media_selector', {boardType: boardType, action: 'play_now'} as GridMediaSelectorWin);
     };
 
     const changeVolume = (_: number, newValue: number) => {
         if (muted && newValue > 0) setMuted(false);
         setVolume(newValue);
-        updateSettings({volume: newValue});
+        updateSettingsAsync({music: {volume: newValue}});
     };
 
     const toggleMute = () => {
@@ -78,9 +61,9 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     };
 
     const queueExists = queue && queue.length > 0;
-    const isFirstTrack = queueExists && currentTrack ? queue[0].id === currentTrack.id : false;
-    const isLastTrack = queueExists && currentTrack ? queue[queue.length - 1].id === currentTrack.id : false;
-    const repeatModeAll = settings.repeat === 'all';
+    const isFirstTrack = queueExists && index === 0;
+    const isLastTrack = queueExists && index === queue.length - 1;
+    const repeatModeAll = settings[boardType].repeat === 'all';
     const VolumeIcon = muted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
 
     return (
@@ -118,10 +101,10 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                             title={'Next'}
                         />
                         <PlayerBtn
-                            icon={settings.repeat === 'one' ? <PiRepeatOnceBold/> : <PiRepeatBold/>}
+                            icon={settings[boardType].repeat === 'one' ? <PiRepeatOnceBold/> : <PiRepeatBold/>}
                             onClick={changeRepeatMode}
-                            className={settings.repeat === 'none' ? styles.disabledBtn : undefined}
-                            title={`Repeat: ${settings.repeat}`}
+                            className={settings[boardType].repeat === 'none' ? styles.disabledBtn : undefined}
+                            title={`Repeat: ${settings[boardType].repeat}`}
                         />
                     </div>
 

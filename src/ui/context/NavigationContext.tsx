@@ -1,5 +1,6 @@
 import {createContext, PropsWithChildren, useCallback, useContext, useEffect, useRef, useState} from "react";
 import {useWindow} from "./WindowContext";
+import {Route} from "../../types";
 
 export type NavigationOptions = {
     replace?: boolean;
@@ -7,33 +8,33 @@ export type NavigationOptions = {
 }
 
 type NavigationContextType = {
-    currentPage: StackEntry;
+    currentRoute: StackEntry;
     visibleStack: StackEntry[];
-    navigate: (page: string, options: NavigationOptions) => void;
+    navigate: (route: Route, options: NavigationOptions) => void;
     back: () => void;
-    isInStack: (page: string) => boolean;
+    isInStack: (page: Route) => boolean;
 }
 
 export type StackEntry = {
-    page: string;
+    route: Route;
     data?: unknown;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export const NavigationProvider = ({children}: PropsWithChildren) => {
-    const {page} = useWindow();
-    const [visibleStack, setVisibleStack] = useState<StackEntry[]>([{page: page}]);
-    const currentPage = visibleStack[visibleStack.length - 1];
-    const lastExternalPage = useRef<string>(page);
+    const {route} = useWindow();
+    const [visibleStack, setVisibleStack] = useState<StackEntry[]>([{route: route}]);
+    const currentRoute = visibleStack[visibleStack.length - 1];
+    const lastExternalRoute = useRef<Route>(route);
 
-    const navigate = useCallback((newPage: string, options: NavigationOptions = {replace: true}) => {
+    const navigate = useCallback((newRoute: Route, options: NavigationOptions = {replace: true}) => {
         setVisibleStack(prevStack => {
             if (options.replace) {
-                return [{page: newPage, data: options.data}];
+                return [{route: newRoute, data: options.data}];
             } else {
-                if (prevStack.find(e => e.page === newPage)) return prevStack;
-                return [...prevStack, {page: newPage, data: options.data}];
+                if (prevStack.find(e => e.route === newRoute)) return prevStack;
+                return [...prevStack, {route: newRoute, data: options.data}];
             }
         });
     }, []);
@@ -47,20 +48,20 @@ export const NavigationProvider = ({children}: PropsWithChildren) => {
         });
     }, []);
 
-    const isInStack = (page: string) => {
-        return visibleStack.find(e => e.page === page) !== undefined;
+    const isInStack = (route: Route) => {
+        return visibleStack.find(e => e.route === route) !== undefined;
     }
 
     useEffect(() => {
-        if (page && page !== lastExternalPage.current) {
-            lastExternalPage.current = page;
-            navigate(page, {replace: true});
+        if (route && route !== lastExternalRoute.current) {
+            lastExternalRoute.current = route;
+            navigate(route, {replace: true});
         }
-    }, [page, navigate]);
+    }, [route, navigate]);
 
     return (
         <NavigationContext.Provider value={{
-            currentPage,
+            currentRoute: currentRoute,
             visibleStack,
             navigate,
             back,

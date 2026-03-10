@@ -1,16 +1,29 @@
-import {BrowserWindow} from "electron";
-import {WindowData, WindowOptions} from "../types/window";
+import {BoardType, StaticWinData, WindowOptions} from "../types";
 import {MusicApi} from "./utils/music-api";
 import {DiscordBot} from "./utils/discord-bot";
 
 class StateManager {
-    public mainWindow: BrowserWindow | undefined;
     public musicApi: MusicApi | null = null;
     public discordBot: DiscordBot | null = null;
 
-    // Window management maps
     public winOptions = new Map<number, WindowOptions>();
-    public winData = new Map<number, WindowData<unknown>>();
+    public winStaticData = new Map<number, StaticWinData<unknown>>();
+    public musicBoardId: number = null;
+    public sfxBoardId: number = null;
+    public ambientBoardId: number = null;
+}
+
+export const isBoardOpen = (boardType: BoardType): boolean => {
+    switch (boardType) {
+        case 'music':
+            return state.musicBoardId !== null;
+        case 'sfx':
+            return state.sfxBoardId !== null;
+        case 'ambient':
+            return state.ambientBoardId !== null;
+        default:
+            return false;
+    }
 }
 
 export const state = new StateManager();

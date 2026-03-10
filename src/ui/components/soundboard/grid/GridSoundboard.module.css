@@ -1,0 +1,9 @@
+.soundboard {
+    margin: 0 1px 1px;
+    display: grid;
+    grid-template-columns: auto auto auto;
+}
+
+.sb-btn-dragging {
+    opacity: 0.5;
+}

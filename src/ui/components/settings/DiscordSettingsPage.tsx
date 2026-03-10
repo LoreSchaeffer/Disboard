@@ -8,7 +8,7 @@ import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
 import Input from "../forms/Input";
 import {PiCircleFill, PiEyeBold, PiEyeSlashBold} from "react-icons/pi";
 import Select, {Option} from "../forms/Select";
-import {DiscordStatus} from "../../../types/discord";
+import {DiscordStatus} from "../../../types";
 
 const DiscordSettingsPage = () => {
     const {settings} = useWindow();
@@ -30,7 +30,7 @@ const DiscordSettingsPage = () => {
 
     useEffect(() => {
         const fetchStatus = () => {
-            window.electron.getDiscordStatus().then(setStatus);
+            window.electron.discord.getStatus().then(setStatus);
         }
 
         const intervalId = setInterval(fetchStatus, 2000);
@@ -42,7 +42,7 @@ const DiscordSettingsPage = () => {
     }, []);
 
     useEffect(() => {
-        if (status.ready) window.electron.getDiscordGuilds().then(guilds => {
+        if (status.ready) window.electron.discord.getGuilds().then(guilds => {
             const guildOptions = guilds.map(g => ({label: g.name, value: g.id}));
 
             setGuilds(guildOptions);
@@ -71,7 +71,7 @@ const DiscordSettingsPage = () => {
             return;
         }
 
-        window.electron.getDiscordChannels(guildId).then(res => {
+        window.electron.discord.getChannels(guildId).then(res => {
             const channelOptions = res.map(c => ({label: c.name, value: c.id}));
             setChannels(channelOptions);
 
@@ -86,7 +86,7 @@ const DiscordSettingsPage = () => {
 
     const handleEnabled = (enabled: boolean) => {
         setShowSettings(enabled);
-        window.electron.updateSettings({discord: {...settings.discord, enabled: enabled}});
+        window.electron.settings.set({discord: {enabled: enabled}});
     }
 
     const handleTokenChange = (value: string) => {
@@ -97,7 +97,7 @@ const DiscordSettingsPage = () => {
         if (value === '') value = null;
 
         tokenTimeoutRef.current = setTimeout(() => {
-            window.electron.updateSettings({discord: {...settings.discord, token: value}});
+            window.electron.settings.set({discord: {token: value}});
         }, 500);
     }
 
@@ -111,9 +111,7 @@ const DiscordSettingsPage = () => {
 
         if (value === '') value = null;
 
-        window.electron.updateSettings({
-            discord: {...settings.discord, lastGuild: value, lastChannel: null}
-        });
+        window.electron.settings.set({discord: {lastGuild: value, lastChannel: null}});
     }
 
     const handleChannelChange = (value: string) => {
@@ -121,7 +119,7 @@ const DiscordSettingsPage = () => {
 
         if (value === '') value = null;
 
-        window.electron.updateSettings({discord: {...settings.discord, lastChannel: value}});
+        window.electron.settings.set({discord: {lastChannel: value}});
     }
 
     return (

@@ -1,18 +1,15 @@
-import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState} from "react";
-import {Settings} from "../../types/settings";
-import {SbProfile} from "../../types/data";
-import {WindowData} from "../../types/window";
+import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
+import {DeepPartial, Route, Settings, StaticWinData, WindowInfo} from "../../types";
+import {deepMerge} from "../../main/utils/objects";
 
 type WindowContextType = {
     ready: boolean;
     parent: number | null;
     resizable: boolean;
-    page: string | null;
+    route: Route | null;
     settings: Settings | null;
-    updateSettings?: (settings: Partial<Settings>) => void;
-    profiles: SbProfile[] | null;
-    activeProfile: SbProfile | null;
-    data: WindowData<unknown> | null;
+    updateSettingsAsync: (settings: DeepPartial<Settings>) => void;
+    data: StaticWinData<unknown> | null;
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined);
@@ -21,40 +18,31 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [ready, setReady] = useState<boolean>(false);
     const [parent, setParent] = useState<number | null>(null);
     const [resizable, setResizable] = useState<boolean>(false);
-    const [page, setPage] = useState<string | null>(null);
+    const [route, setRoute] = useState<Route | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
-    const [profiles, setProfiles] = useState<SbProfile[] | null>(null);
-    const [data, setData] = useState<WindowData<unknown> | null>(null);
+    const [data, setData] = useState<StaticWinData<unknown> | null>(null);
 
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const loadInitialData = async () => {
-            const winData = await window.electron.getWindow();
-            setParent(winData.parent);
-            setResizable(winData.resizable);
-            setPage(winData.page);
-            setData(winData.data || null);
+            const winInfo: WindowInfo = await window.electron.window.getInfo();
+            setParent(winInfo.parent);
+            setResizable(winInfo.resizable);
+            setRoute(winInfo.route);
+            setData(winInfo.data || null);
 
-            const initialSettings = await window.electron.getSettings();
-            setSettings(initialSettings);
-
-            const initialProfiles = await window.electron.getProfiles();
-            setProfiles(initialProfiles);
+            setSettings(await window.electron.settings.get());
         };
 
         loadInitialData();
 
-        const unsubSettings = window.electron.onSettingsChanged(settings => {
+        const unsubSettings = window.electron.settings.onChanged((settings: Settings) => {
             setSettings(settings);
-        });
-        const unsubProfiles = window.electron.onProfilesChanged(profiles => {
-            setProfiles(profiles);
         });
 
         return () => {
             unsubSettings();
-            unsubProfiles();
 
             if (saveSettingsTimeoutRef.current) {
                 clearTimeout(saveSettingsTimeoutRef.current);
@@ -63,26 +51,22 @@ export default function WindowProvider({children}: PropsWithChildren) {
         };
     }, []);
 
-    const activeProfile = useMemo(() => {
-        if (!settings || !profiles) return null;
-        return profiles.find(p => p.id === settings.activeProfile) || null;
-    }, [settings, profiles]);
-
     useEffect(() => {
-        if (settings && profiles && page) setReady(true);
-    }, [settings, profiles, page]);
+        if (settings && route) {
+            setReady(true);
+        }
+    }, [settings, route]);
 
-    const updateSettings = (newSettings: Partial<Settings>) => {
-        if (!settings) return;
-
-        const updatedSettings = {...settings, ...newSettings};
-        setSettings(updatedSettings);
+    const updateSettingsAsync = (newSettings: DeepPartial<Settings>) => {
+        setSettings(prevSettings =>
+            prevSettings ? deepMerge(prevSettings, newSettings) : null
+        );
 
         if (saveSettingsTimeoutRef.current) clearTimeout(saveSettingsTimeoutRef.current);
         saveSettingsTimeoutRef.current = setTimeout(() => {
-            window.electron.updateSettings(newSettings);
+            window.electron.settings.set(newSettings);
             saveSettingsTimeoutRef.current = null;
-        }, 500);
+        }, 250);
     }
 
     return (
@@ -90,11 +74,9 @@ export default function WindowProvider({children}: PropsWithChildren) {
             ready,
             parent,
             resizable,
-            page,
+            route,
             settings,
-            updateSettings,
-            profiles,
-            activeProfile,
+            updateSettingsAsync,
             data,
         }}>
             {children}

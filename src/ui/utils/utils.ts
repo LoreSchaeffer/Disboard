@@ -1,6 +1,6 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
-import {PlayerTrack, SbBtn} from "../../types/data";
+import {PlayerTrack, SbGridBtn} from "../../types";
 
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
@@ -102,23 +102,17 @@ export const getVolumeIcon = (volume: number): ElementType => {
     return PiSpeakerHighBold;
 }
 
-export const generateButtonId = (row: number, col: number): string => {
-    return `btn_${row}_${col}`;
-}
-
-export const getPosFromButtonId = (buttonId: string): { row: number, col: number } | null => {
-    const match = buttonId.match(/^btn_(\d+)_(\d+)$/);
-    if (!match) return null;
-    const row = parseInt(match[1], 10);
-    const col = parseInt(match[2], 10);
-    return {row, col};
-}
-
-export const playerTrackFromBtn = (btn: SbBtn): PlayerTrack => {
+export const playerTrackFromBtn = (btn: SbGridBtn): PlayerTrack => {
     return {
         ...btn.track,
         cropOptions: btn.cropOptions || undefined,
         titleOverride: btn.title || undefined,
         volumeOverride: btn.volumeOverride || undefined
     }
+}
+
+export const getBestThumbnail = (thumbnails: ({ url: string; width: number; height: number })[]): string | null => {
+    if (thumbnails.length === 0) return null;
+    const sorted = thumbnails.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    return sorted[0].url;
 }

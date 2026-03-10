@@ -3,11 +3,13 @@ import {useNavigation} from "../context/NavigationContext";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
 import {ElementType, ReactElement, useState} from "react";
-import {PiCaretRightBold, PiHeadsetBold, PiXBold} from "react-icons/pi";
+import {PiCaretRightBold, PiHeadsetBold, PiPlaylistBold, PiSlidersFill, PiXBold} from "react-icons/pi";
 import Sidebar from "../components/settings/Sidebar";
 import AudioSettingsPage from "../components/settings/AudioSettingsPage";
 import DiscordSettingsPage from "../components/settings/DiscordSettingsPage";
 import {FaDiscord} from "react-icons/fa6";
+import GeneralSettingsPage from "../components/settings/GeneralSettingsPage";
+import TracksSettingsPage from "../components/settings/TracksSettingsPage";
 
 export type Page = {
     id: string;
@@ -27,14 +29,17 @@ const SETTINGS: Category[] = [
         id: 'app_settings',
         label: 'App settings',
         pages: [
+            {id: 'general', label: 'General', icon: PiSlidersFill, content: <GeneralSettingsPage/>},
             {id: 'audio', label: 'Audio', icon: PiHeadsetBold, content: <AudioSettingsPage/>},
-            {id: 'discord', label: 'Discord', icon: FaDiscord, content: <DiscordSettingsPage/>}
+            {id: 'discord', label: 'Discord', icon: FaDiscord, content: <DiscordSettingsPage/>},
+            {id: 'tracks', label: 'Tracks', icon: PiPlaylistBold, content: <TracksSettingsPage/>},
         ]
     },
 ];
+const DEF_PAGE = 'general';
 
 const SettingsWin = () => {
-    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: 'audio'});
+    const [activePage, setActivePage] = useState<{ categoryId: string, pageId: string }>({categoryId: 'app_settings', pageId: DEF_PAGE});
 
     const activePageContent = SETTINGS.find(c => c.id === activePage.categoryId)?.pages
         .find(p => p.id === activePage.pageId)?.content;

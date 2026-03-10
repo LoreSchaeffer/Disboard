@@ -1,0 +1,88 @@
+.tbData {
+    display: flex;
+    gap: 5px;
+    font-size: 9pt;
+    color: var(--text-secondary);
+    -webkit-app-region: drag;
+}
+
+.tbProfile {
+    font-weight: 600;
+}
+
+.errorMessage {
+    color: var(--red-35);
+}
+
+.space {
+    margin-bottom: 10px;
+}
+
+.label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.btnPreviewContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 25px;
+}
+
+.btnPreviewWrapper {
+    background-color: var(--background-tertiary);
+    padding: 30px;
+    border-radius: 8px;
+    position: relative;
+}
+
+.btnPreview {
+    width: 200px;
+    height: 50px;
+}
+
+.previewLabel {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.colorGrid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(4, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.previewBtn {
+    margin-right: auto;
+}
+
+.volumeBlock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.volumeSlider {
+    min-width: 100px;
+    height: 5px;
+    transition: width 500ms ease;
+}
+
+.volumeResetIcons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.volumeResetIcon {
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+}

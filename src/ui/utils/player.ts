@@ -1,13 +1,17 @@
 import {Time} from "./time";
-import {clamp} from "../../common/utils";
-import {RepeatMode} from "../../types/common";
-import {PlayerTrack} from "../../types/data";
+import {clamp} from "../../shared/utils";
+import {PlayerTrack, RepeatMode} from "../../types";
 
-export type PlayerStatus = {
+export type PlayerState = {
     playing: boolean;
     paused: boolean;
     seeking: boolean;
     loading: boolean;
+}
+
+export type SfxState = {
+    playing: boolean;
+    progress: number;
 }
 
 type EventHandlerMap = {
@@ -17,23 +21,28 @@ type EventHandlerMap = {
     pause?: () => void;
     resume?: () => void;
     play?: () => void;
-    trackchange?: (track: PlayerTrack) => void;
+    trackchange?: (track: PlayerTrack | null) => void;
     seeked?: () => void;
     timeupdate?: (currentTime: Time, duration: Time) => void;
     repeatupdate?: (mode: RepeatMode) => void;
     queueupdate?: (queue: PlayerTrack[]) => void;
     reset?: () => void;
     loading?: (isLoading: boolean) => void;
+    sfxupdate?: (activeSfx: Record<string, SfxState>) => void;
 };
 
 export class Player {
     private readonly eventHandlers: Partial<EventHandlerMap> = {};
     private readonly audio: HTMLAudioElement = new Audio();
-    private readonly status: PlayerStatus;
+    private readonly state: PlayerState;
+    private readonly playerId: string;
 
     private repeat: RepeatMode = 'none';
     private queue: PlayerTrack[] = [];
     private index: number = 0;
+
+    private activeSfx: Map<string, { audio: HTMLAudioElement, source: MediaElementAudioSourceNode }> = new Map();
+    private sfxStates: Record<string, SfxState> = {};
 
     private priorityTrack: PlayerTrack | null = null;
     private currentTrack: PlayerTrack | null = null;
@@ -45,6 +54,7 @@ export class Player {
     private masterVolume: number = 50;
 
     private botMode: boolean = false;
+    private captureMediaKeys: boolean = false;
 
     // Web Audio API Components
     private audioContext: AudioContext;
@@ -55,7 +65,9 @@ export class Player {
     private workletInitPromise: Promise<void> | null = null;
 
     constructor() {
-        this.status = {
+        this.playerId = Math.random().toString(36).substring(7);
+
+        this.state = {
             playing: false,
             paused: false,
             seeking: false,
@@ -99,16 +111,16 @@ export class Player {
     private _bindEvents() {
         this.audio.addEventListener('error', (e) => {
             console.error("Audio Error", e);
-            this.status.loading = false;
-            this.status.playing = false;
+            this.state.loading = false;
+            this.state.playing = false;
             this.eventHandlers['error']?.();
         });
 
         this.audio.addEventListener('abort', () => this.eventHandlers['abort']?.());
 
         const setLoading = (loading: boolean) => {
-            if (this.status.loading !== loading) {
-                this.status.loading = loading;
+            if (this.state.loading !== loading) {
+                this.state.loading = loading;
                 this.eventHandlers['loading']?.(loading);
             }
         };
@@ -119,9 +131,10 @@ export class Player {
 
         this.audio.addEventListener('playing', () => {
             setLoading(false);
-            this.status.playing = true;
-            if (this.status.paused) {
-                this.status.paused = false;
+            this.state.playing = true;
+            this._updateMediaSessionState('playing');
+            if (this.state.paused) {
+                this.state.paused = false;
                 this.eventHandlers['resume']?.();
             } else {
                 this.eventHandlers['play']?.();
@@ -129,17 +142,18 @@ export class Player {
         });
 
         this.audio.addEventListener('pause', () => {
-            if (this.status.playing && !this.status.seeking) {
-                this.status.paused = true;
+            if (this.state.playing && !this.state.seeking && this.currentTrack) {
+                this.state.paused = true;
+                this._updateMediaSessionState('paused');
                 this.eventHandlers['pause']?.();
             }
         });
 
         this.audio.addEventListener('ended', () => this._handleEnded());
 
-        this.audio.addEventListener('seeking', () => this.status.seeking = true);
+        this.audio.addEventListener('seeking', () => this.state.seeking = true);
         this.audio.addEventListener('seeked', () => {
-            this.status.seeking = false;
+            this.state.seeking = false;
             this.eventHandlers['seeked']?.();
         });
 
@@ -179,6 +193,17 @@ export class Player {
         }
     }
 
+    public setCaptureMediaKeys(enable: boolean) {
+        this.captureMediaKeys = enable;
+
+        if (enable) {
+            this._setupMediaSessionHandlers();
+            this._updateMediaSessionMetadata();
+        } else {
+            this._clearMediaSession();
+        }
+    }
+
 
     public addToQueue(track: PlayerTrack) {
         if (this.queue.length === 0 && this.currentTrack) {
@@ -211,7 +236,7 @@ export class Player {
 
 
     public playNow(track: PlayerTrack) {
-        if (this.status.playing) this.audio.pause();
+        if (this.state.playing) this.audio.pause();
 
         this.priorityTrack = track;
         this.currentTrack = this.priorityTrack;
@@ -226,7 +251,7 @@ export class Player {
     public play() {
         if (this.audioContext.state === 'suspended') this.audioContext.resume();
 
-        if (this.status.paused && this.currentTrack) {
+        if (this.state.paused && this.currentTrack) {
             this.resume();
             return;
         }
@@ -239,8 +264,8 @@ export class Player {
     }
 
     public playPause() {
-        if (this.status.playing || (this.status.paused && this.currentTrack)) {
-            if (this.status.paused) this.resume();
+        if (this.state.playing || (this.state.paused && this.currentTrack)) {
+            if (this.state.paused) this.resume();
             else this.pause();
         } else {
             this.play();
@@ -315,7 +340,7 @@ export class Player {
 
     public seek(timeMs: number) {
         if (!this.currentTrack) return;
-        this.status.seeking = true;
+        this.state.seeking = true;
 
         let absoluteTimeS = timeMs / 1000;
 
@@ -323,6 +348,114 @@ export class Player {
         if (this.endTime && absoluteTimeS > this.endTime.getTimeS()) absoluteTimeS = this.endTime.getTimeS();
 
         this.audio.currentTime = absoluteTimeS;
+    }
+
+    public toggleSfx(buttonId: string, track: PlayerTrack) {
+        if (this.activeSfx.has(buttonId)) {
+            this.stopSfx(buttonId);
+            return;
+        }
+
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+
+        const sfxAudio = new Audio();
+        sfxAudio.crossOrigin = 'anonymous';
+
+        const vol = track.volumeOverride !== undefined && track.volumeOverride !== null
+            ? track.volumeOverride
+            : this.masterVolume;
+        sfxAudio.volume = clamp(vol, 0, 100) / 100;
+
+        if (track.directStream) {
+            if (track.source.type === 'youtube' || track.source.type === 'url') sfxAudio.src = track.source.src;
+            else sfxAudio.src = `disboard://file/${encodeURIComponent(track.source.src)}`;
+        } else {
+            sfxAudio.src = `disboard://track/${encodeURIComponent(track.id)}`;
+        }
+
+        const sfxSource = this.audioContext.createMediaElementSource(sfxAudio);
+        sfxSource.connect(this.masterGainNode);
+
+        this.activeSfx.set(buttonId, {audio: sfxAudio, source: sfxSource});
+        this.sfxStates[buttonId] = {playing: true, progress: 0};
+        this._emitSfx();
+
+        let absoluteEndTimeS: number | null = null;
+        let startTimeS: number = 0;
+
+        if (track.cropOptions) {
+            const crops = track.cropOptions;
+            if (crops.startTime && crops.startTimeUnit && crops.startTime > 0) {
+                startTimeS = new Time(crops.startTime, crops.startTimeUnit).getTimeS();
+                sfxAudio.currentTime = startTimeS;
+            }
+
+            if (crops.endTime && crops.endTimeUnit && crops.endTimeType) {
+                const endS = new Time(crops.endTime, crops.endTimeUnit).getTimeS();
+                absoluteEndTimeS = crops.endTimeType === 'after' ? startTimeS + endS : endS;
+            }
+        }
+
+        let durationS = (track.duration || 0) / 1000;
+
+        const cleanup = () => {
+            sfxAudio.pause();
+            sfxAudio.src = '';
+            sfxSource.disconnect();
+            this.activeSfx.delete(buttonId);
+            delete this.sfxStates[buttonId];
+            this._emitSfx();
+        };
+
+        sfxAudio.addEventListener('ended', cleanup);
+
+        sfxAudio.addEventListener('loadedmetadata', () => {
+            if (!track.duration) durationS = sfxAudio.duration;
+            if (absoluteEndTimeS) durationS = absoluteEndTimeS - startTimeS;
+            else durationS -= startTimeS;
+        });
+
+        sfxAudio.addEventListener('timeupdate', () => {
+            if (!this.sfxStates[buttonId]) return;
+
+            if (absoluteEndTimeS !== null && sfxAudio.currentTime >= absoluteEndTimeS) {
+                cleanup();
+                return;
+            }
+
+            const currentRelativeS = Math.max(0, sfxAudio.currentTime - startTimeS);
+            this.sfxStates[buttonId].progress = durationS > 0 ? clamp((currentRelativeS / durationS) * 100, 0, 100) : 0;
+            this._emitSfx();
+        });
+
+        sfxAudio.play().catch(e => {
+            console.error("SFX Play error:", e);
+            cleanup();
+        });
+    }
+
+    public stopSfx(buttonId: string) {
+        const sfx = this.activeSfx.get(buttonId);
+        if (sfx) {
+            sfx.audio.pause();
+            sfx.audio.src = '';
+            sfx.source.disconnect();
+            this.activeSfx.delete(buttonId);
+            delete this.sfxStates[buttonId];
+            this._emitSfx();
+        }
+    }
+
+    public stopAllSfx() {
+        this.activeSfx.forEach((sfx) => {
+            sfx.audio.pause();
+            sfx.audio.src = '';
+            sfx.source.disconnect();
+        });
+
+        this.activeSfx.clear();
+        this.sfxStates = {};
+        this._emitSfx();
     }
 
 
@@ -350,8 +483,8 @@ export class Player {
         this.eventHandlers['repeatupdate']?.(mode);
     }
 
-    public getStatus(): PlayerStatus {
-        return {...this.status};
+    public getStatus(): PlayerState {
+        return {...this.state};
     }
 
     public getCurrentTrack(): PlayerTrack | null {
@@ -379,13 +512,14 @@ export class Player {
         if (!this.currentTrack) return;
 
         this.eventHandlers['trackchange']?.(this.currentTrack);
+        this._updateMediaSessionMetadata();
         this._calculateCropsAndDuration();
 
         if (this.currentTrack.directStream) {
             if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
-            else this.audio.src = `music://file/${encodeURIComponent(this.currentTrack.source.src)}`;
+            else this.audio.src = `disboard://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
-            this.audio.src = `music://audio/${encodeURIComponent(this.currentTrack.id)}`;
+            this.audio.src = `disboard://track/${encodeURIComponent(this.currentTrack.id)}`;
         }
 
         this.audio.load();
@@ -396,7 +530,7 @@ export class Player {
 
         if (index < 0 || index >= this.queue.length) return;
 
-        if (this.status.playing) this.audio.pause();
+        if (this.state.playing) this.audio.pause();
 
         this.index = index;
         const nextTrack = this.queue[this.index];
@@ -440,7 +574,7 @@ export class Player {
     }
 
     private _handleTimeUpdate() {
-        if (this.status.seeking || !this.status.playing) return;
+        if (this.state.seeking || !this.state.playing) return;
 
         let currentTimeMs = this.audio.currentTime * 1000;
         if (this.startTime) currentTimeMs -= this.startTime.getTimeMs();
@@ -448,7 +582,7 @@ export class Player {
         if (this.endTime) {
             const absoluteMs = this.audio.currentTime * 1000;
             if (absoluteMs >= this.endTime.getTimeMs()) {
-                this._forceEnd();
+                this._handleEnded();
                 return;
             }
         }
@@ -460,15 +594,10 @@ export class Player {
         );
     }
 
-    private _forceEnd() {
-        this.audio.pause();
-        this.audio.currentTime = this.endTime ? this.endTime.getTimeS() : this.audio.duration;
-        this.audio.dispatchEvent(new Event('ended'));
-    }
-
     private _handleEnded() {
-        this.status.playing = false;
-        this.status.paused = false;
+        this.state.playing = false;
+        this.state.paused = false;
+
         this.eventHandlers['ended']?.();
 
         if (this.priorityTrack) {
@@ -516,14 +645,14 @@ export class Player {
     private _resetPlayer() {
         this.audio.pause();
         this.audio.currentTime = 0;
-        this.audio.removeAttribute('src');
+        this.audio.src = '';
 
         this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 
-        this.status.playing = false;
-        this.status.paused = false;
-        this.status.seeking = false;
-        this.status.loading = false;
+        this.state.playing = false;
+        this.state.paused = false;
+        this.state.seeking = false;
+        this.state.loading = false;
 
         this.currentTrack = null;
         this.priorityTrack = null;
@@ -531,9 +660,65 @@ export class Player {
         this.endTime = null;
         this.duration = null;
 
+        this._updateMediaSessionState('none');
+        this._updateMediaSessionMetadata();
+
         this.eventHandlers['trackchange']?.(null);
         this.eventHandlers['reset']?.();
         this.eventHandlers['timeupdate']?.(Time.fromMs(0), Time.fromMs(0));
+    }
+
+    private _emitSfx() {
+        this.eventHandlers['sfxupdate']?.({...this.sfxStates});
+    }
+
+    private _setupMediaSessionHandlers() {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+
+        try {
+            navigator.mediaSession.setActionHandler('play', () => this.play());
+            navigator.mediaSession.setActionHandler('pause', () => this.pause());
+            navigator.mediaSession.setActionHandler('previoustrack', () => this.previous());
+            navigator.mediaSession.setActionHandler('nexttrack', () => this.next());
+            navigator.mediaSession.setActionHandler('stop', () => this.stop());
+        } catch (e) {
+            console.warn('Media Session API action handlers not fully supported.', e);
+        }
+    }
+
+    private _clearMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+
+        try {
+            navigator.mediaSession.setActionHandler('play', null);
+            navigator.mediaSession.setActionHandler('pause', null);
+            navigator.mediaSession.setActionHandler('previoustrack', null);
+            navigator.mediaSession.setActionHandler('nexttrack', null);
+            navigator.mediaSession.setActionHandler('stop', null);
+            navigator.mediaSession.metadata = null;
+        } catch (e) {
+            console.warn('Failed to clear Media Session API.', e);
+        }
+    }
+
+    private _updateMediaSessionMetadata() {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+
+        if (!this.currentTrack) {
+            navigator.mediaSession.metadata = null;
+            return;
+        }
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: this.currentTrack.title || 'Unknown Title',
+            artist: 'Disboard',
+            artwork: this.currentTrack ? [{src: `disboard://thumbnail/${this.currentTrack.id}`, sizes: '256x256', type: 'image/jpeg'}] : [] // TODO Fix artwork with real data, must use blob
+        });
+    }
+
+    private _updateMediaSessionState(state: 'playing' | 'paused' | 'none') {
+        if (!('mediaSession' in navigator) || !this.captureMediaKeys) return;
+        navigator.mediaSession.playbackState = state;
     }
 
     private async _startRecording() {
@@ -551,7 +736,7 @@ export class Player {
             });
 
             this.workletNode.port.onmessage = (event) => {
-                window.electron.sendAudioPacket(event.data);
+                window.electron.discord.sendAudioPacket(this.playerId, event.data);
             };
 
             this.workletNode.onprocessorerror = (err) => console.error("Worklet Error:", err);

@@ -1,0 +1,336 @@
+import {app, dialog, ipcMain} from "electron";
+import {clamp} from "../../shared/utils";
+import path from "path";
+import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, TrackSourceName, YTSearchResult} from "../../types";
+import {getGridProfilesStore} from "../storage/profiles-store";
+import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile} from "../utils/data-converters";
+import {removeNameInvalidChars, validateName} from "../../shared/validation";
+import {fixActiveProfile, generateUUID, generateValidFileName} from "../utils/misc";
+import {getBoardSettings, settingsStore} from "../storage/settings-store";
+import {broadcastData} from "../utils/broadcast";
+import {cacheStore} from "../storage/cache-store";
+import {deepMerge, pruneNulls} from "../utils/objects";
+import {tracksStore} from "../storage/tracks-store";
+import {createAndDownloadTrack} from "../utils/downloads";
+import {exportGridProfile, exportGridProfilesBatch, importGridProfilesBatch} from "../utils/profiles-io";
+
+export const setupGridProfilesHandlers = () => {
+    ipcMain.handle('grid_profiles:get_all', (_, boardType: Exclude<BoardType, 'ambient'>): SbGridProfile[] => {
+        return getGridProfilesStore(boardType).get('profiles').map(convertGridProfile2SbGridProfile);
+    });
+
+    ipcMain.handle('grid_profiles:get', (_, boardType: Exclude<BoardType, 'ambient'>, id: string): SbGridProfile => {
+        const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === id) || null;
+        if (!profile) return null;
+
+        return convertGridProfile2SbGridProfile(profile);
+    });
+
+    ipcMain.handle('grid_profiles:get_active', (_, boardType: Exclude<BoardType, 'ambient'>): SbGridProfile => {
+        const activeProfile = getBoardSettings(boardType).activeProfile;
+        if (!activeProfile) return null;
+
+        const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === activeProfile) || null;
+        if (!profile) return null;
+
+        return convertGridProfile2SbGridProfile(profile);
+    });
+
+    ipcMain.handle('grid_profiles:create', (_, boardType: Exclude<BoardType, 'ambient'>, profile: Partial<GridProfile>): IpcResponse<void> => {
+        if (!profile.name) return {success: false, error: 'name_required'};
+        if (!validateName(profile.name)) return {success: false, error: 'name_invalid'};
+
+        const profilesStore = getGridProfilesStore(boardType);
+
+        const profiles = profilesStore.get('profiles');
+        if (profiles.some(p => p.name.toLowerCase() === profile.name!.toLowerCase())) return {success: false, error: 'name_exists'};
+
+        const newProfile: GridProfile = {
+            id: generateUUID(),
+            name: profile.name,
+            type: 'music',
+            rows: clamp(Math.floor(profile.rows) || 8, 1, 50),
+            cols: clamp(Math.floor(profile.cols) || 10, 1, 50),
+            buttons: [] as GridBtn[]
+        };
+
+        profiles.push(newProfile);
+        profilesStore.set('profiles', profiles);
+        settingsStore.set(`${boardType}.activeProfile`, newProfile.id);
+
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        broadcastData('settings:changed', settingsStore.store);
+
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:update', (_, boardType: Exclude<BoardType, 'ambient'>, id: string, profile: Partial<GridProfile>): IpcResponse<void> => {
+        if (!id) return {success: false, error: 'id_required'};
+
+        const profilesStore = getGridProfilesStore(boardType);
+
+        const profiles = profilesStore.get('profiles');
+        const idx = profiles.findIndex(p => p.id === id);
+        if (idx === -1) return {success: false, error: 'id_not_found'};
+
+        const existingProfile = profiles[idx];
+        const newValues: Partial<GridProfile> = {};
+
+        if (profile.name) {
+            if (!validateName(profile.name)) return {success: false, error: 'name_invalid'};
+            if (profiles.some(p => p.id !== id && p.name.toLowerCase() === profile.name!.toLowerCase())) return {success: false, error: 'name_exists'};
+            newValues.name = profile.name;
+        }
+
+        if (profile.rows !== undefined) newValues.rows = clamp(Math.floor(profile.rows), 1, 50);
+        if (profile.cols !== undefined) newValues.cols = clamp(Math.floor(profile.cols), 1, 50);
+
+        profiles[idx] = {
+            ...existingProfile,
+            ...newValues
+        };
+
+        profilesStore.set('profiles', profiles);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:delete', (_, boardType: Exclude<BoardType, 'ambient'>, id: string): IpcResponse<void> => {
+        if (!id) return {success: false, error: 'id_required'};
+
+        const profilesStore = getGridProfilesStore(boardType);
+
+        const profiles = profilesStore.get('profiles');
+        const idx = profiles.findIndex(p => p.id === id);
+        if (idx === -1) return {success: false, error: 'id_not_found'};
+
+        profiles.splice(idx, 1);
+        profilesStore.set('profiles', profiles);
+
+        fixActiveProfile(boardType);
+
+        broadcastData('settings:changed', settingsStore.store);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        return {success: true};
+    });
+
+    ipcMain.on('grid_profiles:import', async (_, boardType: Exclude<BoardType, 'ambient'>) => {
+        const defaultPath: string = cacheStore.get('profilesDir') || app.getPath('documents');
+
+        const {canceled, filePaths} = await dialog.showOpenDialog({
+            title: 'Import Profile(s)',
+            defaultPath: defaultPath,
+            properties: ['openFile', 'multiSelections'],
+            filters: [
+                {name: 'ZIP Profile', extensions: ['zip']},
+            ]
+        });
+
+        if (canceled || !filePaths || filePaths.length === 0) return;
+
+        cacheStore.set('profilesDir', path.dirname(filePaths[0]));
+
+        try {
+            await importGridProfilesBatch(filePaths, boardType);
+            console.log(`[Main] Successfully imported ${filePaths.length} profile(s).`);
+        } catch (e) {
+            console.error('[Main] Error during bulk import:', e);
+        }
+    });
+
+    ipcMain.on('grid_profiles:export', async (_, boardType: Exclude<BoardType, 'ambient'>, id: string) => {
+        const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === id);
+        if (!profile) {
+            console.error('[Main] Profile not found');
+            return;
+        }
+
+        const safeFileName = generateValidFileName(profile.name, 'profile');
+
+        const {canceled, filePath} = await dialog.showSaveDialog({
+            title: `Export profile ${profile.name}`,
+            defaultPath: path.join(cacheStore.get('profilesDir') || app.getPath('documents'), safeFileName),
+            filters: [
+                {name: 'ZIP', extensions: ['zip']},
+            ]
+        });
+
+        if (canceled || !filePath) {
+            console.info('[Main] Export canceled');
+            return;
+        }
+
+        cacheStore.set('profilesDir', path.dirname(filePath));
+
+        try {
+            await exportGridProfile(profile, filePath);
+            console.log(`[Main] Profile ${profile.name} (${profile.id}) exported successfully!`);
+        } catch (e) {
+            console.error(`[Main] Exception occurred exporting profile ${profile.name} (${profile.id}):`, e);
+        }
+    });
+
+    ipcMain.on('grid_profiles:export_all', async (_, boardType: Exclude<BoardType, 'ambient'>) => {
+        const profiles = getGridProfilesStore(boardType).get('profiles');
+        if (!profiles || profiles.length === 0) return;
+
+        const {canceled, filePaths} = await dialog.showOpenDialog({
+            title: 'Select Export Directory',
+            defaultPath: cacheStore.get('profilesDir') || app.getPath('documents'),
+            properties: ['openDirectory', 'createDirectory']
+        });
+
+        if (canceled || !filePaths || filePaths.length === 0) {
+            console.info('[Main] Export canceled');
+            return;
+        }
+
+        const exportDir = filePaths[0];
+        cacheStore.set('profilesDir', exportDir);
+
+        try {
+            await exportGridProfilesBatch(profiles, exportDir);
+            console.log(`[Main] Exported ${profiles.length} profiles.`);
+        } catch (e) {
+            console.error(`[Main] Error during bulk export:`, e);
+        }
+    });
+
+
+    ipcMain.handle('grid_profiles:buttons:get', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): SbGridBtn | null => {
+        const profile = getGridProfilesStore(boardType).get('profiles').find(p => p.id === profileId);
+        if (!profile) return null;
+
+        const btn = profile.buttons.find(b => b.id === buttonId);
+        if (!btn) return null;
+
+        return convertGridBtn2SbGridBtn(btn);
+    });
+
+    ipcMain.handle('grid_profiles:buttons:update', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): IpcResponse<void> => {
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles');
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const btnIdx = profile.buttons.findIndex(b => b.id === buttonId);
+        if (btnIdx === -1) return {success: false, error: 'button_not_found'};
+        const existingButton = profile.buttons[btnIdx];
+
+
+        if (updates.title) updates.title = removeNameInvalidChars(updates.title);
+        if (updates.title === '') delete updates.title;
+        if (typeof updates.row === 'number') updates.row = clamp(updates.row, 0, 49);
+        if (typeof updates.col === 'number') updates.col = clamp(updates.col, 0, 49);
+
+        const finalButton: GridBtn = pruneNulls(deepMerge(existingButton, updates));
+        if (!finalButton.track || finalButton.track.length === 0) profile.buttons.splice(btnIdx, 1);
+        else profile.buttons[btnIdx] = finalButton;
+
+        profilesStore.set('profiles', profiles);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:buttons:swap', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): IpcResponse<void> => {
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles');
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const btn1Idx = profile.buttons.findIndex(b => b.row === pos1.row && b.col === pos1.col);
+        const btn1 = btn1Idx !== -1 ? profile.buttons[btn1Idx] : null;
+        const btn2Idx = profile.buttons.findIndex(b => b.row === pos2.row && b.col === pos2.col);
+        const btn2 = btn2Idx !== -1 ? profile.buttons[btn2Idx] : null;
+
+        if (btn1) {
+            btn1.row = pos2.row;
+            btn1.col = pos2.col;
+        }
+
+        if (btn2) {
+            btn2.row = pos1.row;
+            btn2.col = pos1.col;
+        }
+
+        profilesStore.set('profiles', profiles);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:buttons:update_track', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): IpcResponse<void> => {
+        if (!profileId || !gridPos || !source || !media) return {success: false, error: 'invalid_parameters'};
+        if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
+        if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
+
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles') || [];
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const btnIdx = profile.buttons.findIndex(b => b.row === gridPos.row && b.col === gridPos.col);
+        const existingBtn = btnIdx !== -1 ? profile.buttons[btnIdx] : null;
+        const btnId = existingBtn ? existingBtn.id : generateUUID();
+
+        const targetBtn: GridBtn = {
+            ...(existingBtn || {}),
+            id: btnId,
+            row: gridPos.row,
+            col: gridPos.col,
+            track: undefined
+        };
+
+        const save = () => {
+            if (existingBtn) profile.buttons[btnIdx] = targetBtn;
+            else profile.buttons.push(targetBtn);
+
+            profilesStore.set('profiles', profiles);
+            broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+        }
+
+        if (source === 'list') {
+            const track = (tracksStore.get('tracks') || []).find(t => t.id === media);
+            if (!track) return {success: false, error: 'track_not_found'};
+
+            targetBtn.track = track.id;
+
+            save();
+            return {success: true};
+        }
+
+        const trackId = generateUUID();
+        targetBtn.track = trackId;
+
+        save();
+
+        createAndDownloadTrack(boardType, trackId, source, media, customTitle);
+        return {success: true};
+    });
+
+    ipcMain.handle('grid_profiles:buttons:delete', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): IpcResponse<void> => {
+        const profilesStore = getGridProfilesStore(boardType);
+        const profiles = profilesStore.get('profiles');
+
+        const profileIdx = profiles.findIndex(p => p.id === profileId);
+        if (profileIdx === -1) return {success: false, error: 'profile_not_found'};
+        const profile = profiles[profileIdx];
+
+        const existingButtonIdx = profile.buttons.findIndex(b => b.id === buttonId);
+        if (existingButtonIdx === -1) return {success: false, error: 'button_not_found'};
+
+        profile.buttons.splice(existingButtonIdx, 1);
+
+        profilesStore.set('profiles', profiles);
+        broadcastData(`grid_profiles:${boardType}:changed`, profiles.map(convertGridProfile2SbGridProfile));
+
+        return {success: true};
+    });
+}

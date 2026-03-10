@@ -1,17 +1,21 @@
 import {setupWindowHandlers} from "./window";
 import {setupSettingsHandlers} from "./settings";
-import {setupProfilesHandlers} from "./profiles";
+import {setupGridProfilesHandlers} from "./grid-profiles";
 import {setupTracksHandlers} from "./tracks";
 import {setupSystemHandlers} from "./system";
 import {setupMusicApiHandlers} from "./music-api";
 import {setupDiscordBridgeHandlers} from "./discord";
+import {setupPlayerHandlers} from "./player";
+import {setupAmbientProfilesHandlers} from "./ambient-profiles";
 
 export const registerIpcHandlers = () => {
-    setupWindowHandlers();
-    setupSettingsHandlers();
-    setupProfilesHandlers();
-    setupTracksHandlers();
-    setupSystemHandlers();
-    setupMusicApiHandlers();
     setupDiscordBridgeHandlers();
+    setupMusicApiHandlers();
+    setupPlayerHandlers();
+    setupGridProfilesHandlers();
+    setupAmbientProfilesHandlers();
+    setupSettingsHandlers();
+    setupSystemHandlers();
+    setupTracksHandlers();
+    setupWindowHandlers();
 }

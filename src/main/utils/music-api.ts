@@ -1,6 +1,7 @@
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig} from "axios";
-import {ApiCredentials} from "../../types/settings";
-import {YTSearchResult, YTStream} from "../../types/music-api";
+import {ApiCredentials, YTSearchResult, YTStream} from "../../types";
+import {net} from "electron";
+import {state} from "../state";
 
 type AuthResponse = {
     accessToken: string;
@@ -190,8 +191,34 @@ export const getVideoId = (url: string): string | null => {
     return match ? match[1] : null;
 }
 
-export const getBestThumbnail = (thumbnails: ({url: string; width: number; height: number})[]): string | null => {
+export const getBestThumbnail = (thumbnails: ({ url: string; width: number; height: number })[]): string | null => {
     if (thumbnails.length === 0) return null;
     const sorted = thumbnails.sort((a, b) => (b.width * b.height) - (a.width * a.height));
     return sorted[0].url;
+}
+
+const ytStreamCache = new Map<string, string>();
+
+export const getYoutubeStream = async (videoId: string): Promise<string> => {
+    const cachedStream = ytStreamCache.get(videoId);
+
+    if (cachedStream) {
+        try {
+            const response = await net.fetch(cachedStream, {method: 'HEAD'});
+
+            if (response.status >= 200 && response.status < 400) {
+                return cachedStream;
+            } else ytStreamCache.delete(videoId);
+        } catch {
+            ytStreamCache.delete(videoId);
+        }
+    }
+
+    if (!state.musicApi) throw new Error('not_initialized');
+    if (!state.musicApi.isAuthenticated()) throw new Error('not_authenticated');
+
+    const result = await state.musicApi.getStream(videoId);
+    ytStreamCache.set(videoId, result);
+
+    return result;
 }

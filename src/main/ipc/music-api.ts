@@ -1,18 +1,15 @@
 import {ipcMain} from "electron";
 import {state} from "../state";
-import {IpcResponse} from "../../types/common";
-import {YTSearchResult} from "../../types/music-api";
 import {getVideoId} from "../utils/music-api";
-import {getYoutubeStream} from "../utils";
+import {IpcResponse, YTSearchResult} from "../../types";
 
 export const setupMusicApiHandlers = () => {
-
-    ipcMain.handle('use_music_api', (): boolean => {
+    ipcMain.handle('musicapi:use_api', (): boolean => {
         const musicApi = state.musicApi;
         return !(!musicApi || !musicApi.isAuthenticated());
     });
 
-    ipcMain.handle('search_music', async (_, query: string): Promise<IpcResponse<YTSearchResult[]>> => {
+    ipcMain.handle('musicapi:search', async (_, query: string): Promise<IpcResponse<YTSearchResult[]>> => {
         const musicApi = state.musicApi;
 
         try {
@@ -27,17 +24,6 @@ export const setupMusicApiHandlers = () => {
                     }
                 });
             return {success: true, data: results};
-        } catch (e) {
-            return {success: false, error: e.message || 'unknown_error'};
-        }
-    });
-
-    ipcMain.handle('get_video_stream', async (_, videoId: string): Promise<IpcResponse<string>> => {
-        try {
-            const result = await getYoutubeStream(videoId);
-            if (!result) throw new Error('stream_not_found');
-
-            return {success: true, data: result};
         } catch (e) {
             return {success: false, error: e.message || 'unknown_error'};
         }

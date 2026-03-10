@@ -1,109 +1,147 @@
-import {contextBridge, ipcRenderer} from "electron";
-import {IpcResponse} from "./types/common";
-import {Settings} from "./types/settings";
-import {PlayerTrack, SbBtn, SbProfile, Track, TrackSource} from "./types/data";
-import {WindowId, WindowInfo} from "./types/window";
-import {YTSearchResult} from "./types/music-api";
-import {DiscordData, DiscordStatus} from "./types/discord";
+import {contextBridge, ipcRenderer, IpcRendererEvent} from "electron";
+import {BroadcastChannelMap} from "./main/utils/broadcast";
+import {
+    AmbientBtn,
+    AmbientProfile,
+    BoardType,
+    DeepPartial,
+    DiscordData,
+    DiscordStatus,
+    GridBtn,
+    GridPos,
+    GridProfile,
+    IpcResponse,
+    MediaType,
+    PlayerTrack,
+    Route,
+    SbAmbientBtn,
+    SbAmbientProfile,
+    SbGridBtn,
+    SbGridProfile,
+    Settings,
+    Track,
+    TrackSourceName,
+    WindowInfo,
+    YTSearchResult
+} from "./types";
+
+type ListenerCallback<K extends keyof BroadcastChannelMap> = (...args: BroadcastChannelMap[K]) => void;
+
+const createListener = <K extends keyof BroadcastChannelMap>(channel: K, callback: ListenerCallback<K>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscription = (_event: IpcRendererEvent, ...args: any[]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (callback as (...args: any[]) => void)(...args);
+    };
+
+    ipcRenderer.on(channel, subscription);
+    return () => ipcRenderer.removeListener(channel, subscription);
+}
+
+const windowApi = {
+    minimize: () => ipcRenderer.send('window:minimize'),
+    maximize: () => ipcRenderer.send('window:maximize'),
+    close: () => ipcRenderer.send('window:close'),
+    getInfo: (): Promise<WindowInfo> => ipcRenderer.invoke('window:info'),
+    open: (route: Route, args?: unknown) => ipcRenderer.send('window:open', route, args),
+    isBoardOpen: (boardType: BoardType): Promise<boolean> => ipcRenderer.invoke('window:is_board_open', boardType),
+}
+
+const settingsApi = {
+    get: (): Promise<Settings> => ipcRenderer.invoke('settings:get'),
+    set: (settings: DeepPartial<Settings>) => ipcRenderer.send('settings:set', settings),
+
+    onChanged: (func: (settings: Settings) => void) => createListener('settings:changed', func),
+}
+
+const gridProfilesApi = {
+    getAll: (boardType: Exclude<BoardType, 'ambient'>): Promise<SbGridProfile[]> => ipcRenderer.invoke('grid_profiles:get_all', boardType),
+    get: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get', boardType, id),
+    getActive: (boardType: Exclude<BoardType, 'ambient'>): Promise<SbGridProfile | null> => ipcRenderer.invoke('grid_profiles:get_active', boardType),
+    create: (boardType: Exclude<BoardType, 'ambient'>, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:create', boardType, profile),
+    update: (boardType: Exclude<BoardType, 'ambient'>, id: string, profile: Partial<GridProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:update', boardType, id, profile),
+    delete: (boardType: Exclude<BoardType, 'ambient'>, id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:delete', boardType, id),
+    import: (boardType: Exclude<BoardType, 'ambient'>) => ipcRenderer.send('grid_profiles:import', boardType),
+    export: (boardType: Exclude<BoardType, 'ambient'>, id: string) => ipcRenderer.send('grid_profiles:export', boardType, id),
+    exportAll: (boardType: Exclude<BoardType, 'ambient'>) => ipcRenderer.send('grid_profiles:export_all', boardType),
+
+    onMusicChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:music:changed', func),
+    onSfxChanged: (func: (profiles: SbGridProfile[]) => void) => createListener('grid_profiles:sfx:changed', func),
+
+    buttons: {
+        get: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
+        update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
+        swap: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:swap', boardType, profileId, pos1, pos2),
+        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
+        delete: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
+    }
+}
+
+const ambientProfilesApi = {
+    getAll: (): Promise<SbAmbientProfile[]> => ipcRenderer.invoke('ambient_profiles:get_all'),
+    get: (id: string): Promise<SbAmbientProfile | null> => ipcRenderer.invoke('ambient_profiles:get', id),
+    getActive: (): Promise<SbAmbientProfile | null> => ipcRenderer.invoke('ambient_profiles:get_active'),
+    create: (profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:create', profile),
+    update: (id: string, profile: Partial<AmbientProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:update', id, profile),
+    delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:delete', id),
+    import: () => ipcRenderer.send('ambient_profiles:import'),
+    export: (id: string) => ipcRenderer.send('ambient_profiles:export', id),
+    exportAll: () => ipcRenderer.send('ambient_profiles:export_all'),
+
+    onChanged: (func: (profiles: SbAmbientProfile[]) => void) => createListener('ambient_profiles:changed', func),
+
+    buttons: {
+        get: (profileId: string, buttonId: string): Promise<SbAmbientBtn | null> => ipcRenderer.invoke('ambient_profiles:buttons:get', profileId, buttonId),
+        update: (profileId: string, buttonId: string, updates: Partial<AmbientBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:buttons:update', profileId, buttonId, updates),
+        delete: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('ambient_profiles:buttons:delete', profileId, buttonId),
+    }
+}
+
+const tracksApi = {
+    getAll: (): Promise<Track[]> => ipcRenderer.invoke('tracks:get_all'),
+    get: (id: string): Promise<Track | null> => ipcRenderer.invoke('tracks:get', id),
+    getVolatile: (source: TrackSourceName, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
+    delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:delete', id),
+
+    onChanged: (func: (tracks: Track[]) => void) => createListener('tracks:changed', func),
+}
+
+const systemApi = {
+    openLink: (url: string) => ipcRenderer.send('system:open_link', url),
+    openFileMediaSelector: (mediaType?: MediaType): Promise<IpcResponse<string>> => ipcRenderer.invoke('system:open_file_media_selector', mediaType),
+}
+
+const musicApi = {
+    useApi: (): Promise<boolean> => ipcRenderer.invoke('musicapi:use_api'),
+    search: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('musicapi:search', query),
+}
+
+const discordApi = {
+    sendAudioPacket: (playerId: string, buffer: ArrayBuffer) => ipcRenderer.send('discord:audio_packet', playerId, buffer),
+    getStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('discord:status'),
+    getGuilds: (): Promise<DiscordData[]> => ipcRenderer.invoke('discord:guilds'),
+    getChannels: (guildId: string): Promise<DiscordData[]> => ipcRenderer.invoke('discord:channels', guildId),
+}
+
+const playerApi = {
+    stopPreview: () => ipcRenderer.send('player:preview_stopped'),
+    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
+
+    onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
+    onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
+}
 
 const api = {
-    /* === FROM MAIN PROCESS === */
-    // All Windows
-    onSettingsChanged: (func: (settings: Settings) => void) => {
-        const sub = (_: unknown, val: Settings) => func(val);
-        ipcRenderer.on('settings', sub);
-        return () => ipcRenderer.removeListener('settings', sub);
-    },
-    onProfilesChanged: (func: (profiles: SbProfile[]) => void) => {
-        const sub = (_: unknown, val: SbProfile[]) => func(val);
-        ipcRenderer.on('profiles', sub);
-        return () => ipcRenderer.removeListener('profiles', sub);
-    },
-
-    // Player
-    onPlayNow: (func: (track: PlayerTrack) => void) => {
-        const sub = (_: unknown, track: PlayerTrack) => func(track);
-        ipcRenderer.on('play_now', sub);
-        return () => ipcRenderer.removeListener('play_now', sub);
-    },
-    onPause: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('pause', sub);
-        return () => ipcRenderer.removeListener('pause', sub);
-    },
-    onPlay: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('play', sub);
-        return () => ipcRenderer.removeListener('play', sub);
-    },
-    onPlayPause: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('play_pause', sub);
-        return () => ipcRenderer.removeListener('play_pause', sub);
-    },
-    onStop: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('stop', sub);
-        return () => ipcRenderer.removeListener('stop', sub);
-    },
-    onNext: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('next', sub);
-        return () => ipcRenderer.removeListener('next', sub);
-    },
-    onPrev: (func: () => void) => {
-        const sub = () => func();
-        ipcRenderer.on('prev', sub);
-        return () => ipcRenderer.removeListener('prev', sub);
-    },
-
-    /* === TO MAIN PROCESS === */
-    // Window
-    minimize: () => ipcRenderer.send('minimize'),
-    maximize: () => ipcRenderer.send('maximize'),
-    close: () => ipcRenderer.send('close'),
-    getWindow: (): Promise<WindowInfo> => ipcRenderer.invoke('get_window'),
-    openWindow: (winId: WindowId, args?: unknown) => ipcRenderer.send('open_window', winId, args),
-
-    // Store
-    getSettings: (): Promise<Settings> => ipcRenderer.invoke('get_settings'),
-    updateSettings: (settings: Partial<Settings>) => ipcRenderer.send('update_settings', settings),
-
-    // Profiles
-    getProfiles: (): Promise<SbProfile[]> => ipcRenderer.invoke('get_profiles'),
-    getProfile: (id: string): Promise<SbProfile | null> => ipcRenderer.invoke('get_profile', id),
-    createProfile: (profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('create_profile', profile),
-    updateProfile: (id: string, profile: Partial<SbProfile>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_profile', id, profile),
-    deleteProfile: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_profile', id),
-    importProfile: () => ipcRenderer.send('import_profile'),
-    exportProfile: (id: string) => ipcRenderer.send('export_profile', id),
-    exportProfiles: () => ipcRenderer.send('export_profiles'),
-    getButton: (profileId: string, buttonId: string): Promise<SbBtn | null> => ipcRenderer.invoke('get_button', profileId, buttonId),
-    updateButton: (profileId: string, buttonId: string, updates: Partial<SbBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('update_button', profileId, buttonId, updates),
-    deleteButton: (profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('delete_button', profileId, buttonId),
-
-    // Tracks
-    getTracks: (): Promise<Track[]> => ipcRenderer.invoke('get_tracks'),
-    getTrack: (trackId: string): Promise<Track | null> => ipcRenderer.invoke('get_track', trackId),
-    addTrack: (source: TrackSource, media: YTSearchResult | string, customTitle: string, profileId: string, buttonId: string) => ipcRenderer.invoke('add_track', source, media, customTitle, profileId, buttonId),
-    playNow: (source: TrackSource, media: YTSearchResult | string, customTitle: string) => ipcRenderer.send('play_now', source, media, customTitle),
-    getVolatileTrack: (source: TrackSource, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('get_volatile_track', source, media),
-
-    // System
-    openLink: (url: string) => ipcRenderer.send('open_link', url),
-    openFileMediaSelector: (): Promise<IpcResponse<string>> => ipcRenderer.invoke('open_file_media_selector'),
-
-    // Music API
-    useMusicApi: (): Promise<boolean> => ipcRenderer.invoke('use_music_api'),
-    searchMusic: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('search_music', query),
-    getVideoStream: (videoId: string): Promise<IpcResponse<string>> => ipcRenderer.invoke('get_video_stream', videoId),
-
-    // Discord
-    sendAudioPacket: (buffer: ArrayBuffer) => ipcRenderer.send('discord_stream_packet', buffer),
-    getDiscordStatus: (): Promise<DiscordStatus> => ipcRenderer.invoke('discord_status'),
-    getDiscordGuilds: (): Promise<DiscordData[]> => ipcRenderer.invoke('discord_guilds'),
-    getDiscordChannels: (guildId: string): Promise<DiscordData[]> => ipcRenderer.invoke('discord_channels', guildId),
-}
+    window: windowApi,
+    settings: settingsApi,
+    gridProfiles: gridProfilesApi,
+    ambientProfiles: ambientProfilesApi,
+    tracks: tracksApi,
+    system: systemApi,
+    music: musicApi,
+    discord: discordApi,
+    player: playerApi,
+};
 
 contextBridge.exposeInMainWorld('electron', api);
 

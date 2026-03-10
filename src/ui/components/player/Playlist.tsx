@@ -3,7 +3,7 @@ import {useAnimatedUnmount} from "../../hooks/useAnimatedUnmount";
 import {usePlayer} from "../../context/PlayerContext";
 import {useClickOutside} from "../../hooks/useClickOutside";
 import React, {useEffect, useRef} from "react";
-import {PlayerTrack} from "../../../types/data";
+import {PlayerTrack} from "../../../types";
 import {clsx} from "clsx";
 import {PiBroomBold, PiXBold} from "react-icons/pi";
 
@@ -105,7 +105,7 @@ const Track = ({index, track}: TrackProps) => {
             <span className={styles.trackIndex}>{index + 1}</span>
             <img
                 className={styles.trackImage}
-                src={track ? `music://images/${track.id}` : '/images/track.png'}
+                src={track ? `disboard://thumbnail/${track.id}` : '/images/track.png'}
                 alt={track.titleOverride || track.title || 'Unknown Title'}
                 onError={(e) => {
                     const img = e.currentTarget;

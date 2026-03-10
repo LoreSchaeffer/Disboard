@@ -1,15 +1,9 @@
 import ffmpeg from 'fluent-ffmpeg';
-import * as fs from "node:fs";
+import fs from 'node:fs/promises';
 import path from "path";
-import {removeNameInvalidChars} from "./validation";
-import {USER_AGENT} from "../utils";
-
-export type ProbeResult = {
-    format: string;
-    codec: string;
-    duration: number;
-    tags: Record<string, string | number>;
-}
+import {USER_AGENT} from "../constants";
+import {ProbeResult, Track} from "../../types";
+import {removeNameInvalidChars} from "../../shared/validation";
 
 const getInputOptions = (inputSource: string): string[] => {
     const isUrl = inputSource.startsWith('http');
@@ -33,20 +27,21 @@ export const probeMedia = (inputSource: string): Promise<ProbeResult> => {
                     return reject(err);
                 }
 
-                const audioStream = data.streams.find(s => s.codec_type === 'audio');
+                const audioStream = data.streams?.find(s => s.codec_type === 'audio');
 
                 resolve({
-                    format: data.format.format_name || '',
+                    format: data.format?.format_name || '',
                     codec: audioStream?.codec_name || 'unknown',
-                    duration: data.format.duration || 0,
-                    tags: data.format.tags || {}
+                    // Forza SEMPRE la conversione a numero per evitare 'NaN' successivi
+                    duration: Number(data.format?.duration) || 0,
+                    tags: data.format?.tags || {}
                 });
             });
     });
 };
 
-export const processAudio = async (inputSource: string, outputDir: string, trackId: string): Promise<number> => {
-    fs.mkdirSync(outputDir, {recursive: true});
+export const downloadAudio = async (inputSource: string, outputDir: string, trackId: string): Promise<number> => {
+    await fs.mkdir(outputDir, {recursive: true});
 
     const tempPath = path.join(outputDir, `${trackId}.tmp`);
     const finalPath = path.join(outputDir, `${trackId}.mp3`);
@@ -55,7 +50,8 @@ export const processAudio = async (inputSource: string, outputDir: string, track
     try {
         probe = await probeMedia(inputSource);
     } catch (e) {
-        throw new Error(`[FFmpeg] Error processing source: ${e.message}`);
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        throw new Error(`[FFmpeg] Error processing source: ${errorMessage}`);
     }
 
     const isSourceMp3 = probe.codec === 'mp3';
@@ -67,7 +63,7 @@ export const processAudio = async (inputSource: string, outputDir: string, track
 
         if (isSourceMp3) {
             command
-                .outputOptions(['-c:a copy', '-map a'])
+                .outputOptions(['-c:a copy', '-map 0:a:0'])
                 .format('mp3');
         } else {
             command
@@ -75,8 +71,7 @@ export const processAudio = async (inputSource: string, outputDir: string, track
                 .audioCodec('libmp3lame')
                 .audioBitrate(256)
                 .outputOptions([
-                    '-threads 0',
-                    '-compression_level 2'
+                    '-threads 0'
                 ])
                 .format('mp3');
         }
@@ -84,18 +79,16 @@ export const processAudio = async (inputSource: string, outputDir: string, track
         command
             .on('error', async (err) => {
                 console.error(`[FFmpeg] Error processing ${trackId}:`, err);
-
                 try {
-                    fs.unlinkSync(tempPath);
+                    await fs.unlink(tempPath);
                 } catch {
                     // Ignored
                 }
-
                 reject(err);
             })
             .on('end', async () => {
                 try {
-                    fs.renameSync(tempPath, finalPath);
+                    await fs.rename(tempPath, finalPath);
                     resolve(Math.round(probe.duration * 1000));
                 } catch (renameErr) {
                     reject(renameErr);
@@ -105,11 +98,16 @@ export const processAudio = async (inputSource: string, outputDir: string, track
     });
 };
 
-export const extractCoverImage = async (inputSource: string, outputDir: string, trackId: string): Promise<boolean> => {
-    fs.mkdirSync(outputDir, {recursive: true});
-    const outputPath = path.join(outputDir, `${trackId}.jpg`);
+export const extractCoverImage = async (inputSource: string, outputDir: string, trackId: string): Promise<void> => {
+    const dstFile = path.join(outputDir, `${trackId}.jpg`);
 
-    return new Promise((resolve) => {
+    try {
+        await fs.mkdir(outputDir, {recursive: true});
+    } catch (e) {
+        return Promise.reject(e);
+    }
+
+    return new Promise((resolve, reject) => {
         ffmpeg(inputSource)
             .inputOptions(getInputOptions(inputSource))
             .outputOptions([
@@ -119,42 +117,51 @@ export const extractCoverImage = async (inputSource: string, outputDir: string, 
                 '-y'
             ])
             .format('image2')
-            .on('error', (err) => {
-                console.log(`[FFmpeg] No cover found or extraction error for track ${trackId}:`, err.message);
-                resolve(false);
+            .on('error', async (e) => {
+                let cleanError = e.message;
+
+                if (e.message.includes('does not contain any stream')) cleanError = 'No embedded cover art found.';
+                else if (e.message.includes('No such file or directory')) cleanError = 'Source audio file not found on disk.';
+                else cleanError = e.message.split('\n')[0];
+                console.info(`[FFmpeg] Skipped thumbnail for ${trackId}: ${cleanError}`);
+
+                try {
+                    await fs.unlink(dstFile);
+                } catch {
+                    // Ignored
+                }
+
+                // Rigettiamo un nuovo errore pulito
+                reject(new Error(cleanError));
             })
-            .on('end', () => resolve(true))
-            .save(outputPath);
+            .on('end', () => resolve())
+            .save(dstFile);
     });
 };
 
-export const determineTitle = async (uri: string, providedTitle?: string): Promise<string> => {
-    if (providedTitle) return providedTitle;
-
+export const determineTitle = async (track: Track): Promise<string> => {
     try {
-        const probe = await probeMedia(uri);
+        const probe = await probeMedia(track.source.src);
         const tagTitle = probe.tags?.title || probe.tags?.TITLE || probe.tags?.Title;
-        if (tagTitle && typeof tagTitle === 'string' && tagTitle.trim().length > 0) {
-            return tagTitle;
-        }
+
+        if (tagTitle && typeof tagTitle === 'string' && tagTitle.trim().length > 0) return tagTitle.trim();
     } catch {
         // Ignored
     }
 
     try {
-        const isUrl = uri.startsWith('http');
-        const baseName = path.basename(uri);
+        const isUrl = track.source.src.startsWith('http');
+        let cleanPath: string;
 
         if (isUrl) {
-
-            const decodedName = decodeURIComponent(baseName).split('?')[0];
-            const nameWithoutExt = decodedName.replace(/\.[^/.]+$/, "");
-            return removeNameInvalidChars(nameWithoutExt) || 'Unknown Title';
+            const urlObj = new URL(track.source.src);
+            cleanPath = decodeURIComponent(urlObj.pathname);
         } else {
-
-            const nameWithoutExt = path.parse(uri).name;
-            return removeNameInvalidChars(nameWithoutExt) || 'Unknown Title';
+            cleanPath = track.source.src;
         }
+
+        const nameWithoutExt = path.parse(cleanPath).name;
+        return removeNameInvalidChars(nameWithoutExt) || 'Unknown Title';
     } catch {
         return 'Unknown Title';
     }

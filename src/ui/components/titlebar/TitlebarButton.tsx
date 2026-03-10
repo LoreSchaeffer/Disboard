@@ -7,7 +7,7 @@ interface TitlebarButtonProps {
     color?: 'default' | 'red';
     className?: string;
     disabled?: boolean;
-    onClick?: () => void;
+    onClick?: (e: React.MouseEvent) => void;
 }
 
 const TitlebarButton = ({icon: Icon, color = 'default', className, disabled = false, onClick}: TitlebarButtonProps) => {

@@ -1,66 +1,14 @@
 import './App.css';
-import {ReactElement} from "react";
-import MainSoundboardWin from "./windows/MainSoundboardWin";
 import {useWindow} from "./context/WindowContext";
-import {useNavigation} from "./context/NavigationContext";
-import {PlayerProvider} from "./context/PlayerContext";
-import MediaSelectorWin from "./windows/MediaSelectorWin";
-import ButtonSettingsWin from "./windows/ButtonSettingsWin";
-import SettingsWin from "./windows/SettingsWin";
-import NewProfileWin from "./windows/NewProfileWin";
-import DeleteConfirmationWin from "./windows/DeleteConfirmationWin";
-
-type PageConfig = {
-    component: ReactElement;
-    usePlayer: boolean;
-}
-
-const PAGES: Record<string, PageConfig> = {
-    'main': {component: <MainSoundboardWin/>, usePlayer: true},
-    'button_settings': {component: <ButtonSettingsWin/>, usePlayer: true},
-    'media_selector': {component: <MediaSelectorWin/>, usePlayer: true},
-
-    'settings': {component: <SettingsWin/>, usePlayer: true},
-    'new_profile': {component: <NewProfileWin/>, usePlayer: false},
-
-    'delete_confirmation': {component: <DeleteConfirmationWin/>, usePlayer: false},
-}
-
-const FallbackPage = () => <div>Page not found!</div>
+import Router from "./Router";
 
 export const App = () => {
     const {ready} = useWindow();
-    const {visibleStack} = useNavigation();
-
     if (!ready) return null;
 
     return (
         <div className='app'>
-            {visibleStack.map((entry, index) => {
-                const pageConfig = PAGES[entry.page];
-                if (!pageConfig) {
-                    if (index === visibleStack.length - 1) return <FallbackPage key={entry.page}/>;
-                    return null;
-                }
-
-                const content = pageConfig.usePlayer ? (
-                    <PlayerProvider>{pageConfig.component}</PlayerProvider>
-                ) : (
-                    pageConfig.component
-                );
-
-                return (
-                    <div
-                        key={entry.page}
-                        className="pageContainer"
-                        style={{
-                            zIndex: 10 + index,
-                        }}
-                    >
-                        {content}
-                    </div>
-                )
-            })}
+            <Router/>
         </div>
     )
 }

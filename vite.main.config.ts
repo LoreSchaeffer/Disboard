@@ -17,6 +17,7 @@ export default defineConfig({
                 'sodium-native',
                 '@snazzah/davey',
                 'zod',
+                'sharp'
             ],
         }
     }

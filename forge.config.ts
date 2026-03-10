@@ -6,17 +6,16 @@ import {MakerRpm} from '@electron-forge/maker-rpm';
 import {VitePlugin} from '@electron-forge/plugin-vite';
 import {FusesPlugin} from '@electron-forge/plugin-fuses';
 import {FuseV1Options, FuseVersion} from '@electron/fuses';
+import AutoUnpackNativesPlugin from "@electron-forge/plugin-auto-unpack-natives";
 
 const config: ForgeConfig = {
     packagerConfig: {
-        asar: true,
+        asar: {
+            unpack: "{**/node_modules/@ffmpeg-installer/**,**/node_modules/@ffprobe-installer/**}"
+        },
         icon: 'icons/icon.png',
         overwrite: true,
         prune: true,
-        // TODO Set this to true if needed
-        // extraResource: [
-        //     './resources/epidemiology.jar',
-        // ]
     },
     rebuildConfig: {},
     makers: [
@@ -36,6 +35,7 @@ const config: ForgeConfig = {
         })
     ],
     plugins: [
+        new AutoUnpackNativesPlugin({}),
         new VitePlugin({
             build: [
                 {

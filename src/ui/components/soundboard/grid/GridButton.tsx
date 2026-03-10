@@ -108,12 +108,12 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
             {showImages && (
                 <img
                     className={styles.image}
-                    src={btn.track ? (btn.track.downloading ? '/images/download.png' : `disboard://thumbnail/${btn.track?.id}`) : '/images/track.png'}
+                    src={btn.track ? (btn.track.downloading ? './images/download.png' : `disboard://thumbnail/${btn.track?.id}`) : './images/track.png'}
                     alt={btn.title || ''}
                     onError={(e) => {
                         const img = e.currentTarget;
                         img.onerror = null;
-                        img.src = '/images/track.png';
+                        img.src = './images/track.png';
                     }}
                 />
             )}

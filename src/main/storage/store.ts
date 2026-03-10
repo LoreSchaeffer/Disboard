@@ -3,6 +3,8 @@ import {z} from "zod";
 import {CONFIG_DATA} from "../constants";
 import fs from "node:fs";
 
+const StoreConstructor = ((Store as any).default || Store) as typeof Store;
+
 export const createValidatedStore = <T extends Record<string, unknown>>(
     name: string,
     schema: z.Schema<T>,
@@ -22,7 +24,7 @@ export const createValidatedStore = <T extends Record<string, unknown>>(
         }
     }
 
-    const store = new Store<T>({
+    const store = new StoreConstructor<T>({
         name,
         cwd: CONFIG_DATA,
         watch: true,

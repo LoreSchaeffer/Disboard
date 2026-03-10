@@ -101,7 +101,7 @@ export class Player {
         this.audio.crossOrigin = 'anonymous';
 
         try {
-            this.workletInitPromise = this.audioContext.audioWorklet.addModule('/audioProcessor.js');
+            this.workletInitPromise = this.audioContext.audioWorklet.addModule('./audioProcessor.js');
             await this.workletInitPromise;
         } catch (e) {
             console.error('Failed to load AudioWorklet module:', e);

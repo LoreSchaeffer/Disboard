@@ -26,7 +26,7 @@ const Sidebar = ({categories, activePage, onPageSelected}: SidebarProps) => {
                 >
                     <span className={styles.categoryLabel}>{category.label}</span>
                     {category.pages.map((page) => (
-                        <Page
+                        <SettingPageItem
                             key={page.id}
                             page={page}
                             active={selectedPage.categoryId === category.id && selectedPage.pageId === page.id}
@@ -46,7 +46,7 @@ type PageProps = {
     onClick?: () => void,
 }
 
-const Page = ({page, active = false, onClick}: PageProps) => {
+const SettingPageItem = ({page, active = false, onClick}: PageProps) => {
     const Icon = page.icon;
 
     return (

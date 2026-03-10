@@ -262,7 +262,7 @@ const ListSelector = ({boardType, onChange}: ListSelectorProps) => {
                                 onError={(e) => {
                                     const img = e.currentTarget;
                                     img.onerror = null;
-                                    img.src = '/images/track.png';
+                                    img.src = './images/track.png';
                                 }}
                             />
                             <div className={styles.resultInfo}>
@@ -335,7 +335,7 @@ const YouTubeSelector = ({onChange}: SelectorProps) => {
                                 onError={(e) => {
                                     const img = e.currentTarget;
                                     img.onerror = null;
-                                    img.src = '/images/track.png';
+                                    img.src = './images/track.png';
                                 }}
                             />
                             <div className={styles.resultInfo}>

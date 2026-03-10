@@ -44,7 +44,7 @@ const TracksSettingsPage = () => {
                     onError={(e) => {
                         const img = e.currentTarget;
                         img.onerror = null;
-                        img.src = '/images/track.png';
+                        img.src = './images/track.png';
                     }}
                     key={`thumbnail-${track.id}`}
                     onClick={() => handlePlayPause(track)}

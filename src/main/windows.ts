@@ -6,13 +6,14 @@ import os from "node:os";
 import {getBoardSettings, settingsStore} from "./storage/settings-store";
 import {broadcastData} from "./utils/broadcast";
 
-declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
-declare const MAIN_WINDOW_VITE_NAME: string;
-
 const loadWindowUrl = (win: BrowserWindow, pageName: string, queryParams: string = '') => {
     const search = pageName !== 'main' ? `?page=${pageName}${queryParams}` : queryParams;
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/index.html${search}`).catch(e => console.log(`[Main] Failed to load URL: ${e}`));
-    else win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {search: search}).catch(e => console.log(`[Main] Failed to load file: ${e}`));
+
+    if (process.env['ELECTRON_RENDERER_URL']) {
+        win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/index.html${search}`).catch(e => console.error(`[Main] Failed to load URL: ${e}`));
+    } else {
+        win.loadFile(path.join(__dirname, '../renderer/index.html'), {search: search}).catch(e => console.error(`[Main] Failed to load file: ${e}`));
+    }
 };
 
 const createWin = (options: WindowOptions): BrowserWindow => {
@@ -34,7 +35,7 @@ const createWin = (options: WindowOptions): BrowserWindow => {
         autoHideMenuBar: true,
         show: false,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, '../preload/preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false,

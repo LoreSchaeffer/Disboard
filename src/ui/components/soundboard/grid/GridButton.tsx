@@ -62,6 +62,8 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
         title: `Button ${row}-${col}`,
     };
 
+    if (!btn.title) btn.title = `Button ${row}-${col}`;
+
     const dynamicStyle: CustomCSSProperties = useMemo(() => {
         const zoomFactor = Math.pow(clamp(zoom, 0.1, 2), 0.8);
 
@@ -98,7 +100,8 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
                 active && styles.active,
                 className,
                 isDragging && styles.dragging,
-                isDropping && styles.dropping
+                isDropping && styles.dropping,
+                !showImages && styles.centered
             )}
             style={dynamicStyle}
             onClick={(e) => onClick?.(e, btn, row, col)}

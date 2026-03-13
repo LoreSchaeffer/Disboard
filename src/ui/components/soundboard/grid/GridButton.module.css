@@ -82,6 +82,10 @@
     color: var(--sb-text-active);
 }
 
+.btn.centered .text {
+    text-align: center;
+}
+
 .progress {
     position: absolute;
     bottom: 0;

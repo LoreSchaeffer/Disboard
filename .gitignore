@@ -88,8 +88,9 @@ typings/
 # Vite
 .vite/
 
-# Electron-Forge
+# Electron-Vite
 out/
+dist/
 
 .idea/
 Epidemiology/

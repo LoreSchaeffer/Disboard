@@ -51,6 +51,12 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
         }
     }
 
+    const clearButton = (btn: SbGridBtn) => {
+        window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id);
+        if (player.getCurrentTrack()?.id === btn.track.id) player.stop();
+        if (previewPlayer.getCurrentTrack()?.id === btn.track.id) previewPlayer.stop();
+    }
+
     const onContextMenu = useCallback((event: MouseEvent, targetButton: SbGridBtn, row: number, col: number) => {
         const btn = targetButton || {id: '', row, col};
         const isButtonNotSet = !btn.track && btn;
@@ -178,7 +184,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                         variant: 'danger',
                         onClick: () => {
                             if (settings && !settings.confirmButtonDeletion) {
-                                window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id);
+                                clearButton(btn);
                             } else {
                                 navigate('delete_confirmation', {
                                     replace: false,
@@ -186,7 +192,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                                         boardType: boardType,
                                         resource: 'button',
                                         id: btn.id,
-                                        onConfirm: () => window.electron.gridProfiles.buttons.delete(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id)
+                                        onConfirm: () => clearButton(btn)
                                     }
                                 });
                             }
@@ -241,8 +247,8 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                                 onClick={hasTrack && !isDownloading ? onClick : undefined}
                                 onContextMenu={!isDownloading || !hasTrack ? onContextMenu : undefined}
                                 swapButtons={swapButtons}
-                                zoom={settings?.[boardType].zoom || 1}
-                                showImages={settings?.showImages || true}
+                                zoom={settings?.[boardType].zoom ?? 1}
+                                showImages={settings?.showImages ?? true}
                                 active={isActive}
                                 progress={progress}
                             />

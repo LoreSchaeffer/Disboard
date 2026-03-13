@@ -50,6 +50,30 @@ const GeneralSettingsPage = () => {
                     />
                 </Col>
             </Row>
+            <Row className={styles.row}>
+                <Col size={4}>
+                    <label>Show images in buttons</label>
+                </Col>
+                <Col>
+                    <Input
+                        type={'checkbox'}
+                        checked={settings.showImages}
+                        onChange={(e) => window.electron.settings.set({showImages: e.target.checked})}
+                    />
+                </Col>
+            </Row>
+            <Row className={styles.row}>
+                <Col size={4}>
+                    <label>Debug</label>
+                </Col>
+                <Col>
+                    <Input
+                        type={'checkbox'}
+                        checked={settings.debug}
+                        onChange={(e) => window.electron.settings.set({debug: e.target.checked})}
+                    />
+                </Col>
+            </Row>
         </div>
     )
 }

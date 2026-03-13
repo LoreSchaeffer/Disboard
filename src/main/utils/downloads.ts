@@ -1,16 +1,17 @@
 import path from "path";
 import fs from "node:fs/promises";
-import axios from "axios";
+import axios, {isAxiosError} from "axios";
 import {THUMBNAILS_DIR, TRACKS_DIR, USER_AGENT} from "../constants";
 import sharp from "sharp";
 import {determineTitle, downloadAudio, extractCoverImage} from "./ffmpeg";
 import {BoardType, GridProfiles, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
 import {getBestThumbnail, getVideoId, getYoutubeStream} from "./music-api";
-import {musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
+import {getGridProfilesStore, musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
 import {broadcastData} from "./broadcast";
 import {convertGridProfile2SbGridProfile} from "./data-converters";
 import Store from "electron-store";
+import {cacheStore} from "../storage/cache-store";
 
 const updateTracksStore = (track: Track) => {
     const tracks = tracksStore.get('tracks') || [];
@@ -21,6 +22,7 @@ const updateTracksStore = (track: Track) => {
 
     tracksStore.set('tracks', tracks);
     broadcastData('tracks:changed', tracks);
+    broadcastData(`grid_profiles:${track.board}:changed`, getGridProfilesStore(track.board).get('profiles')?.map(convertGridProfile2SbGridProfile) || []);
 }
 
 export const removeTrackFromStore = (id: string): boolean => {
@@ -38,12 +40,9 @@ export const removeTrackFromStore = (id: string): boolean => {
 
         let profilesChanged = false;
         for (const profile of profiles) {
-            for (const btn of profile.buttons) {
-                if (btn.track === id) {
-                    btn.track = null;
-                    profilesChanged = true;
-                }
-            }
+            const len = profile.buttons.length;
+            profile.buttons = profile.buttons.filter(btn => btn.track !== id);
+            if (len !== profile.buttons.length) profilesChanged = true;
         }
 
         if (profilesChanged) {
@@ -127,6 +126,11 @@ const downloadImage = async (track: Track, url?: string): Promise<void> => {
             .toFile(dstFile);
 
     } catch (e) {
+        if (isAxiosError(e) && url) {
+            const unreachableUrls = cacheStore.get('unreachableUrls') || [];
+            if (!unreachableUrls.includes(url)) cacheStore.set('unreachableUrls', [...unreachableUrls, url]);
+        }
+
         const errMsg = e instanceof Error ? e.message : String(e);
         console.warn(`[Main] Thumbnail not generated for ${track.title} (${track.id}): ${errMsg}`);
 
@@ -231,18 +235,25 @@ export const fixMissingTracks = async () => {
         if (!trackExists) {
             console.warn(`[Main] Track audio ${track.title} (${track.id}) is missing...`);
 
+            const unreachableUrls = cacheStore.get('unreachableUrls') || [];
+
             try {
-                await downloadMissingTrack(track, !thumbExists);
-                console.info(`[Main] Track audio ${track.title} (${track.id}) restored.`)
+                if (!unreachableUrls.includes(track.source.src)) {
+                    await downloadMissingTrack(track, !thumbExists);
+                    console.info(`[Main] Track audio ${track.title} (${track.id}) restored.`)
+                }
             } catch (e) {
                 console.error(`[Main] Failed to restore audio for ${track.id}`, e);
             }
         } else if (!thumbExists) {
-            console.warn(`[Main] Thumbnail for ${track.title} (${track.id}) is missing...`);
+             try {
+                const unreachableUrls = cacheStore.get('unreachableUrls') || [];
+                const fallbackThumbnailUrl = getFallbackThumbnailUrl(track) || '';
 
-            try {
-                await downloadImage(track, getFallbackThumbnailUrl(track));
-                console.info(`[Main] Thumbnail for ${track.title} (${track.id}) restored.`)
+                if (fallbackThumbnailUrl !== '' && !unreachableUrls.includes(fallbackThumbnailUrl)) {
+                    await downloadImage(track, fallbackThumbnailUrl);
+                    console.info(`[Main] Thumbnail for ${track.title} (${track.id}) restored.`)
+                }
             } catch (e) {
                 console.warn(`[Main] Failed to restore thumbnail for ${track.id}`, e.message);
             }

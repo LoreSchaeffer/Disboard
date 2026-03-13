@@ -33,7 +33,8 @@ export const GridBtnSchema = z.object({
     title: z.string().optional(),
     volumeOverride: z.number().min(0).max(100).optional(),
     style: BtnStyleSchema.optional(),
-    cropOptions: CropOptionsSchema.optional()
+    cropOptions: CropOptionsSchema.optional(),
+    loop: z.boolean().optional()
 });
 
 export const AmbientBtnSchema = z.object({

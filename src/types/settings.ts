@@ -15,9 +15,15 @@ export const DiscordSettingsSchema = z.object({
     lastChannel: z.string().optional(),
 });
 
+export const WindowPositionSchema = z.object({
+    x: z.number().optional(),
+    y: z.number().optional(),
+});
+
 export const BoardSettingsSchema = z.object({
     width: z.number().min(1080).max(10000).default(1366),
     height: z.number().min(608).max(10000).default(768),
+    position: WindowPositionSchema.optional(),
     volume: z.number().min(0).max(100).default(50),
     activeProfile: z.uuid().nullable().default(null),
     zoom: z.number().min(0.5).max(3).default(1),
@@ -45,6 +51,7 @@ export const SettingsSchema = z.object({
     debug: z.boolean().default(false)
 });
 
+export type WindowPosition = z.infer<typeof WindowPositionSchema>;
 export type BoardSettings = z.infer<typeof BoardSettingsSchema>;
 export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
 export type DiscordSettings = z.infer<typeof DiscordSettingsSchema>;

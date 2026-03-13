@@ -183,6 +183,14 @@ const GridBtnSettingsWin = () => {
         });
     }
 
+    const handleLoopChange = (value: boolean | null) => {
+        if (!button) return;
+
+        setNewButton(prev => {
+            return {...prev, loop: value};
+        });
+    }
+
     const handleVolumeChange = (val: number | null) => {
         if (!button) return;
 
@@ -662,7 +670,7 @@ const GridBtnSettingsWin = () => {
                         />
                     </Col>
                 </Row>
-                <Row>
+                <Row className={styles.space}>
                     <Col size={2}>
                         <label className={styles.label}>Track ends</label>
                     </Col>
@@ -696,6 +704,18 @@ const GridBtnSettingsWin = () => {
                             options={timeUnitOptions}
                             value={getTimeUnit('endTimeUnit')}
                             onChange={(val) => handleEndTimeUnitChange(val as TimeUnit)}
+                        />
+                    </Col>
+                </Row>
+                <Row>
+                    <Col size={4}>
+                        <label className={styles.label}>Loop</label>
+                    </Col>
+                    <Col>
+                        <Input
+                            type={'checkbox'}
+                            checked={getValue('loop') ?? false}
+                            onChange={e => handleLoopChange(e.target.checked)}
                         />
                     </Col>
                 </Row>

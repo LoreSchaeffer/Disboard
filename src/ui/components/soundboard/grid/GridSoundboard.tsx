@@ -45,7 +45,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
         if (!button || !button.track) return
 
         if (boardType === 'sfx') {
-            player.toggleSfx(button.id, playerTrackFromBtn(button));
+            player.toggleSfx(button.id, button.loop ?? false, playerTrackFromBtn(button));
         } else {
             player.playNow(playerTrackFromBtn(button));
         }
@@ -71,7 +71,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                     items.push({
                         label: isSfxPlaying ? 'Stop SFX' : 'Play Now',
                         icon: isSfxPlaying ? <PiStopFill/> : <PiPlayFill/>,
-                        onClick: () => player.toggleSfx(btn.id, playerTrackFromBtn(btn))
+                        onClick: () => player.toggleSfx(btn.id, btn.loop ?? false, playerTrackFromBtn(btn))
                     });
                 } else {
                     items.push(

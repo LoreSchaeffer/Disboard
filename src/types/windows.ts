@@ -8,6 +8,7 @@ export type WindowOptions = BrowserWindowConstructorOptions & {
     onReady?: (win: BrowserWindow) => void;
     onResize?: (win: BrowserWindow) => void;
     onClosed?: (win: BrowserWindow) => void;
+    onMoved?: (win: BrowserWindow) => void;
     data?: StaticWinData<unknown>;
 }
 

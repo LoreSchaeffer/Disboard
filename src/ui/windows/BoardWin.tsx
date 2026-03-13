@@ -9,7 +9,7 @@ const BoardWin = ({children}: PropsWithChildren) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType, gridProfiles, activeGridProfile, ambientProfiles, activeAmbientProfile} = useProfiles();
     const {player} = usePlayer();
-    const {setTitlebarContent} = useTitlebar();
+    const {setTitle, setTitlebarContent} = useTitlebar();
 
     const zoomRef = useRef<number>(1);
 
@@ -27,6 +27,8 @@ const BoardWin = ({children}: PropsWithChildren) => {
         }
 
         window.addEventListener('wheel', handleMouseWheel, {passive: false});
+
+        setTitle(`Disboard ${boardType.charAt(0).toUpperCase() + boardType.slice(1)}`);
 
         return () => {
             window.removeEventListener('wheel', handleMouseWheel);

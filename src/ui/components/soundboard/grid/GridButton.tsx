@@ -2,7 +2,9 @@ import styles from "./GridButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {clamp} from "../../../../shared/utils";
 import {clsx} from "clsx";
-import {SbGridBtn} from "../../../../types";
+import {BoardType, SbGridBtn} from "../../../../types";
+import {useProfiles} from "../../../context/ProfilesProvider";
+import {usePlayer} from "../../../context/PlayerContext";
 
 type CustomCSSProperties = CSSProperties & {
     '--sb-bg'?: string;
@@ -54,6 +56,8 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
         onClick,
         onContextMenu
     }, ref) => {
+    const {boardType, activeGridProfile} = useProfiles();
+    const {player} = usePlayer();
 
     const btn: SbGridBtn = button || {
         id: '',
@@ -63,6 +67,18 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
     };
 
     if (!btn.title) btn.title = `Button ${row}-${col}`;
+
+    const onWheel = (e: React.WheelEvent<HTMLDivElement>, btn: SbGridBtn) => {
+        const direction = e.deltaY < 0 ? 1 : -1;
+
+        e.stopPropagation();
+
+        const initialVolume = btn.volumeOverride ?? 100;
+        const finalVolume = clamp(initialVolume + (direction * 2), 0, 100);
+
+        window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id, {volumeOverride: finalVolume});
+        if (boardType === 'sfx') player.setSfxVolume(btn.id, finalVolume);
+    }
 
     const dynamicStyle: CustomCSSProperties = useMemo(() => {
         const zoomFactor = Math.pow(clamp(zoom, 0.1, 2), 0.8);
@@ -106,7 +122,7 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
             style={dynamicStyle}
             onClick={(e) => onClick?.(e, btn, row, col)}
             onContextMenu={(e) => onContextMenu?.(e, btn, row, col)}
-            title={btn.title}
+            onWheel={(e) => onWheel?.(e, btn)}
         >
             {showImages && (
                 <img
@@ -128,7 +144,13 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
                 className={styles.progress}
                 style={{
                     width: `${progress}%`
-            }}
+                }}
+            ></div>
+            <div
+                className={styles.volume}
+                style={{
+                    height: `${btn.volumeOverride ?? 0}%`
+                }}
             ></div>
         </div>
     );

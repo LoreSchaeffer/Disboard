@@ -93,3 +93,18 @@
     background-color: var(--sb-progress);
     height: 3px;
 }
+
+.volume {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: var(--sb-progress);
+    width: 3px;
+    opacity: 0;
+    transition: opacity 200ms ease 500ms;
+}
+
+.btn:hover .volume {
+    opacity: 1;
+    transition: opacity 200ms ease 0s;
+}

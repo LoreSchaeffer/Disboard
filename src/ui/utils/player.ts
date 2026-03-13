@@ -12,6 +12,7 @@ export type PlayerState = {
 export type SfxState = {
     playing: boolean;
     progress: number;
+    volume: number;
 }
 
 type EventHandlerMap = {
@@ -350,7 +351,8 @@ export class Player {
         this.audio.currentTime = absoluteTimeS;
     }
 
-    public toggleSfx(buttonId: string, track: PlayerTrack) {
+
+    public toggleSfx(buttonId: string, loop: boolean, track: PlayerTrack) {
         if (this.activeSfx.has(buttonId)) {
             this.stopSfx(buttonId);
             return;
@@ -364,7 +366,8 @@ export class Player {
         const vol = track.volumeOverride !== undefined && track.volumeOverride !== null
             ? track.volumeOverride
             : this.masterVolume;
-        sfxAudio.volume = clamp(vol, 0, 100) / 100;
+        const initialVolume = clamp(vol, 0, 100);
+        sfxAudio.volume = initialVolume / 100;
 
         if (track.directStream) {
             if (track.source.type === 'youtube' || track.source.type === 'url') sfxAudio.src = track.source.src;
@@ -377,7 +380,7 @@ export class Player {
         sfxSource.connect(this.masterGainNode);
 
         this.activeSfx.set(buttonId, {audio: sfxAudio, source: sfxSource});
-        this.sfxStates[buttonId] = {playing: true, progress: 0};
+        this.sfxStates[buttonId] = {playing: true, progress: 0, volume: initialVolume};
         this._emitSfx();
 
         let absoluteEndTimeS: number | null = null;
@@ -407,7 +410,19 @@ export class Player {
             this._emitSfx();
         };
 
-        sfxAudio.addEventListener('ended', cleanup);
+        const handleEnd = () => {
+            if (loop) {
+                sfxAudio.currentTime = startTimeS;
+                sfxAudio.play().catch(e => {
+                    console.error("SFX Replay error:", e);
+                    cleanup();
+                });
+            } else {
+                cleanup();
+            }
+        };
+
+        sfxAudio.addEventListener('ended', handleEnd);
 
         sfxAudio.addEventListener('loadedmetadata', () => {
             if (!track.duration) durationS = sfxAudio.duration;
@@ -419,7 +434,7 @@ export class Player {
             if (!this.sfxStates[buttonId]) return;
 
             if (absoluteEndTimeS !== null && sfxAudio.currentTime >= absoluteEndTimeS) {
-                cleanup();
+                handleEnd();
                 return;
             }
 
@@ -456,6 +471,18 @@ export class Player {
         this.activeSfx.clear();
         this.sfxStates = {};
         this._emitSfx();
+    }
+
+    public setSfxVolume(buttonId: string, volume: number) {
+        const sfx = this.activeSfx.get(buttonId);
+        const state = this.sfxStates[buttonId];
+
+        if (sfx && state) {
+            const clampedVol = clamp(volume, 0, 100);
+            sfx.audio.volume = clampedVol / 100;
+            state.volume = clampedVol;
+            this._emitSfx();
+        }
     }
 
 

@@ -43,7 +43,7 @@ export const probeMedia = (inputSource: string): Promise<ProbeResult> => {
     });
 };
 
-const downloadChunkedAudio = async (url: string, destPath: string): Promise<void> => {
+const downloadChunkedAudio = async (url: string, destPath: string, trackId: string): Promise<void> => {
     const initRes = await axios.get(url, {
         headers: {Range: 'bytes=0-0', 'User-Agent': USER_AGENT}
     });
@@ -72,7 +72,7 @@ const downloadChunkedAudio = async (url: string, destPath: string): Promise<void
             await fileHandle.write(res.data);
 
             const netPercent = Math.round(((end + 1) / totalBytes) * 100);
-            console.log(`Network Download: ${netPercent}%`);
+            console.log(`[Network] progress ${trackId}: ${netPercent}%`);
         }
     } finally {
         await fileHandle.close();
@@ -91,7 +91,7 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
     if (isUrl) {
         console.log(`[Network] Starting high-speed chunked download for ${trackId}...`);
         try {
-            await downloadChunkedAudio(inputSource, rawTempPath);
+            await downloadChunkedAudio(inputSource, rawTempPath, trackId);
             ffmpegSource = rawTempPath;
             console.log(`[Network] Download complete. Handing over to FFmpeg.`);
         } catch (e) {
@@ -125,7 +125,8 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
                 .audioCodec('libmp3lame')
                 .audioBitrate(256)
                 .outputOptions([
-                    '-threads 0'
+                    '-threads 0',
+                    '-q:a 2'
                 ])
                 .format('mp3');
         }

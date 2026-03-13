@@ -1,0 +1,19 @@
+appId: it.lycoris.disboard
+productName: Disboard
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**/*
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/node_modules/@ffmpeg-installer/**"
+  - "**/node_modules/@ffprobe-installer/**"
+win:
+  target: nsis
+  icon: icons/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true

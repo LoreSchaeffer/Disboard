@@ -47,10 +47,36 @@
     font-size: 0.875rem;
 }
 
+.clickable {
+    cursor: pointer;
+}
+
 .tableIcon {
     cursor: pointer;
     transition: all 200ms ease-in-out;
     font-size: 1.2rem;
+}
+
+.titleContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.copyIcon {
+    opacity: 0;
+    fill: var(--text-primary);
+    transition: all 200ms ease-in-out;
+}
+
+.copyIcon.activeCopy {
+    fill: var(--blurple-25);
+}
+
+.titleContainer:hover .copyIcon,
+.copyIcon:hover {
+    opacity: 1;
 }
 
 .youtubeIcon {

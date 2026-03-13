@@ -15,7 +15,7 @@ const TEST_SOUND: PlayerTrack = {
     id: 'test-sound',
     source: {
         type: 'url',
-        src: '/test.mp3'
+        src: './test.mp3'
     },
     title: 'Test Sound',
     duration: 0,

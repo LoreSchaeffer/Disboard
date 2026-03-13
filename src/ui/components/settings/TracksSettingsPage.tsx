@@ -3,7 +3,7 @@ import React, {useEffect, useState} from "react";
 import {Track} from "../../../types";
 import {DataTable} from "../tables/DataTable";
 import {usePlayer} from "../../context/PlayerContext";
-import {PiFolderOpenFill, PiGlobeBold, PiPlayFill, PiTrash, PiYoutubeLogoFill} from "react-icons/pi";
+import {PiCopyBold, PiFolderOpenFill, PiGlobeBold, PiPlayFill, PiTrash, PiYoutubeLogoFill} from "react-icons/pi";
 import AudioWave from "../misc/AudioWave";
 import {Time} from "../../utils/time";
 import {clsx} from "clsx";
@@ -15,6 +15,7 @@ const TracksSettingsPage = () => {
     const {navigate} = useNavigation();
     const [tracks, setTracks] = useState<Track[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [copiedBtn, setCopiedBtn] = useState<boolean>(false);
 
     useEffect(() => {
         window.electron.tracks.getAll().then((tracks) => {
@@ -44,7 +45,7 @@ const TracksSettingsPage = () => {
                     onError={(e) => {
                         const img = e.currentTarget;
                         img.onerror = null;
-                        img.src = '/images/track.png';
+                        img.src = './images/track.png';
                     }}
                     key={`thumbnail-${track.id}`}
                     onClick={() => handlePlayPause(track)}
@@ -62,6 +63,21 @@ const TracksSettingsPage = () => {
                         onClick={() => handlePlayPause(track)}
                     />
                 )}
+            </div>
+        )
+    }
+
+    const titleRenderer = (track: Track) => {
+        const handleClick = async () => {
+            await navigator.clipboard.writeText(track.id);
+            setCopiedBtn(true);
+            setTimeout(() => setCopiedBtn(false), 500);
+        }
+
+        return (
+            <div className={styles.titleContainer} onClick={handleClick}>
+                <span className={clsx(styles.tableSpan, styles.clickable)}>{track.title}</span>
+                <PiCopyBold className={clsx(styles.copyIcon, copiedBtn && styles.activeCopy)}/>
             </div>
         )
     }
@@ -110,7 +126,7 @@ const TracksSettingsPage = () => {
                 rowClassName={() => styles.trackRow}
                 columns={[
                     {id: 'thumbnail', text: '', sortable: false, searchable: false, render: thumbnailRenderer},
-                    {id: 'title', text: 'Title', sortable: true, searchable: true, render: (t) => <span className={styles.tableSpan}>{t.title}</span>},
+                    {id: 'title', text: 'Title', sortable: true, searchable: true, render: titleRenderer},
                     {id: 'board', text: 'Board', sortable: true, searchable: false, render: (t) => <span className={styles.tableSpan}>{t.board.charAt(0).toUpperCase() + t.board.slice(1)}</span>},
                     {id: 'duration', text: 'Duration', sortable: true, searchable: false, render: (t) => <span className={styles.tableSpan}>{new Time(t.duration, 'ms').formatted()}</span>},
                     {id: 'source', text: 'Src', sortable: true, searchable: false, render: sourceRenderer},

@@ -13,9 +13,6 @@ import {BoardType} from "./types";
 import {setupLogger} from "./main/utils/logger";
 import {fixMissingTracks} from "./main/utils/downloads";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-if (require('electron-squirrel-startup')) app.quit();
-
 registerProtocols();
 
 const setupCorsHandler = () => {

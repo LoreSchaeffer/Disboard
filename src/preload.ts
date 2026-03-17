@@ -109,6 +109,7 @@ const tracksApi = {
 const systemApi = {
     openLink: (url: string) => ipcRenderer.send('system:open_link', url),
     openFileMediaSelector: (mediaType?: MediaType): Promise<IpcResponse<string>> => ipcRenderer.invoke('system:open_file_media_selector', mediaType),
+    openFile: (path?: string) => ipcRenderer.send('system:open_file', path),
 }
 
 const musicApi = {

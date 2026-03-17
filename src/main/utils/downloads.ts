@@ -63,7 +63,7 @@ const downloadTrack = async (track: Track): Promise<void> => {
             ? await getYoutubeStream(getVideoId(track.source.src))
             : track.source.src;
 
-        track.duration = await downloadAudio(uri, TRACKS_DIR, track.id);
+        track.duration = await downloadAudio(uri, TRACKS_DIR, track.id, track.title);
         track.downloading = false;
 
         updateTracksStore(track);

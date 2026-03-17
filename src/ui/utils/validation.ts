@@ -1,4 +1,5 @@
-const nameRegex = /^[\p{L}\p{N}\s]+$/u;
+const nameRegex = /^[\p{L}\p{N}\s\p{P}\p{S}]+$/u;
+
 export const validateName = (name: string, ignoreSize: boolean = false) => {
     if (!ignoreSize) {
         if (!name || name.trim().length === 0) return false;
@@ -8,5 +9,5 @@ export const validateName = (name: string, ignoreSize: boolean = false) => {
 }
 
 export const removeNameInvalidChars = (name: string) => {
-    return name.replace(/[^\p{L}\p{N}\s\-_()]/gu, '');
+    return name.replace(/[^\p{L}\p{N}\s\p{P}\p{S}]/gu, '');
 }

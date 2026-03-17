@@ -58,6 +58,8 @@ export default function WindowProvider({children}: PropsWithChildren) {
 
             const combo = keys.join('+');
 
+            if (settings && settings.debug) console.log('Combo received: ', combo);
+
             const callback = shortcutRegistry.current.get(combo);
             if (callback) {
                 e.preventDefault();

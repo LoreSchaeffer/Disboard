@@ -156,6 +156,8 @@ export class Player {
         this.audio.addEventListener('seeked', () => {
             this.state.seeking = false;
             this.eventHandlers['seeked']?.();
+
+            this._handleTimeUpdate(true);
         });
 
         this.audio.addEventListener('timeupdate', () => this._handleTimeUpdate());
@@ -349,6 +351,8 @@ export class Player {
         if (this.endTime && absoluteTimeS > this.endTime.getTimeS()) absoluteTimeS = this.endTime.getTimeS();
 
         this.audio.currentTime = absoluteTimeS;
+
+        this._handleTimeUpdate(true);
     }
 
 
@@ -600,8 +604,8 @@ export class Player {
         if (this.startTime) this.duration.subtract(this.startTime);
     }
 
-    private _handleTimeUpdate() {
-        if (this.state.seeking || !this.state.playing) return;
+    private _handleTimeUpdate(forceUIUpdate: boolean = false) {
+        if (!forceUIUpdate && (this.state.seeking || !this.state.playing)) return;
 
         let currentTimeMs = this.audio.currentTime * 1000;
         if (this.startTime) currentTimeMs -= this.startTime.getTimeMs();

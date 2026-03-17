@@ -113,7 +113,7 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                         <ProgressBar
                             className={styles.progressBar}
                             seekable
-                            disabled={!status?.playing}
+                            disabled={!currentTrack}
                             max={status.playing ? duration?.getTimeMs() : 99999999}
                             val={status.playing ? currentTime.getTimeMs() : 0}
                             displayFunction={formatTime}

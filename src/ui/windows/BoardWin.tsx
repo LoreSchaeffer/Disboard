@@ -1,15 +1,18 @@
 import {useProfiles} from "../context/ProfilesProvider";
 import {PropsWithChildren, useEffect, useRef} from "react";
-import {useWindow} from "../context/WindowContext";
+import {useShortcut, useWindow} from "../context/WindowContext";
 import {useTitlebar} from "../context/TitlebarContext";
 import ProfileSelector from "../components/misc/ProfileSelector";
 import {usePlayer} from "../context/PlayerContext";
+import {useNavigation} from "../context/NavigationContext";
+import {GridMediaSelectorWin} from "../../types";
 
 const BoardWin = ({children}: PropsWithChildren) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType, gridProfiles, activeGridProfile, ambientProfiles, activeAmbientProfile} = useProfiles();
     const {player} = usePlayer();
     const {setTitle, setTitlebarContent} = useTitlebar();
+    const {navigate, isInStack} = useNavigation();
 
     const zoomRef = useRef<number>(1);
 
@@ -44,6 +47,42 @@ const BoardWin = ({children}: PropsWithChildren) => {
         if (boardType === 'ambient') setTitlebarContent(<ProfileSelector boardType={boardType} ambientProfiles={ambientProfiles} activeAmbientProfile={activeAmbientProfile}/>);
         else setTitlebarContent(<ProfileSelector boardType={boardType} gridProfiles={gridProfiles} activeGridProfile={activeGridProfile}/>);
     }, [gridProfiles, activeGridProfile, ambientProfiles, activeAmbientProfile]);
+
+    useShortcut('ctrl+s', () => {
+        if (!isInStack('settings')) navigate('settings', {replace: false});
+    });
+
+    useShortcut('ctrl+d', () => {
+        window.electron.settings.set({discord: {enabled: !settings.discord.enabled}});
+    });
+
+    useShortcut('ctrl+shift+m', () => {
+        if (boardType === 'music') return;
+
+        window.electron.window.isBoardOpen('music').then(open => {
+            if (!open) window.electron.window.open('music_board')
+        });
+    });
+
+    useShortcut('ctrl+shift+s', () => {
+        if (boardType === 'sfx') return;
+
+        window.electron.window.isBoardOpen('sfx').then(open => {
+            if (!open) window.electron.window.open('sfx_board')
+        });
+    });
+
+    useShortcut('ctrl+shift+a', () => {
+        if (boardType === 'ambient') return;
+
+        window.electron.window.isBoardOpen('ambient').then(open => {
+            if (!open) window.electron.window.open('ambient_board')
+        });
+    });
+
+    useShortcut('ctrl+n', () => {
+        window.electron.window.open('grid_media_selector', {boardType: boardType, action: 'play_now'} as GridMediaSelectorWin);
+    });
 
     return children;
 }

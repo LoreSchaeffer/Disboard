@@ -102,6 +102,7 @@ const tracksApi = {
     get: (id: string): Promise<Track | null> => ipcRenderer.invoke('tracks:get', id),
     getVolatile: (source: TrackSourceName, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
     delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:delete', id),
+    getUsed: (): Promise<string[]> => ipcRenderer.invoke('tracks:get_used'),
 
     onChanged: (func: (tracks: Track[]) => void) => createListener('tracks:changed', func),
 }

@@ -834,7 +834,7 @@ const ColorPickerRow = ({
         const hsl = hexToHsl(color);
         if (!hsl) return color;
 
-        hsl.l = Math.min(100, hsl.l + 15);
+        hsl.l = Math.min(100, hsl.l + 8);
         return hslToHex(hsl);
     }
 
@@ -844,7 +844,7 @@ const ColorPickerRow = ({
         const hsl = hexToHsl(color);
         if (!hsl) return color;
 
-        hsl.l = Math.max(0, hsl.l - 15);
+        hsl.l = Math.max(0, hsl.l - 8);
         return hslToHex(hsl);
     }
 

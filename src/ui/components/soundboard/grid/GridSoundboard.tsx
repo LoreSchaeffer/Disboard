@@ -48,7 +48,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
             onClick(null, button);
         });
 
-        const unsubStop = window.electron.player.onPlayButton(buttonId => player.stopSfx(buttonId));
+        const unsubStop = window.electron.player.onStopButton(buttonId => player.stopSfx(buttonId));
 
         return () => {
             unsubPlay();

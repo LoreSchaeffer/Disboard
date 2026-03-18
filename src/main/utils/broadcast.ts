@@ -12,6 +12,13 @@ export type BroadcastChannelMap = {
 
     'player:preview_stopped': [],
     'player:on_play_now': [boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack],
+    'player:on_play_button': [buttonId: string],
+    'player:on_stop_button': [buttonId: string],
+    'player:on_play': [],
+    'player:on_pause': [],
+    'player:on_stop': [],
+    'player:on_next': [],
+    'player:on_previous': [],
 }
 
 export const broadcastData = <K extends keyof BroadcastChannelMap>(

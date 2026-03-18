@@ -9,8 +9,6 @@ export const ApiCredentialsSchema = z.object({
 export const DiscordSettingsSchema = z.object({
     enabled: z.boolean().default(false),
     token: z.string().optional(),
-    restPort: z.number().min(1).max(65535).default(24454),
-    udpPort: z.number().min(1).max(65535).default(24455),
     lastGuild: z.string().optional(),
     lastChannel: z.string().optional(),
 });
@@ -27,6 +25,14 @@ export const BoardSettingsSchema = z.object({
     volume: z.number().min(0).max(100).default(50),
     activeProfile: z.uuid().nullable().default(null),
     zoom: z.number().min(0.5).max(3).default(1),
+});
+
+export const RemoteServerSchema = z.object({
+    enabled: z.boolean().default(false),
+    port: z.number().min(1).max(65535).default(4466),
+    authEnabled: z.boolean().default(false),
+    username: z.string().optional().default(''),
+    password: z.string().optional().default(''),
 });
 
 export const SettingsSchema = z.object({
@@ -46,7 +52,9 @@ export const SettingsSchema = z.object({
     musicApi: z.url().or(z.literal('')).default('https://ma.lycoris.it'),
     musicApiCredentials: ApiCredentialsSchema.nullable().default(null),
 
-    discord: DiscordSettingsSchema.default({enabled: false, restPort: 24454, udpPort: 24455}),
+    discord: DiscordSettingsSchema.default({enabled: false}),
+
+    remoteServer: RemoteServerSchema.default({enabled: false, port: 4466, authEnabled: false, username: '', password: ''}),
 
     debug: z.boolean().default(false)
 });
@@ -55,4 +63,5 @@ export type WindowPosition = z.infer<typeof WindowPositionSchema>;
 export type BoardSettings = z.infer<typeof BoardSettingsSchema>;
 export type ApiCredentials = z.infer<typeof ApiCredentialsSchema>;
 export type DiscordSettings = z.infer<typeof DiscordSettingsSchema>;
+export type WebsocketSettings = z.infer<typeof RemoteServerSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;

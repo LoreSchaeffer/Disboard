@@ -7,6 +7,7 @@ import {broadcastData} from "../utils/broadcast";
 
 const onSettingsChange = (oldSettings: Settings, newSettings: Settings) => {
     if (state.discordBot) state.discordBot.onSettingsUpdate(oldSettings, newSettings);
+    if (state.remoteServer) state.remoteServer.onSettingsUpdate(oldSettings, newSettings);
 
     if (oldSettings.debug !== newSettings.debug) {
         const allWindows = BrowserWindow.getAllWindows();

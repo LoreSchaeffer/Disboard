@@ -1,5 +1,5 @@
 import styles from "./GridSoundboard.module.css";
-import React, {MouseEvent, useCallback, useMemo, useState} from "react";
+import React, {MouseEvent, useCallback, useEffect, useMemo, useState} from "react";
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import DraggableGridButton from "./DraggableGridButton";
@@ -40,6 +40,21 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
         }
         return map;
     }, [activeGridProfile?.buttons]);
+
+    useEffect(() => {
+        const unsubPlay = window.electron.player.onPlayButton(buttonId => {
+            const button = activeGridProfile?.buttons.find(b => b.id === buttonId);
+            if (!button) return;
+            onClick(null, button);
+        });
+
+        const unsubStop = window.electron.player.onPlayButton(buttonId => player.stopSfx(buttonId));
+
+        return () => {
+            unsubPlay();
+            unsubStop();
+        }
+    }, []);
 
     const onClick = (_: MouseEvent, button: SbGridBtn) => {
         if (!button || !button.track) return

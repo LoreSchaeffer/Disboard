@@ -104,7 +104,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                 }
             }
 
-            const isPreviewing = previewPlayer.getStatus().playing;
+            const isPreviewing = previewPlayer.getState().playing;
             if (!isButtonNotSet) {
                 items.push({
                     label: isPreviewing ? 'Stop Preview' : 'Preview',

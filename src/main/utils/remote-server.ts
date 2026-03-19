@@ -1,20 +1,8 @@
 import {WebSocket, WebSocketServer} from "ws";
 import {settingsStore} from "../storage/settings-store";
-import {Settings, WebsocketSettings} from "../../types";
+import {RemoteCommand, RemoteMessage, Settings, WebsocketSettings} from "../../types";
 import {sendError, sendMessage} from "./rsc-utils";
 import {rscCommands} from "./rsc";
-
-export type RemoteMessage = {
-    op: string;
-    username?: string;
-    password?: string;
-    [key: string]: unknown
-}
-
-export type RemoteCommand = {
-    op: string;
-    handler: (ws: WebSocket, msg: RemoteMessage) => void;
-}
 
 export class RemoteServer {
     private wss: WebSocketServer | null = null;
@@ -161,13 +149,12 @@ export class RemoteServer {
         }
     }
 
-    public broadcast(op: string, data: RemoteMessage) {
+    public broadcast(payload: RemoteMessage) {
         if (!this.wss || !this.isRunning) return;
 
-        const payload = JSON.stringify({op, data});
         for (const client of this.wss.clients) {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(payload);
+                client.send(JSON.stringify(payload));
             }
         }
     }

@@ -82,11 +82,11 @@ const Track = ({index, track}: TrackProps) => {
     const {player} = usePlayer();
 
     const isActive = player.getIndex() === index;
-    const isPlaying = player.getStatus().playing;
+    const isPlaying = player.getState().playing;
 
     const handleClick = () => {
         if (!isActive) player.playFromQueue(index);
-        else if (player.getStatus().paused) player.playPause();
+        else if (player.getState().paused) player.playPause();
         else if (!isPlaying) player.play();
     }
 
@@ -98,7 +98,7 @@ const Track = ({index, track}: TrackProps) => {
         <div
             className={clsx(
                 styles.track,
-                player.getIndex() === index && player.getStatus().playing && styles.active
+                player.getIndex() === index && player.getState().playing && styles.active
             )}
             onClick={handleClick}
         >

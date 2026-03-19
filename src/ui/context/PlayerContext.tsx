@@ -29,7 +29,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 
-    const [status, setStatus] = useState<PlayerState>(player.getStatus());
+    const [state, setState] = useState<PlayerState>(player.getState());
     const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
     const [queue, setQueue] = useState<PlayerTrack[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
@@ -38,14 +38,14 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
     const [activeSfx, setActiveSfx] = useState<Record<string, SfxState>>({});
 
-    const [previewStatus, setPreviewStatus] = useState<PlayerState>(previewPlayer.getStatus());
+    const [previewStatus, setPreviewStatus] = useState<PlayerState>(previewPlayer.getState());
     const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentTrack());
     const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
     const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     useEffect(() => {
-        const syncState = () => {
-            setStatus(player.getStatus());
+        const syncAndBroadcast = () => {
+            setState(player.getState());
             setRepeat(player.getRepeatMode());
             setQueue(player.getQueue());
             setIndex(player.getIndex());
@@ -53,46 +53,67 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
+
+            window.electron.remoteServer.broadcast({
+                op: 'PlayerState',
+                state: player.getFullState()
+            });
         };
 
         const handleTimeUpdate = (time: Time, dur: Time) => {
             setCurrentTime(time);
             if (dur) setDuration(dur);
+
+            window.electron.remoteServer.broadcast({
+                op: 'TimeUpdate',
+                currentTime: time.getTimeMs(),
+                duration: dur ? dur.getTimeMs() : 0
+            });
         };
 
-        player.on('play', syncState);
-        player.on('pause', syncState);
-        player.on('resume', syncState);
-        player.on('loading', (isLoading) => setStatus(prev => ({...prev, loading: isLoading})));
-
+        player.on('play', syncAndBroadcast);
+        player.on('pause', syncAndBroadcast);
+        player.on('resume', syncAndBroadcast);
         player.on('ended', () => {
-            syncState();
             setCurrentTime(new Time(0, 'ms'));
+            syncAndBroadcast();
+        });
+        player.on('trackchange', () => {
+            setCurrentTime(new Time(0, 'ms'));
+            setDuration(new Time(0, 'ms'));
+            syncAndBroadcast();
+        });
+        player.on('error', () => {
+            setCurrentTime(new Time(0, 'ms'));
+            syncAndBroadcast();
+        });
+        player.on('reset', () => {
+            setCurrentTime(new Time(0, 'ms'));
+            setDuration(new Time(0, 'ms'));
+            syncAndBroadcast();
+        });
+
+        player.on('loading', (isLoading) => {
+            setState(prev => ({...prev, loading: isLoading}));
+            syncAndBroadcast();
+        });
+
+        player.on('queueupdate', (newQueue) => {
+            setQueue(newQueue);
+            syncAndBroadcast();
+        });
+
+        player.on('repeatupdate', (mode) => {
+            setRepeat(mode);
+            syncAndBroadcast();
+        });
+
+        player.on('sfxupdate', (sfx) => {
+            setActiveSfx(sfx);
+            syncAndBroadcast();
         });
 
         player.on('timeupdate', handleTimeUpdate);
-
-        player.on('trackchange', (track) => {
-            setCurrentPlayerTrack(track);
-            setCurrentTime(new Time(0, 'ms'));
-            setDuration(new Time(0, 'ms'));
-        });
-
-        player.on('queueupdate', (newQueue) => setQueue(newQueue));
-        player.on('repeatupdate', (mode) => setRepeat(mode));
-
-        player.on('error', () => {
-            syncState();
-            setCurrentTime(new Time(0, 'ms'));
-        });
-
-        player.on('reset', () => {
-            syncState();
-            setCurrentTime(new Time(0, 'ms'));
-            setDuration(new Time(0, 'ms'));
-        });
-
-        player.on('sfxupdate', setActiveSfx);
 
         const unsubStopped = window.electron.player.onPreviewStopped(() => {
             if (!previewPlayer) return;
@@ -126,7 +147,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
     useEffect(() => {
         const syncPreviewState = () => {
-            setPreviewStatus(previewPlayer.getStatus());
+            setPreviewStatus(previewPlayer.getState());
             setPreviewCurrentPlayerTrack(previewPlayer.getCurrentTrack());
 
             const dur = previewPlayer.getDuration();
@@ -183,7 +204,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     return (
         <PlayerContext.Provider value={{
             player,
-            status,
+            status: state,
             repeat,
             queue,
             index,

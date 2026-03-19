@@ -13,6 +13,7 @@ import {
     IpcResponse,
     MediaType,
     PlayerTrack,
+    RemoteMessage,
     Route,
     SbAmbientBtn,
     SbAmbientProfile,
@@ -140,6 +141,10 @@ const playerApi = {
     onPrevious: (func: () => void) => createListener('player:on_previous', func),
 }
 
+const remoteServerApi = {
+    broadcast: (payload: RemoteMessage) => ipcRenderer.send('remote-server:broadcast', payload),
+}
+
 const api = {
     window: windowApi,
     settings: settingsApi,
@@ -150,6 +155,7 @@ const api = {
     music: musicApi,
     discord: discordApi,
     player: playerApi,
+    remoteServer: remoteServerApi,
 };
 
 contextBridge.exposeInMainWorld('electron', api);

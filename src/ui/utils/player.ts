@@ -514,8 +514,22 @@ export class Player {
         this.eventHandlers['repeatupdate']?.(mode);
     }
 
-    public getStatus(): PlayerState {
+    public getState(): PlayerState {
         return {...this.state};
+    }
+
+    public getFullState() {
+        return {
+            state: this.getState(),
+            currentTrack: this.getCurrentTrack(),
+            queue: this.getQueue(),
+            index: this.getIndex(),
+            repeatMode: this.getRepeatMode(),
+            masterVolume: this.masterVolume,
+            activeSfx: this.sfxStates,
+            duration: this.duration ? this.duration.getTimeMs() : 0,
+            currentTime: this.audio ? (this.audio.currentTime * 1000) : 0,
+        };
     }
 
     public getCurrentTrack(): PlayerTrack | null {
@@ -631,6 +645,11 @@ export class Player {
 
         this.eventHandlers['ended']?.();
 
+        if (this.repeat === 'one') {
+            this._loadAndPlay();
+            return;
+        }
+
         if (this.priorityTrack) {
             this.priorityTrack = null;
 
@@ -638,26 +657,17 @@ export class Player {
                 this.currentTrack = this.queue[this.index];
                 this._loadAndPlay();
             } else {
-                this._resetPlayer();
+                if (this.repeat === 'all') this._loadAndPlay();
+                else this._resetPlayer();
             }
-
             return;
         }
 
         if (this.queue.length === 0) {
-            if (this.repeat === 'one' || this.repeat === 'all') {
-                this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
-                this.audio.play().catch(console.error);
-            } else {
-                this._resetPlayer();
-            }
+            if (this.repeat === 'all') this._loadAndPlay();
+            else this._resetPlayer();
         } else {
-            if (this.repeat === 'one') {
-                this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
-                this.audio.play().catch(console.error);
-            } else {
-                this.next();
-            }
+            this.next();
         }
     }
 
@@ -675,8 +685,9 @@ export class Player {
 
     private _resetPlayer() {
         this.audio.pause();
+        this.audio.removeAttribute('src');
+        this.audio.load();
         this.audio.currentTime = 0;
-        this.audio.src = '';
 
         this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 

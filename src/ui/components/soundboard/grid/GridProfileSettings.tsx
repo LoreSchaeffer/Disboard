@@ -82,8 +82,6 @@ const GridProfileSettings = ({show, onClose, mb = '0px'}: ProfileSettingsProps) 
 
     if (!shouldRender) return null;
 
-    console.log(mb);
-
     return (
         <div
             ref={ref}

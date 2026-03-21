@@ -5,10 +5,11 @@
     --sb-text: var(--text-primary);
     --sb-text-hover: var(--text-primary-hover);
     --sb-text-active: var(--text-primary-active);
+    --sb-progress: var(--primary);
+    --sb-search-glow: var(--primary);
     --sb-border: transparent;
     --sb-border-hover: transparent;
     --sb-border-active: transparent;
-    --sb-progress: var(--primary);
     --sb-font-size: 11pt;
     --sb-line-height: calc(11pt * 1.2);
     --sb-image-size: 30px;
@@ -107,4 +108,20 @@
 .btn:hover .volume {
     opacity: 1;
     transition: opacity 200ms ease 0s;
+}
+
+.btn.searchMatch {
+    z-index: 10;
+    outline: 2px solid var(--sb-search-glow);
+    outline-offset: -1px;
+    animation: searchGlowPulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes searchGlowPulse {
+    0% {
+        box-shadow: 0 0 5px 1px var(--sb-search-glow);
+    }
+    100% {
+        box-shadow: 0 0 15px 5px var(--sb-search-glow);
+    }
 }

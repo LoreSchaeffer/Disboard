@@ -24,6 +24,9 @@ type CustomCSSProperties = CSSProperties & {
 
     '--sb-image-size'?: string;
     '--sb-image-radius'?: string;
+
+    '--sb-progress'?: string;
+    '--sb-search-glow'?: string;
 }
 
 export type GridButtonProps = {
@@ -34,6 +37,7 @@ export type GridButtonProps = {
     progress?: number;
     zoom?: number;
     showImages?: boolean;
+    searchMatch?: boolean;
     className?: string;
     isDragging?: boolean;
     isDropping?: boolean;
@@ -50,6 +54,7 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
         progress = 0,
         zoom = 1,
         showImages = true,
+        searchMatch = false,
         className,
         isDragging = false,
         isDropping = false,
@@ -97,6 +102,7 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
             '--sb-border-active': btn.style?.borderColorActive || btn.style?.borderColor || undefined,
 
             '--sb-progress': btn.style?.borderColorActive || btn.style?.borderColor || 'var(--primary)',
+            '--sb-search-glow': btn.style?.borderColor || btn.style?.backgroundColor || btn.style?.textColor || 'var(--primary)',
 
             '--sb-font-size': `${11 * zoomFactor}pt`,
             '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,
@@ -117,7 +123,8 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
                 className,
                 isDragging && styles.dragging,
                 isDropping && styles.dropping,
-                !showImages && styles.centered
+                !showImages && styles.centered,
+                searchMatch && styles.searchMatch
             )}
             style={dynamicStyle}
             onClick={(e) => onClick?.(e, btn, row, col)}

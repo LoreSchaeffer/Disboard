@@ -1,6 +1,6 @@
 import styles from "./Titlebar.module.css";
 import TitlebarButton from "./TitlebarButton";
-import React, {PropsWithChildren} from "react";
+import React, {PropsWithChildren, ReactNode} from "react";
 import {useWindow} from "../../context/WindowContext";
 import {PiArrowSquareOutBold, PiGearSixFill, PiListBold, PiMinusBold, PiSquareBold, PiXBold} from "react-icons/pi";
 import {StackEntry, useNavigation} from "../../context/NavigationContext";
@@ -12,13 +12,14 @@ import {useContextMenu} from "../../context/ContextMenuContext";
 export type TitlebarProps = PropsWithChildren<{
     title?: string;
     contentPos?: ContentPos;
+    rightContent?: ReactNode;
 }>;
 
 const isBoard = (visibleStack: StackEntry[]): boolean => {
     return visibleStack.some(s => s.route === 'music_board' || s.route === 'sfx_board' || s.route === 'ambient_board');
 }
 
-const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
+const Titlebar = ({title, contentPos = 'default', rightContent, children}: TitlebarProps) => {
     const {resizable, data} = useWindow();
     const {navigate, visibleStack} = useNavigation();
     const {showContextMenu} = useContextMenu();
@@ -80,23 +81,27 @@ const Titlebar = ({title, contentPos = 'default', children}: TitlebarProps) => {
                 {children}
             </div>
 
-            <div className={styles.windowControls}>
-                <TitlebarButton
-                    onClick={() => window.electron.window.minimize()}
-                    icon={PiMinusBold}
-                />
-                {resizable && (
+            <div className={styles.rightContent}>
+                {rightContent}
+
+                <div className={styles.windowControls}>
                     <TitlebarButton
-                        onClick={() => window.electron.window.maximize()}
-                        icon={PiSquareBold}
+                        onClick={() => window.electron.window.minimize()}
+                        icon={PiMinusBold}
                     />
-                )}
-                <TitlebarButton
-                    onClick={() => window.electron.window.close()}
-                    icon={PiXBold}
-                    color={'red'}
-                    className={styles.last}
-                />
+                    {resizable && (
+                        <TitlebarButton
+                            onClick={() => window.electron.window.maximize()}
+                            icon={PiSquareBold}
+                        />
+                    )}
+                    <TitlebarButton
+                        onClick={() => window.electron.window.close()}
+                        icon={PiXBold}
+                        color={'red'}
+                        className={styles.last}
+                    />
+                </div>
             </div>
         </div>
     );

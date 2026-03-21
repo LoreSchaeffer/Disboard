@@ -11,7 +11,7 @@ const BoardWin = ({children}: PropsWithChildren) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType, gridProfiles, activeGridProfile, ambientProfiles, activeAmbientProfile} = useProfiles();
     const {player} = usePlayer();
-    const {setTitle, setTitlebarContent} = useTitlebar();
+    const {setTitle, setMainContent} = useTitlebar();
     const {navigate, isInStack} = useNavigation();
 
     const zoomRef = useRef<number>(1);
@@ -44,8 +44,8 @@ const BoardWin = ({children}: PropsWithChildren) => {
     }, [settings]);
 
     useEffect(() => {
-        if (boardType === 'ambient') setTitlebarContent(<ProfileSelector boardType={boardType} ambientProfiles={ambientProfiles} activeAmbientProfile={activeAmbientProfile}/>);
-        else setTitlebarContent(<ProfileSelector boardType={boardType} gridProfiles={gridProfiles} activeGridProfile={activeGridProfile}/>);
+        if (boardType === 'ambient') setMainContent(<ProfileSelector boardType={boardType} ambientProfiles={ambientProfiles} activeAmbientProfile={activeAmbientProfile}/>);
+        else setMainContent(<ProfileSelector boardType={boardType} gridProfiles={gridProfiles} activeGridProfile={activeGridProfile}/>);
     }, [gridProfiles, activeGridProfile, ambientProfiles, activeAmbientProfile]);
 
     useShortcut('ctrl+s', () => {

@@ -37,7 +37,7 @@ const GridBtnSettingsWin = () => {
     const {data} = useWindow();
     const {boardType, gridProfiles} = useProfiles();
     const {previewPlayer, previewStatus} = usePlayer();
-    const {setTitlebarContent} = useTitlebar();
+    const {setMainContent} = useTitlebar();
 
     const [profile, setProfile] = useState<SbGridProfile | undefined>(undefined);
     const [button, setButton] = useState<SbGridBtn | undefined>(undefined);
@@ -82,7 +82,7 @@ const GridBtnSettingsWin = () => {
     useEffect(() => {
         if (!profile || !button) return;
 
-        setTitlebarContent(
+        setMainContent(
             <div className={styles.tbData}>
                 <span className={styles.tbProfile}>{profile.name}</span>
                 <span className={styles.tbButton}>{button.row} - {button.col}</span>
@@ -90,7 +90,7 @@ const GridBtnSettingsWin = () => {
             'centered'
         );
 
-        return () => setTitlebarContent(null);
+        return () => setMainContent(null);
     }, [profile, button]);
 
     const previewBtnData: SbGridBtn | null = useMemo(() => {

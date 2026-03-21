@@ -1,0 +1,31 @@
+.wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - var(--titlebar-height) - var(--player-height) - 10px);
+    pointer-events: none;
+}
+
+.searchBar {
+    pointer-events: auto;
+    position: absolute;
+    width: fit-content;
+    z-index: 1000;
+}
+
+.left {
+    left: 10px;
+}
+
+.right {
+    right: 10px;
+}
+
+.top {
+    top: 10px;
+}
+
+.bottom {
+    bottom: 10px;
+}

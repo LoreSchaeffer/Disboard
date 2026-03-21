@@ -3,7 +3,7 @@ import React, {MouseEvent, useCallback, useEffect, useMemo, useState} from "reac
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import DraggableGridButton from "./DraggableGridButton";
-import {useWindow} from "../../../context/WindowContext";
+import {useShortcut, useWindow} from "../../../context/WindowContext";
 import {usePlayer} from "../../../context/PlayerContext";
 import {useContextMenu} from "../../../context/ContextMenuContext";
 import {ContextMenuItemData} from "../../context_menu/ContextMenuItem";
@@ -13,6 +13,7 @@ import {playerTrackFromBtn} from "../../../utils/utils";
 import {useNavigation} from "../../../context/NavigationContext";
 import {useProfiles} from "../../../context/ProfilesProvider";
 import {BoardType, BtnStyle, GridBtnSettingsWin, SbGridBtn} from "../../../../types";
+import SearchBar from "../SearchBar";
 
 type GridSoundboardProps = {
     gridHeight?: string;
@@ -27,6 +28,9 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
 
     const [copiedButton, setCopiedButton] = useState<SbGridBtn | null>(null);
     const [copiedStyle, setCopiedStyle] = useState<BtnStyle | null>(null);
+    const [showSearchBar, setShowSearchBar] = useState<boolean>(true);
+    const [searchBarPos, setSearchBarPos] = useState<{ x: 'left' | 'right', y: 'top' | 'bottom' }>({x: 'right', y: 'top'});
+    const [searchQuery, setSeachQuery] = useState<string | null>(null);
 
     const rows = activeGridProfile?.rows || 8;
     const cols = activeGridProfile?.cols || 10;
@@ -42,6 +46,61 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
     }, [activeGridProfile?.buttons]);
 
     useEffect(() => {
+        if (!searchQuery || searchQuery.trim() === '') return;
+
+        const query = searchQuery.toLowerCase();
+
+        const quadrants = {
+            'top-left': 0,
+            'top-right': 0,
+            'bottom-left': 0,
+            'bottom-right': 0,
+        };
+
+        const halfRows = rows / 2;
+        const halfCols = cols / 2;
+
+        let hasMatches = false;
+
+        buttonMap.forEach((btn) => {
+            if (btn.track) {
+                const title = (btn.title || btn.track.title || '').toLowerCase();
+                if (title.includes(query)) {
+                    hasMatches = true;
+                    const isTop = btn.row < halfRows;
+                    const isLeft = btn.col < halfCols;
+
+                    if (isTop && isLeft) quadrants['top-left']++;
+                    else if (isTop && !isLeft) quadrants['top-right']++;
+                    else if (!isTop && isLeft) quadrants['bottom-left']++;
+                    else if (!isTop && !isLeft) quadrants['bottom-right']++;
+                }
+            }
+        });
+
+        if (!hasMatches) return;
+
+        const currentQuadKey = `${searchBarPos.y}-${searchBarPos.x}`;
+
+        if (quadrants[currentQuadKey as keyof typeof quadrants] > 0) {
+            let bestQuad = currentQuadKey;
+            let minMatches = quadrants[currentQuadKey as keyof typeof quadrants];
+
+            for (const [quad, count] of Object.entries(quadrants)) {
+                if (count < minMatches) {
+                    minMatches = count;
+                    bestQuad = quad;
+                }
+            }
+
+            if (bestQuad !== currentQuadKey) {
+                const [y, x] = bestQuad.split('-');
+                setSearchBarPos({y: y as 'top' | 'bottom', x: x as 'left' | 'right'});
+            }
+        }
+    }, [searchQuery, buttonMap, rows, cols, searchBarPos]);
+
+    useEffect(() => {
         const unsubPlay = window.electron.player.onPlayButton(buttonId => {
             const button = activeGridProfile?.buttons.find(b => b.id === buttonId);
             if (!button) return;
@@ -54,7 +113,9 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
             unsubPlay();
             unsubStop();
         }
-    }, []);
+    }, [activeGridProfile]);
+
+    if (!activeGridProfile) return null;
 
     const onClick = (_: MouseEvent, button: SbGridBtn) => {
         if (!button || !button.track) return
@@ -231,47 +292,71 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
         window.electron.gridProfiles.buttons.swap(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, {row: fromRow, col: fromCol}, {row: toRow, col: toCol});
     }, [activeGridProfile?.id, boardType, buttonMap]);
 
-    if (!activeGridProfile) return null;
+    const closeSearchBar = () => {
+        setSeachQuery(null);
+        setShowSearchBar(false);
+        setSearchBarPos({x: 'right', y: 'top'});
+    }
+
+    useShortcut('ctrl+f', () => {
+        if (showSearchBar) closeSearchBar();
+        else setShowSearchBar(true);
+    });
 
     return (
-        <DndProvider backend={HTML5Backend}>
-            <div
-                className={styles.soundboard}
-                style={{
-                    gridTemplateRows: `repeat(${rows}, 1fr)`,
-                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                    height: gridHeight
-                }}
-            >
-                {Array.from({length: rows}).map((_, row) =>
-                    Array.from({length: cols}).map((_, col) => {
-                        const button = buttonMap.get(`${row}-${col}`);
-                        const hasTrack = button && !!button.track;
-                        const isDownloading = hasTrack && button.track.downloading;
+        <>
+            <SearchBar
+                show={showSearchBar}
+                position={searchBarPos}
+                onClose={closeSearchBar}
+                onChange={(val) => setSeachQuery(val)}
+            />
+            <DndProvider backend={HTML5Backend}>
+                <div
+                    className={styles.soundboard}
+                    style={{
+                        gridTemplateRows: `repeat(${rows}, 1fr)`,
+                        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                        height: gridHeight
+                    }}
+                >
+                    {Array.from({length: rows}).map((_, row) =>
+                        Array.from({length: cols}).map((_, col) => {
+                            const button = buttonMap.get(`${row}-${col}`);
+                            const hasTrack = button && !!button.track;
+                            const isDownloading = hasTrack && button.track.downloading;
 
-                        const currentSfxState = button ? activeSfx[button.id] : undefined;
-                        const isActive = currentSfxState?.playing || false;
-                        const progress = currentSfxState?.progress || 0;
+                            const currentSfxState = button ? activeSfx[button.id] : undefined;
+                            const isActive = currentSfxState?.playing || false;
+                            const progress = currentSfxState?.progress || 0;
 
-                        return (
-                            <DraggableGridButton
-                                key={`btn-${row}-${col}`}
-                                row={row}
-                                col={col}
-                                button={button || undefined}
-                                onClick={hasTrack && !isDownloading ? onClick : undefined}
-                                onContextMenu={!isDownloading || !hasTrack ? onContextMenu : undefined}
-                                swapButtons={swapButtons}
-                                zoom={settings?.[boardType].zoom ?? 1}
-                                showImages={settings?.showImages ?? true}
-                                active={isActive}
-                                progress={progress}
-                            />
-                        );
-                    })
-                )}
-            </div>
-        </DndProvider>
+                            let isSearchMatch = false;
+                            if (showSearchBar && searchQuery && searchQuery.trim() !== '' && button && button.track) {
+                                const title = (button.title || button.track.title || '').toLowerCase();
+                                isSearchMatch = title.includes(searchQuery.toLowerCase());
+                            }
+
+                            return (
+                                <DraggableGridButton
+                                    key={`btn-${row}-${col}`}
+                                    row={row}
+                                    col={col}
+                                    button={button || undefined}
+                                    searchMatch={isSearchMatch}
+                                    onClick={hasTrack && !isDownloading ? onClick : undefined}
+                                    onContextMenu={!isDownloading || !hasTrack ? onContextMenu : undefined}
+                                    swapButtons={swapButtons}
+                                    zoom={settings?.[boardType].zoom ?? 1}
+                                    showImages={settings?.showImages ?? true}
+                                    active={isActive}
+                                    progress={progress}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+            </DndProvider>
+        </>
     );
 }
 

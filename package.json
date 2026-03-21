@@ -1,7 +1,7 @@
 {
   "name": "disboard",
   "productName": "disboard",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Disboard",
   "main": "./out/main/main.js",
   "scripts": {

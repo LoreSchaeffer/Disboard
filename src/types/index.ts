@@ -5,7 +5,7 @@ export * from './buttons';
 export * from './profiles';
 export * from './profiles-io';
 export * from './settings';
-export * from './remote-server';
+export * from './remote';
 export * from './renderer';
 
 export * from './cache';

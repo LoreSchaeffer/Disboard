@@ -1,7 +1,7 @@
 import {BoardType, StaticWinData, WindowOptions} from "../types";
 import {MusicApi} from "./utils/music-api";
 import {DiscordBot} from "./utils/discord-bot";
-import {RemoteServer} from "./utils/remote-server";
+import {RemoteServer} from "./utils/remote/remote-server";
 import {BrowserWindow} from "electron";
 
 class StateManager {

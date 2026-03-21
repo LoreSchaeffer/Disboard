@@ -12,7 +12,8 @@ import {createBoardWin} from "./main/windows";
 import {BoardType} from "./types";
 import {setupLogger} from "./main/utils/logger";
 import {fixMissingTracks} from "./main/utils/downloads";
-import {RemoteServer} from "./main/utils/remote-server";
+import {RemoteServer} from "./main/utils/remote/remote-server";
+import {registerRemoteServerHandlers} from "./main/utils/remote/rsc";
 
 registerProtocols();
 
@@ -77,6 +78,7 @@ const initApp = async () => {
     state.discordBot.init();
 
     // 7. Init Remote Server
+    registerRemoteServerHandlers();
     state.remoteServer = new RemoteServer();
     state.remoteServer.init();
 

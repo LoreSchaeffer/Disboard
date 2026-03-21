@@ -133,7 +133,7 @@ const playerApi = {
     onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
     onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
     onPlayButton: (func: (buttonId: string) => void) => createListener('player:on_play_button', func),
-    onStopButton: (func: (buttonId: string) => void) => createListener('player:on_stop_button', func),
+    onStopSfx: (func: (buttonId: string) => void) => createListener('player:on_stop_sfx', func),
     onPlay: (func: () => void) => createListener('player:on_play', func),
     onPause: (func: () => void) => createListener('player:on_pause', func),
     onStop: (func: () => void) => createListener('player:on_stop', func),
@@ -142,7 +142,8 @@ const playerApi = {
 }
 
 const remoteServerApi = {
-    broadcast: (payload: RemoteMessage) => ipcRenderer.send('remote-server:broadcast', payload),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    broadcast: (channel: string, ...args: any[]) => ipcRenderer.send('remote-server:broadcast', channel, ...args),
 }
 
 const api = {

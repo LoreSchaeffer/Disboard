@@ -54,21 +54,13 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
 
-            window.electron.remoteServer.broadcast({
-                op: 'PlayerState',
-                state: player.getFullState()
-            });
+            window.electron.remoteServer.broadcast('player:state', player.getFullState());
         };
 
-        const handleTimeUpdate = (time: Time, dur: Time) => {
+        const handleTimeUpdate = (time: Time, duration: Time) => {
             setCurrentTime(time);
-            if (dur) setDuration(dur);
-
-            window.electron.remoteServer.broadcast({
-                op: 'TimeUpdate',
-                currentTime: time.getTimeMs(),
-                duration: dur ? dur.getTimeMs() : 0
-            });
+            if (duration) setDuration(duration);
+            window.electron.remoteServer.broadcast('player:timeupdate', {currentTime: time.getTimeMs(), duration: duration ? duration.getTimeMs() : 0});
         };
 
         player.on('play', syncAndBroadcast);

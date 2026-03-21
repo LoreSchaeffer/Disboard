@@ -28,7 +28,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
 
     const [copiedButton, setCopiedButton] = useState<SbGridBtn | null>(null);
     const [copiedStyle, setCopiedStyle] = useState<BtnStyle | null>(null);
-    const [showSearchBar, setShowSearchBar] = useState<boolean>(true);
+    const [showSearchBar, setShowSearchBar] = useState<boolean>(false);
     const [searchBarPos, setSearchBarPos] = useState<{ x: 'left' | 'right', y: 'top' | 'bottom' }>({x: 'right', y: 'top'});
     const [searchQuery, setSeachQuery] = useState<string | null>(null);
 
@@ -107,7 +107,7 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
             onClick(null, button);
         });
 
-        const unsubStop = window.electron.player.onStopButton(buttonId => player.stopSfx(buttonId));
+        const unsubStop = window.electron.player.onStopSfx(buttonId => player.stopSfx(buttonId));
 
         return () => {
             unsubPlay();

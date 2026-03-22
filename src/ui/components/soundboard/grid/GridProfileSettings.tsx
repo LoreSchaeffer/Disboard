@@ -6,7 +6,7 @@ import Input from "../../forms/Input";
 import {useEffect, useRef, useState} from "react";
 import {useClickOutside} from "../../../hooks/useClickOutside";
 import {useAnimatedUnmount} from "../../../hooks/useAnimatedUnmount";
-import {useProfiles} from "../../../context/ProfilesProvider";
+import {useProfiles} from "../../../context/ProfilesContext";
 import {validateName} from "../../../../shared/validation";
 import {BoardType} from "../../../../types";
 

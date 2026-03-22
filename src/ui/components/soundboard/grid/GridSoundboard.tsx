@@ -11,7 +11,7 @@ import {PiBroomBold, PiCopyBold, PiFileBold, PiGearSixBold, PiPlayFill, PiPlayli
 import {FaRegPaste} from "react-icons/fa6";
 import {playerTrackFromBtn} from "../../../utils/utils";
 import {useNavigation} from "../../../context/NavigationContext";
-import {useProfiles} from "../../../context/ProfilesProvider";
+import {useProfiles} from "../../../context/ProfilesContext";
 import {BoardType, BtnStyle, GridBtnSettingsWin, SbGridBtn} from "../../../../types";
 import SearchBar from "../SearchBar";
 

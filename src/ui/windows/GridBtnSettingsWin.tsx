@@ -19,7 +19,7 @@ import {usePlayer} from "../context/PlayerContext";
 import ResettableColorPicker from "../components/forms/color_picker/ResettableColorPicker";
 import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWinData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
 import {validateName} from "../../shared/validation";
-import {useProfiles} from "../context/ProfilesProvider";
+import {useProfiles} from "../context/ProfilesContext";
 import ProgressBar from "../components/forms/ProgressBar";
 
 const timeUnitOptions: { value: TimeUnit, label: string }[] = [

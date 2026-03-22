@@ -6,7 +6,7 @@ import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
     player: Player;
-    status: PlayerState;
+    state: PlayerState;
     repeat: RepeatMode;
     queue: PlayerTrack[];
     index: number;
@@ -54,13 +54,13 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
 
-            window.electron.remoteServer.broadcast('player:state', player.getFullState());
+            window.electron.remoteServer.broadcast('player:state', data.boardType, player.getFullState());
         };
 
         const handleTimeUpdate = (time: Time, duration: Time) => {
             setCurrentTime(time);
             if (duration) setDuration(duration);
-            window.electron.remoteServer.broadcast('player:timeupdate', {currentTime: time.getTimeMs(), duration: duration ? duration.getTimeMs() : 0});
+            window.electron.remoteServer.broadcast('player:timeupdate', data.boardType, {currentTime: time.getTimeMs(), duration: duration ? duration.getTimeMs() : 0});
         };
 
         player.on('play', syncAndBroadcast);
@@ -84,27 +84,22 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setDuration(new Time(0, 'ms'));
             syncAndBroadcast();
         });
-
         player.on('loading', (isLoading) => {
             setState(prev => ({...prev, loading: isLoading}));
             syncAndBroadcast();
         });
-
         player.on('queueupdate', (newQueue) => {
             setQueue(newQueue);
             syncAndBroadcast();
         });
-
         player.on('repeatupdate', (mode) => {
             setRepeat(mode);
             syncAndBroadcast();
         });
-
         player.on('sfxupdate', (sfx) => {
             setActiveSfx(sfx);
             syncAndBroadcast();
         });
-
         player.on('timeupdate', handleTimeUpdate);
 
         const unsubStopped = window.electron.player.onPreviewStopped(() => {
@@ -117,6 +112,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             if (!player) return;
             player.playNow(track);
         });
+
+        const unsubBroadcastState = window.electron.player.onBroadcastState(() => window.electron.remoteServer.broadcast('player:state', data.boardType, player.getFullState()));
 
         return () => {
             player.off('play');
@@ -134,6 +131,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
             unsubStopped();
             unsubPlayNow();
+            unsubBroadcastState();
         }
     }, [player]);
 
@@ -155,25 +153,20 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         previewPlayer.on('pause', syncPreviewState);
         previewPlayer.on('resume', syncPreviewState);
         previewPlayer.on('loading', (isLoading) => setPreviewStatus(prev => ({...prev, loading: isLoading})));
-
         previewPlayer.on('ended', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
         });
-
         previewPlayer.on('timeupdate', handlePreviewTimeUpdate);
-
         previewPlayer.on('trackchange', (track) => {
             setPreviewCurrentPlayerTrack(track);
             setPreviewCurrentTime(new Time(0, 'ms'));
             setPreviewDuration(new Time(0, 'ms'));
         });
-
         previewPlayer.on('error', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
         });
-
         previewPlayer.on('reset', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
@@ -196,7 +189,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     return (
         <PlayerContext.Provider value={{
             player,
-            status: state,
+            state,
             repeat,
             queue,
             index,

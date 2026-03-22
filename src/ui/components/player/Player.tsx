@@ -9,7 +9,7 @@ import {formatTime} from "../../utils/time";
 import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
-import {useProfiles} from "../../context/ProfilesProvider";
+import {useProfiles} from "../../context/ProfilesContext";
 import {GridMediaSelectorWin, RepeatMode} from "../../../types";
 
 type PlayerProps = {
@@ -20,7 +20,7 @@ type PlayerProps = {
 const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType} = useProfiles();
-    const {player, status, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
+    const {player, state, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
 
     const [volume, setVolume] = useState<number>(settings[boardType].volume);
     const [muted, setMuted] = useState<boolean>(false);
@@ -70,14 +70,14 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
         <>
             <div className={styles.player}>
                 <div className={styles.leftColumn}>
-                    {status?.playing && currentTrack && <TrackInfo track={currentTrack} className={styles.trackInfo}/>}
+                    {state?.playing && currentTrack && <TrackInfo track={currentTrack} className={styles.trackInfo}/>}
                 </div>
 
                 <div className={styles.centerColumn}>
                     <div className={styles.playerButtons}>
                         <PlayerBtn
                             icon={<PiStopFill/>}
-                            disabled={!status?.playing}
+                            disabled={!state?.playing}
                             onClick={() => player.stop()}
                             title={'Stop'}
                         />
@@ -88,11 +88,11 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                             title={'Previous'}
                         />
                         <PlayerBtn
-                            icon={status?.playing && !status?.paused ? <PiPauseCircleFill/> : <PiPlayCircleFill/>}
+                            icon={state?.playing && !state?.paused ? <PiPauseCircleFill/> : <PiPlayCircleFill/>}
                             size={'large'}
                             disabled={!currentTrack && !queueExists}
                             onClick={() => player.playPause()}
-                            title={status?.playing && !status?.paused ? 'Pause' : 'Play'}
+                            title={state?.playing && !state?.paused ? 'Pause' : 'Play'}
                         />
                         <PlayerBtn
                             icon={<PiSkipForwardFill/>}
@@ -109,17 +109,17 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                     </div>
 
                     <div className={styles.progressGroup}>
-                        <span className={clsx(styles.progressTime, !status.playing && styles.hidden)}>{currentTime.formatted() || '00:00'}</span>
+                        <span className={clsx(styles.progressTime, !state.playing && styles.hidden)}>{currentTime.formatted() || '00:00'}</span>
                         <ProgressBar
                             className={styles.progressBar}
                             seekable
                             disabled={!currentTrack}
-                            max={status.playing ? duration?.getTimeMs() : 99999999}
-                            val={status.playing ? currentTime.getTimeMs() : 0}
+                            max={state.playing ? duration?.getTimeMs() : 99999999}
+                            val={state.playing ? currentTime.getTimeMs() : 0}
                             displayFunction={formatTime}
                             onChange={(_, newValue) => player.seek(newValue)}
                         />
-                        <span className={clsx(styles.progressTime, !status.playing && styles.hidden)}>{duration.formatted() || '00:00'}</span>
+                        <span className={clsx(styles.progressTime, !state.playing && styles.hidden)}>{duration.formatted() || '00:00'}</span>
                     </div>
                 </div>
 

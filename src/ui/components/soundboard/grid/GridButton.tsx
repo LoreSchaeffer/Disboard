@@ -3,7 +3,7 @@ import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {clamp} from "../../../../shared/utils";
 import {clsx} from "clsx";
 import {BoardType, SbGridBtn} from "../../../../types";
-import {useProfiles} from "../../../context/ProfilesProvider";
+import {useProfiles} from "../../../context/ProfilesContext";
 import {usePlayer} from "../../../context/PlayerContext";
 
 type CustomCSSProperties = CSSProperties & {

@@ -1,7 +1,7 @@
 import {useNavigation} from "./context/NavigationContext";
 import {PlayerProvider} from "./context/PlayerContext";
 import {AppProviderName, appProviderPriorities, ROUTES} from "./config/routes";
-import ProfilesProvider, {useProfiles} from "./context/ProfilesProvider";
+import ProfilesProvider, {useProfiles} from "./context/ProfilesContext";
 import {FC, PropsWithChildren} from "react";
 
 const FallbackPage = () => <div>Page not found!</div>

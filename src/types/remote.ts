@@ -15,6 +15,8 @@ export type RemoteMessage = {
 
 export type RemoteWebSocket = WebSocket & {
     isAuthenticated: boolean;
+    authTimeout?: NodeJS.Timeout;
+    authToken?: string;
 }
 
 export type RemoteEvent = {

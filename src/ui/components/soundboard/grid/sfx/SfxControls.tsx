@@ -2,7 +2,7 @@ import styles from "./SfxControls.module.css";
 import {useWindow} from "../../../../context/WindowContext";
 import {usePlayer} from "../../../../context/PlayerContext";
 import React, {useEffect, useState} from "react";
-import {useProfiles} from "../../../../context/ProfilesProvider";
+import {useProfiles} from "../../../../context/ProfilesContext";
 import {GridMediaSelectorWin} from "../../../../../types";
 import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopCircleFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../../../utils/utils";

@@ -1,4 +1,4 @@
-import {useProfiles} from "../context/ProfilesProvider";
+import {useProfiles} from "../context/ProfilesContext";
 import {PropsWithChildren, useEffect, useRef} from "react";
 import {useShortcut, useWindow} from "../context/WindowContext";
 import {useTitlebar} from "../context/TitlebarContext";

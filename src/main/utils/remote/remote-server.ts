@@ -1,16 +1,21 @@
 import {WebSocket, WebSocketServer} from "ws";
 import {settingsStore} from "../../storage/settings-store";
 import {RemoteEvent, RemoteMessage, RemoteWebSocket, Settings, WebsocketSettings} from "../../../types";
-import {sendError} from "./rsc-utils";
 import {remoteMain} from "./remote-main";
+import {createServer} from "node:http";
+import {generateUUID} from "../misc";
+import {net} from "electron";
+import {Readable} from "node:stream";
 
 const TIMEOUT = 15;
 
 export class RemoteServer {
     private wss: WebSocketServer | null = null;
+    private httpServer: ReturnType<typeof createServer> | null = null;
     private isRunning: boolean = false;
     private port: number = 4466;
     private authEnabled: boolean = false;
+    private validTokens: Set<string> = new Set();
 
     constructor() {
     }
@@ -28,25 +33,77 @@ export class RemoteServer {
     }
 
     public start() {
-        if (this.isRunning || this.wss) this.stop();
+        if (this.isRunning || this.wss || this.httpServer) this.stop();
 
         try {
-            this.wss = new WebSocketServer({port: this.port});
+            this.httpServer = createServer(async (req, res) => {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                if (req.method === 'OPTIONS') {
+                    res.writeHead(204);
+                    res.end();
+                    return;
+                }
+
+                try {
+                    const parsedUrl = new URL(req.url || '', `http://localhost`);
+                    const pathname = parsedUrl.pathname;
+
+                    if (pathname.startsWith('/api/')) {
+                        if (this.authEnabled) {
+                            const providedToken = parsedUrl.searchParams.get('token');
+                            if (!providedToken || !this.validTokens.has(providedToken)) {
+                                res.writeHead(401);
+                                res.end('Unauthorized');
+                                return;
+                            }
+                        }
+
+                        const resourcePath = pathname.slice(5);
+
+                        const fetchHeaders = new Headers();
+                        if (req.headers.range) {
+                            fetchHeaders.set('Range', req.headers.range);
+                        }
+
+                        const fetchOptions: RequestInit = {
+                            method: req.method,
+                            headers: fetchHeaders
+                        };
+
+                        const intRes = await net.fetch(`disboard://${resourcePath}`, fetchOptions);
+                        res.statusCode = intRes.status;
+
+                        intRes.headers.forEach((value, key) => res.setHeader(key, value));
+
+                        if (intRes.body) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const nodeStream = Readable.fromWeb(intRes.body as any);
+                            nodeStream.pipe(res);
+                        } else {
+                            res.end();
+                        }
+                    } else {
+                        res.writeHead(404);
+                        res.end();
+                    }
+                } catch (error) {
+                    console.error('[RemoteServer] Proxy Handler Error:', error);
+                    res.writeHead(500);
+                    res.end('Internal Server Error');
+                }
+            });
+
+            this.wss = new WebSocketServer({server: this.httpServer});
 
             this.wss.on('connection', (socket) => {
                 const ws = socket as RemoteWebSocket;
 
-                console.log('[RemoteServer] New client connected.');
-
                 ws.isAuthenticated = !this.authEnabled;
 
-                let authTimeout: NodeJS.Timeout | null = null;
-
                 if (this.authEnabled) {
-                    authTimeout = setTimeout(() => {
+                    ws.authTimeout = setTimeout(() => {
                         if (!ws.isAuthenticated && ws.readyState === WebSocket.OPEN) {
-                            console.log(`[RemoteServer] Client failed to authenticate within ${TIMEOUT} seconds. Disconnecting.`);
-                            sendError(ws, `Authentication timeout (${TIMEOUT}s).`);
+                            this.sendError(ws, `Authentication timeout (${TIMEOUT}s).`);
                             ws.close(1008, 'auth_timeout');
                         }
                     }, TIMEOUT * 1000);
@@ -57,13 +114,13 @@ export class RemoteServer {
                         const msg = JSON.parse(rawMsg.toString()) as RemoteMessage;
 
                         if (typeof msg !== 'object' || msg === null || !msg.op) {
-                            sendError(ws, 'Invalid message format.');
+                            this.sendError(ws, 'Invalid message format.');
                             return;
                         }
 
                         if (!ws.isAuthenticated && msg.op !== 'auth:identify') {
                             console.warn(`[RemoteServer] Unauthenticated client attempted to use ${msg.op}. Disconnecting.`);
-                            sendError(ws, 'Authentication required as the very first message.');
+                            this.sendError(ws, 'Authentication required as the very first message.');
                             ws.close(1008, 'auth_required');
                             return;
                         }
@@ -76,17 +133,16 @@ export class RemoteServer {
 
                 ws.on('close', () => {
                     console.log('[RemoteServer] Client disconnected.');
-                    if (authTimeout) clearTimeout(authTimeout);
+                    if (ws.authTimeout) clearTimeout(ws.authTimeout);
+
+                    if (ws.authToken) this.validTokens.delete(ws.authToken);
                 });
             });
 
-            this.wss.on('error', (error) => {
-                console.error('[RemoteServer] Critical server error:', error);
-                this.isRunning = false;
+            this.httpServer.listen(this.port, () => {
+                this.isRunning = true;
+                console.log(`[RemoteServer] HTTP + WS Server listening on port ${this.port}`);
             });
-
-            this.isRunning = true;
-            console.log(`[RemoteServer] Listening on port ${this.port}`);
         } catch (error) {
             console.error('[RemoteServer] Cannot start server:', error);
             this.isRunning = false;
@@ -104,6 +160,13 @@ export class RemoteServer {
             this.wss.close();
             this.wss = null;
         }
+
+        if (this.httpServer) {
+            this.httpServer.close();
+            this.httpServer = null;
+        }
+
+        this.validTokens.clear();
         this.isRunning = false;
     }
 
@@ -147,6 +210,18 @@ export class RemoteServer {
         }
     }
 
+    public send(ws: WebSocket, msg: RemoteMessage) {
+        ws.send(JSON.stringify(msg));
+    }
+
+    public sendError(ws: RemoteWebSocket, error: string) {
+        this.send(ws, {
+            op: 'error',
+            success: false,
+            error: error
+        });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public broadcast(channel: string, ...args: any[]) {
         if (!this.wss || !this.isRunning) return;
@@ -169,6 +244,12 @@ export class RemoteServer {
         };
     }
 
+    public generateToken() {
+        const token = generateUUID();
+        this.validTokens.add(token);
+        return token;
+    }
+
     private _updateInternalCache(wsSettings: WebsocketSettings) {
         this.port = wsSettings.port;
         this.authEnabled = wsSettings.authEnabled;
@@ -176,13 +257,13 @@ export class RemoteServer {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async _handleCommand(ws: RemoteWebSocket, msg: RemoteMessage & { args?: any[] }) {
-        if (settingsStore.get('debug')) console.log('[RemoteServer] Received:', msg.op);
+        if (settingsStore.get('debug')) console.log('[RemoteServer] Received:', msg);
 
         const event: RemoteEvent = {
             ws,
             nonce: msg.nonce,
             reply: (op: string, data: Record<string, unknown> = {}) => {
-                ws.send(JSON.stringify({op, ...data}));
+                this.send(ws, {op: op, ...data})
             }
         };
 
@@ -210,19 +291,21 @@ export class RemoteServer {
                 return;
             }
 
-            sendError(ws, `Unknown command: ${msg.op}`);
+            this.sendError(ws, `Unknown command: ${msg.op}`);
         } catch (error) {
             console.error(`[RemoteServer] Error processing ${msg.op}:`, error);
+
+            const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
 
             if (remoteMain.getHandler(msg.op)) {
                 ws.send(JSON.stringify({
                     op: `${msg.op}:response`,
                     nonce: msg.nonce,
                     success: false,
-                    error: error.message || 'Internal Server Error'
+                    error: errorMessage
                 }));
             } else {
-                sendError(ws, `Error processing ${msg.op}`);
+                this.sendError(ws, `Error processing ${msg.op}`);
             }
         }
     }

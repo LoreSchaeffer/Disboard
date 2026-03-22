@@ -1,5 +1,5 @@
 import {BrowserWindow} from "electron";
-import {BoardType, PlayerTrack, SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
+import {BoardType, PlayerTrack, RepeatMode, SbAmbientProfile, SbGridProfile, Settings, Track} from "../../types";
 import {state} from "../state";
 
 export type BroadcastChannelMap = {
@@ -12,14 +12,19 @@ export type BroadcastChannelMap = {
     'tracks:changed': [tracks: Track[]],
 
     'player:preview_stopped': [],
+    'player:on_broadcast_state': [],
     'player:on_play_now': [boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack],
     'player:on_play_button': [buttonId: string],
     'player:on_stop_sfx': [buttonId: string],
     'player:on_play': [],
     'player:on_pause': [],
+    'player:on_play_pause': [],
     'player:on_stop': [],
     'player:on_next': [],
     'player:on_previous': [],
+    'player:on_seek': [time: number],
+    'player:on_volume_change': [volume: number],
+    'on_repeat_mode_change': [mode: RepeatMode],
 }
 
 export const broadcastData = <K extends keyof BroadcastChannelMap>(

@@ -12,8 +12,7 @@ import {
     GridProfile,
     IpcResponse,
     MediaType,
-    PlayerTrack,
-    RemoteMessage,
+    PlayerTrack, RepeatMode,
     Route,
     SbAmbientBtn,
     SbAmbientProfile,
@@ -136,9 +135,14 @@ const playerApi = {
     onStopSfx: (func: (buttonId: string) => void) => createListener('player:on_stop_sfx', func),
     onPlay: (func: () => void) => createListener('player:on_play', func),
     onPause: (func: () => void) => createListener('player:on_pause', func),
+    onPlayPause: (func: () => void) => createListener('player:on_play_pause', func),
     onStop: (func: () => void) => createListener('player:on_stop', func),
     onNext: (func: () => void) => createListener('player:on_next', func),
     onPrevious: (func: () => void) => createListener('player:on_previous', func),
+    onSeek: (func: (time: number) => void) => createListener('player:on_seek', func),
+    onBroadcastState: (func: () => void) => createListener('player:on_broadcast_state', func),
+    onVolumeChange: (func: (volume: number) => void) => createListener('player:on_volume_change', func),
+    onRepeatModeChange: (func: (mode: RepeatMode) => void) => createListener('on_repeat_mode_change', func),
 }
 
 const remoteServerApi = {

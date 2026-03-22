@@ -1,5 +1,6 @@
 import {remoteMain} from "../remote-main"
 import {settingsStore} from "../../../storage/settings-store";
+import {state} from "../../../state";
 
 export const setupAuthRemoteHandlers = () => {
 
@@ -16,8 +17,16 @@ export const setupAuthRemoteHandlers = () => {
 
         if (validUser && validPass) {
             event.ws.isAuthenticated = true;
+            if (event.ws.authTimeout) {
+                clearTimeout(event.ws.authTimeout);
+                event.ws.authTimeout = null;
+            }
+
+            const authToken = state.remoteServer.generateToken();
+            event.ws.authToken = authToken;
+
             console.log('[RemoteServer] Client authenticated successfully.');
-            return {authenticated: true};
+            return {authenticated: true, authToken: authToken};
         } else {
             setTimeout(() => {
                 if (event.ws.readyState === event.ws.OPEN) event.ws.close(1008, 'invalid_credentials');

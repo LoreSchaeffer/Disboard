@@ -16,16 +16,27 @@ const MusicBoardWin = () => {
     useEffect(() => {
         const unsubPlay = window.electron.player.onPlay(() => player.play());
         const unsubPause = window.electron.player.onPause(() => player.pause());
+        const unsubPlayPause = window.electron.player.onPlayPause(() => player.playPause());
         const unsubStop = window.electron.player.onStop(() => player.stop());
         const unsubNext = window.electron.player.onNext(() => player.next());
         const unsubPrevious = window.electron.player.onPrevious(() => player.previous());
+        const unsubSeek = window.electron.player.onSeek((time) => player.seek(time));
+        const unsubVolume = window.electron.player.onVolumeChange((volume) => player.setVolume(volume));
+        const unsubRepeatMode = window.electron.player.onRepeatModeChange((mode) => {
+            player.setRepeatMode(mode);
+            window.electron.settings.set({music: {repeat: mode}});
+        });
 
         return () => {
             unsubPlay();
             unsubPause();
+            unsubPlayPause();
             unsubStop();
             unsubNext();
             unsubPrevious();
+            unsubSeek();
+            unsubVolume();
+            unsubRepeatMode();
         };
     }, []);
 

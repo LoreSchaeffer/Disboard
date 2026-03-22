@@ -84,6 +84,6 @@ export default function ProfilesProvider({children}: PropsWithChildren) {
 
 export function useProfiles() {
     const context = useContext(ProfilesContext);
-    if (context === undefined) throw new Error('useProfiles must be used within a ProfilesProvider');
+    if (context === undefined) throw new Error('useProfiles must be used within a ProfilesContext');
     return context;
 }

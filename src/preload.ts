@@ -132,7 +132,7 @@ const playerApi = {
     onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
     onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
     onPlayButton: (func: (buttonId: string) => void) => createListener('player:on_play_button', func),
-    onStopSfx: (func: (buttonId: string) => void) => createListener('player:on_stop_sfx', func),
+    onStopSfx: (func: (buttonId?: string) => void) => createListener('player:on_stop_sfx', func),
     onPlay: (func: () => void) => createListener('player:on_play', func),
     onPause: (func: () => void) => createListener('player:on_pause', func),
     onPlayPause: (func: () => void) => createListener('player:on_play_pause', func),

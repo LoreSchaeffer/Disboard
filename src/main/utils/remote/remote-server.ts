@@ -257,7 +257,7 @@ export class RemoteServer {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async _handleCommand(ws: RemoteWebSocket, msg: RemoteMessage & { args?: any[] }) {
-        if (settingsStore.get('debug')) console.log('[RemoteServer] Received:', msg);
+        if (settingsStore.get('debug')) console.log('[RemoteServer] Received:', JSON.stringify(msg));
 
         const event: RemoteEvent = {
             ws,

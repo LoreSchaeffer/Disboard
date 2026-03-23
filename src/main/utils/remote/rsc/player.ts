@@ -66,7 +66,7 @@ export const setupPlayerRSHandlers = () => {
         getBoardWin(boardType).webContents.send('player:on_play_button', id);
     });
 
-    remoteMain.on('player:stop_sfx', (_, id: string) => {
+    remoteMain.on('player:stop_sfx', (_, id?: string) => {
         if (!isBoardOpen('sfx')) return;
         getBoardWin('sfx').webContents.send('player:on_stop_sfx', id);
     });

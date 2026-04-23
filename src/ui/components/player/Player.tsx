@@ -6,7 +6,20 @@ import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
 import ProgressBar from "../forms/ProgressBar";
 import {formatTime} from "../../utils/time";
-import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
+import {
+    PiListPlusBold,
+    PiMagnifyingGlassBold,
+    PiPauseCircleFill,
+    PiPlayCircleFill,
+    PiPlaylistBold,
+    PiRepeatBold,
+    PiRepeatOnceBold,
+    PiSkipBackFill,
+    PiSkipForwardFill,
+    PiSlidersHorizontalBold,
+    PiSpeakerSimpleSlashBold,
+    PiStopFill
+} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
 import {useProfiles} from "../../context/ProfilesContext";
@@ -15,9 +28,10 @@ import {GridMediaSelectorWin, RepeatMode} from "../../../types";
 type PlayerProps = {
     showProfileSettings?: () => void;
     showPlaylist?: () => void;
+    showAvailablePlaylists?: () => void;
 };
 
-const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
+const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: PlayerProps) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType} = useProfiles();
     const {player, state, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
@@ -135,6 +149,14 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                         title={queueExists ? 'Playlist' : undefined}
                         onClick={showPlaylist}
                     />
+                    {settings.musicApi && settings.musicApi.length > 0 && (
+                        <PlayerBtn
+                            icon={<PiListPlusBold/>}
+                            disabled={queueExists}
+                            title={'Load Playlist'}
+                            onClick={showAvailablePlaylists}
+                        />
+                    )}
                     <PlayerBtn
                         icon={<PiSlidersHorizontalBold/>}
                         title={'Profile settings'}

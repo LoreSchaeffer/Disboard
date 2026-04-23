@@ -4,7 +4,7 @@ import {usePlayer} from "../../../../context/PlayerContext";
 import React, {useEffect, useState} from "react";
 import {useProfiles} from "../../../../context/ProfilesContext";
 import {GridMediaSelectorWin} from "../../../../../types";
-import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopCircleFill} from "react-icons/pi";
+import {PiMagnifyingGlassBold, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopCircleFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../../../utils/utils";
 import PlayerBtn from "../../../player/PlayerBtn";
 import ProgressBar from "../../../forms/ProgressBar";
@@ -18,11 +18,11 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     const {boardType} = useProfiles();
     const {player, activeSfx} = usePlayer();
 
-    const [volume, setVolume] = useState<number>(settings[boardType].volume);
+    const [volume, setVolume] = useState<number>(settings['sfx'].volume);
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
-        setVolume(settings[boardType].volume);
+        setVolume(settings['sfx'].volume);
     }, [settings[boardType].volume]);
 
     useEffect(() => {

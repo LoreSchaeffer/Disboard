@@ -374,7 +374,7 @@ export class Player {
         sfxAudio.volume = initialVolume / 100;
 
         if (track.directStream) {
-            if (track.source.type === 'youtube' || track.source.type === 'url') sfxAudio.src = track.source.src;
+            if (track.source.type === 'youtube' || track.source.type === 'url' || track.source.type === 'music_api') sfxAudio.src = track.source.src;
             else sfxAudio.src = `disboard://file/${encodeURIComponent(track.source.src)}`;
         } else {
             sfxAudio.src = `disboard://track/${encodeURIComponent(track.id)}`;
@@ -561,7 +561,7 @@ export class Player {
         this._calculateCropsAndDuration();
 
         if (this.currentTrack.directStream) {
-            if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
+            if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url' || this.currentTrack.source.type === 'music_api') this.audio.src = this.currentTrack.source.src;
             else this.audio.src = `disboard://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
             this.audio.src = `disboard://track/${encodeURIComponent(this.currentTrack.id)}`;

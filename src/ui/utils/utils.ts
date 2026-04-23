@@ -1,6 +1,6 @@
 import {ElementType} from "react";
 import {PiSpeakerHighBold, PiSpeakerLowBold, PiSpeakerNoneBold} from "react-icons/pi";
-import {PlayerTrack, SbGridBtn} from "../../types";
+import {PlayerTrack, SbGridBtn, Settings} from "../../types";
 
 export const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
     let cleanHex = hex.replace(/^#/, '');
@@ -115,4 +115,13 @@ export const getBestThumbnail = (thumbnails: ({ url: string; width: number; heig
     if (thumbnails.length === 0) return null;
     const sorted = thumbnails.sort((a, b) => (b.width * b.height) - (a.width * a.height));
     return sorted[0].url;
+}
+
+export const getTrackCoverUrl = (track?: PlayerTrack, settings?: Settings): string => {
+    if (!track) return './images/track.png'
+    if (track.source.type === 'music_api') {
+        if (!settings) return './images/track.png';
+        return `${settings.musicApi}/api/tracks/cover/${track.id}`;
+    }
+    return `disboard://thumbnail/${track.id}`;
 }

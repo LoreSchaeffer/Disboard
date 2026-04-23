@@ -22,7 +22,19 @@ const setupCorsHandler = () => {
         urls: ['http://*/*', 'https://*/*']
     };
 
+    const useMusicApi = settingsStore.get('musicApi');
+
     session.defaultSession.webRequest.onHeadersReceived(filter, (details, callback) => {
+        const isMusicApi = useMusicApi && details.url.startsWith(settingsStore.get('musicApi'));
+
+        if (isMusicApi) {
+            callback({
+                responseHeaders: details.responseHeaders,
+                statusLine: details.statusLine
+            });
+            return;
+        }
+
         const {responseHeaders} = details;
         if (responseHeaders) {
             responseHeaders['Access-Control-Allow-Origin'] = ['*'];

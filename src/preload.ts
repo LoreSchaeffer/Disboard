@@ -11,8 +11,12 @@ import {
     GridPos,
     GridProfile,
     IpcResponse,
+    MATrack,
     MediaType,
-    PlayerTrack, RepeatMode,
+    PlayerTrack,
+    Playlist,
+    PlaylistTrack,
+    RepeatMode,
     Route,
     SbAmbientBtn,
     SbAmbientProfile,
@@ -72,7 +76,7 @@ const gridProfilesApi = {
         get: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
         update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
         swap: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:swap', boardType, profileId, pos1, pos2),
-        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
+        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
         delete: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
     }
 }
@@ -100,7 +104,7 @@ const ambientProfilesApi = {
 const tracksApi = {
     getAll: (): Promise<Track[]> => ipcRenderer.invoke('tracks:get_all'),
     get: (id: string): Promise<Track | null> => ipcRenderer.invoke('tracks:get', id),
-    getVolatile: (source: TrackSourceName, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
+    getVolatile: (source: TrackSourceName, media: YTSearchResult | string | MATrack): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
     delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:delete', id),
     getUsed: (): Promise<string[]> => ipcRenderer.invoke('tracks:get_used'),
 
@@ -116,6 +120,9 @@ const systemApi = {
 const musicApi = {
     useApi: (): Promise<boolean> => ipcRenderer.invoke('musicapi:use_api'),
     search: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('musicapi:search', query),
+    getPlaylists: (): Promise<IpcResponse<Playlist[]>> => ipcRenderer.invoke('musicapi:get_playlists'),
+    getPlaylistTracks: (playlistId: string): Promise<IpcResponse<PlaylistTrack[]>> => ipcRenderer.invoke('musicapi:get_playlist_tracks', playlistId),
+    getTracks: (size?: number, sort?: string, direction?: 'asc' | 'desc'): Promise<IpcResponse<MATrack[]>> => ipcRenderer.invoke('musicapi:get_tracks', size, sort, direction),
 }
 
 const discordApi = {
@@ -127,7 +134,7 @@ const discordApi = {
 
 const playerApi = {
     stopPreview: () => ipcRenderer.send('player:preview_stopped'),
-    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
+    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
 
     onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
     onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),

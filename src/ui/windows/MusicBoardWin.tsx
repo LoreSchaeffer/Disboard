@@ -6,12 +6,14 @@ import GridProfileSettings from "../components/soundboard/grid/GridProfileSettin
 import {usePlayer} from "../context/PlayerContext";
 import Playlist from "../components/player/Playlist";
 import BoardWin from "./BoardWin";
+import AvailablePlaylists from "../components/player/AvailablePlaylists";
 
 const MusicBoardWin = () => {
     const {settings} = useWindow();
     const {player} = usePlayer();
     const [profileSettingsOpen, setProfileSettingsOpen] = useState<boolean>(false);
     const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);
+    const [availablePlaylistsOpen, setAvailablePlaylistsOpen] = useState<boolean>(false);
 
     useEffect(() => {
         const unsubPlay = window.electron.player.onPlay(() => player.play());
@@ -50,6 +52,7 @@ const MusicBoardWin = () => {
             <Player
                 showProfileSettings={() => setProfileSettingsOpen(true)}
                 showPlaylist={() => setPlaylistOpen(true)}
+                showAvailablePlaylists={() => setAvailablePlaylistsOpen(true)}
             />
 
             <GridProfileSettings
@@ -61,6 +64,11 @@ const MusicBoardWin = () => {
             <Playlist
                 show={playlistOpen}
                 onClose={() => setPlaylistOpen(false)}
+            />
+
+            <AvailablePlaylists
+                show={availablePlaylistsOpen}
+                onClose={() => setAvailablePlaylistsOpen(false)}
             />
         </BoardWin>
     )

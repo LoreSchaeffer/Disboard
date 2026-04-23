@@ -1,7 +1,7 @@
 import {z} from "zod";
 import {BoardTypeSchema} from "./common";
 
-export const TrackSourceNameSchema = z.enum(['list', 'youtube', 'file', 'url']);
+export const TrackSourceNameSchema = z.enum(['list', 'youtube', 'file', 'url', 'music_api']);
 
 export const TrackSourceSchema = z.object({
     type: TrackSourceNameSchema.refine(val => val !== 'list', {

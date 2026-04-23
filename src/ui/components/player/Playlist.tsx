@@ -6,6 +6,8 @@ import React, {useEffect, useRef} from "react";
 import {PlayerTrack} from "../../../types";
 import {clsx} from "clsx";
 import {PiBroomBold, PiXBold} from "react-icons/pi";
+import {getTrackCoverUrl} from "../../utils/utils";
+import {useWindow} from "../../context/WindowContext";
 
 type PlaylistProps = {
     show: boolean;
@@ -79,6 +81,7 @@ type TrackProps = {
 }
 
 const Track = ({index, track}: TrackProps) => {
+    const {settings} = useWindow();
     const {player} = usePlayer();
 
     const isActive = player.getIndex() === index;
@@ -105,7 +108,7 @@ const Track = ({index, track}: TrackProps) => {
             <span className={styles.trackIndex}>{index + 1}</span>
             <img
                 className={styles.trackImage}
-                src={track ? `disboard://thumbnail/${track.id}` : './images/track.png'}
+                src={getTrackCoverUrl(track, settings)}
                 alt={track.titleOverride || track.title || 'Unknown Title'}
                 onError={(e) => {
                     const img = e.currentTarget;

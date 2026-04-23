@@ -1,6 +1,6 @@
 import styles from './GridMediaSelectorWin.module.css';
 import React, {useEffect, useMemo, useState} from "react";
-import {PiFloppyDiskBold, PiFolderOpenBold, PiGlobeBold, PiMagnifyingGlassBold, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopFill, PiXBold, PiYoutubeLogoFill} from "react-icons/pi";
+import {PiFloppyDiskBold, PiFolderOpenBold, PiGlobeBold, PiMagnifyingGlassBold, PiMusicNoteFill, PiPlayBold, PiPlayFill, PiPlaylistBold, PiStopFill, PiXBold, PiYoutubeLogoFill} from "react-icons/pi";
 import {clsx} from "clsx";
 import {useWindow} from "../context/WindowContext";
 import {usePlayer} from "../context/PlayerContext";
@@ -10,7 +10,7 @@ import Input from "../components/forms/Input";
 import {formatTime, Time} from "../utils/time";
 import Row from "../components/layout/Row";
 import Col from "../components/layout/Col";
-import {BoardType, GridMediaSelectorWinData, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, GridMediaSelectorWinData, MATrack, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {removeNameInvalidChars} from "../utils/validation";
 import {getBestThumbnail} from "../utils/utils";
 
@@ -20,7 +20,7 @@ const GridMediaSelectorWin = () => {
         const [winData, setWinData] = useState<GridMediaSelectorWinData | null>(null);
         const [useMusicApi, setUseMusicApi] = useState<boolean>(false);
         const [mode, setMode] = useState<TrackSourceName>('youtube');
-        const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string | null>(null);
+        const [selectedMedia, setSelectedMedia] = useState<YTSearchResult | string | MATrack | null>(null);
         const [customTitle, setCustomTitle] = useState<string>('');
 
         const handleModeChange = (newMode: TrackSourceName) => {
@@ -70,6 +70,7 @@ const GridMediaSelectorWin = () => {
             if (!selectedMedia) return false;
 
             if (mode === 'youtube') return typeof selectedMedia === 'object' && 'id' in selectedMedia;
+            if (mode === 'music_api') return typeof selectedMedia === 'object' && 'id' in selectedMedia;
             if (typeof selectedMedia === 'string') return selectedMedia.trim().length >= 2;
 
             return false;
@@ -124,6 +125,17 @@ const GridMediaSelectorWin = () => {
                     >
                         URL
                     </Button>
+                    {
+                        useMusicApi && (
+                            <Button
+                                variant={mode === 'music_api' ? 'primary' : 'secondary'}
+                                icon={<PiMusicNoteFill/>}
+                                onClick={() => handleModeChange('music_api')}
+                            >
+                                Music Api
+                            </Button>
+                        )
+                    }
                     <Button
                         variant={mode === 'list' ? 'primary' : 'secondary'}
                         icon={<PiPlaylistBold/>}
@@ -156,6 +168,7 @@ const GridMediaSelectorWin = () => {
                 {mode === 'youtube' && <YouTubeSelector onChange={handleOnChange}/>}
                 {mode === 'file' && <FileSelector onChange={handleOnChange}/>}
                 {mode === 'url' && <URLSelector onChange={handleOnChange}/>}
+                {mode === 'music_api' && <MusicApiSelector onChange={handleOnChange}/>}
                 {mode === 'list' && <ListSelector boardType={data.boardType} onChange={handleOnChange}/>}
 
                 <div className={'windowButtons'}>
@@ -189,7 +202,7 @@ const GridMediaSelectorWin = () => {
 ;
 
 type SelectorProps = {
-    onChange?: (selected: YTSearchResult | string) => void;
+    onChange?: (selected: YTSearchResult | string | MATrack) => void;
 }
 
 type ListSelectorProps = SelectorProps & {
@@ -210,7 +223,7 @@ const ListSelector = ({boardType, onChange}: ListSelectorProps) => {
                 if (aIsCurrent && !bIsCurrent) return -1;
                 if (!aIsCurrent && bIsCurrent) return 1;
 
-                return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+                return a.title.localeCompare(b.title, undefined, {sensitivity: 'base'});
             }));
         });
 
@@ -414,6 +427,77 @@ const URLSelector = ({onChange}: SelectorProps) => {
                 className={styles.mb}
                 autoFocus
             />
+        </div>
+    );
+}
+
+const MusicApiSelector = ({onChange}: SelectorProps) => {
+    const {settings} = useWindow();
+    const [tracks, setTracks] = useState<MATrack[]>([]);
+    const [query, setQuery] = useState<string>('');
+    const [selected, setSelected] = useState<MATrack | null>(null);
+
+    useEffect(() => {
+        window.electron.music.getTracks().then(res => {
+            if (!res.success) setTracks([]);
+            setTracks(res.data.sort((a, b) => a.title.localeCompare(b.title, undefined, {sensitivity: 'base'})));
+        });
+    }, []);
+
+    const handleSelect = (track: MATrack) => {
+        setSelected(track);
+        onChange?.(track);
+    }
+
+    const filteredTracks = useMemo(() => {
+        if (!query) return tracks;
+
+        const lowerQuery = query.toLowerCase();
+        return tracks.filter(track => track.title.toLowerCase().includes(lowerQuery));
+    }, [tracks, query]);
+
+    return (
+        <div>
+            <Input
+                type={'text'}
+                icon={<PiMagnifyingGlassBold/>}
+                placeholder={'Search...'}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={styles.mb}
+                autoFocus
+            />
+
+            <div className={styles.resultsContainer}>
+                <div className={clsx(styles.results, filteredTracks.length === 0 && styles.noResults)}>
+                    {filteredTracks.length === 0 && tracks.length === 0 && <span>No results</span>}
+                    {filteredTracks.length === 0 && tracks.length > 0 && <span>No tracks match your search.</span>}
+                    {filteredTracks.map(track => (
+                        <div
+                            key={track.id}
+                            className={clsx(styles.result, selected?.id === track.id && styles.active)}
+                            onClick={() => handleSelect(track)}
+                        >
+                            <img
+                                className={styles.resultThumbnail}
+                                src={`${settings.musicApi}/api/tracks/cover/${track.id}`}
+                                alt={track.title || ''}
+                                onError={(e) => {
+                                    const img = e.currentTarget;
+                                    img.onerror = null;
+                                    img.src = './images/track.png';
+                                }}
+                            />
+                            <div className={styles.resultInfo}>
+                                <span className={styles.resultTitle}>{track.title}</span>
+                            </div>
+                            <span className={styles.resultDuration}>
+                                {formatTime(new Time(track.duration / 1000 || 0, 's'))}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

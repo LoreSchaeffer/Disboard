@@ -1,16 +1,42 @@
 {
   "name": "disboard",
   "productName": "disboard",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Disboard",
   "main": "./out/main/main.js",
+  "build": {
+    "appId": "network.multicore.disboard",
+    "productName": "Disboard",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    }
+  },
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "package": "npm run build && electron-builder --dir",
     "make": "npm run build && electron-builder",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "postinstall": "npm rebuild @discordjs/opus --runtime=electron --target=39.2.7 --dist-url=https://electronjs.org/headers --build-from-source"
   },
   "keywords": [],
   "author": {
@@ -55,7 +81,6 @@
     "electron-store": "^11.0.2",
     "fluent-ffmpeg": "^2.1.3",
     "music-metadata": "^11.10.3",
-    "node-opus": "^0.3.3",
     "react": "^19.2.3",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.2.3",

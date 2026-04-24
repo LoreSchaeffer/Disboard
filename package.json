@@ -9,24 +9,27 @@
     "productName": "Disboard",
     "directories": {
       "output": "dist",
-      "buildResources": "build"
+      "buildResources": "icons"
     },
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "icons/icon.ico"
     },
     "mac": {
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "icon": "icons/icon.icns"
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "icon": "icons/icon.png"
     }
   },
   "scripts": {

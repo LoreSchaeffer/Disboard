@@ -7,6 +7,7 @@ export type PlayerState = {
     paused: boolean;
     seeking: boolean;
     loading: boolean;
+    shuffle: boolean;
 }
 
 export type SfxState = {
@@ -30,6 +31,7 @@ type EventHandlerMap = {
     reset?: () => void;
     loading?: (isLoading: boolean) => void;
     sfxupdate?: (activeSfx: Record<string, SfxState>) => void;
+    shuffleupdate?: (isShuffle: boolean) => void;
 };
 
 export class Player {
@@ -41,6 +43,9 @@ export class Player {
     private repeat: RepeatMode = 'none';
     private queue: PlayerTrack[] = [];
     private index: number = 0;
+
+    private isShuffle: boolean = false;
+    private playHistory: number[] = [];
 
     private activeSfx: Map<string, { audio: HTMLAudioElement, source: MediaElementAudioSourceNode }> = new Map();
     private sfxStates: Record<string, SfxState> = {};
@@ -72,7 +77,8 @@ export class Player {
             playing: false,
             paused: false,
             seeking: false,
-            loading: false
+            loading: false,
+            shuffle: false,
         };
 
         this.audio.preload = 'auto';
@@ -207,6 +213,20 @@ export class Player {
         }
     }
 
+    public setShuffleMode(enable: boolean) {
+        if (this.isShuffle === enable) return;
+
+        this.isShuffle = enable;
+        this.state.shuffle = enable;
+
+        if (!enable) this.playHistory = [];
+        this.eventHandlers['shuffleupdate']?.(enable);
+    }
+
+    public getShuffleMode(): boolean {
+        return this.isShuffle;
+    }
+
 
     public addToQueue(track: PlayerTrack) {
         if (this.queue.length === 0 && this.currentTrack) {
@@ -227,6 +247,10 @@ export class Player {
         if (this.index > index) this.index--;
         else if (this.index >= this.queue.length) this.index = Math.max(0, this.queue.length - 1);
 
+        this.playHistory = this.playHistory
+            .filter(i => i !== index)
+            .map(i => (i > index ? i - 1 : i));
+
         this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
@@ -234,6 +258,7 @@ export class Player {
         this.stop();
         this.queue = [];
         this.index = 0;
+        this.playHistory = [];
         this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
@@ -312,7 +337,30 @@ export class Player {
 
         let nextIndex = this.index + 1;
 
-        if (nextIndex >= this.queue.length) {
+        if (this.isShuffle) {
+            const unplayedIndices = this.queue
+                .map((_, i) => i)
+                .filter(i => i !== this.index && !this.playHistory.includes(i));
+
+            if (unplayedIndices.length > 0) {
+                const randomIndex = Math.floor(Math.random() * unplayedIndices.length);
+                nextIndex = unplayedIndices[randomIndex];
+            } else {
+                if (this.repeat === 'all') {
+                    this.playHistory = [];
+                    const allExceptCurrent = this.queue
+                        .map((_, i) => i)
+                        .filter(i => i !== this.index);
+
+                    nextIndex = allExceptCurrent.length === 0
+                        ? this.index
+                        : allExceptCurrent[Math.floor(Math.random() * allExceptCurrent.length)];
+                } else {
+                    this.stop();
+                    return;
+                }
+            }
+        } else if (nextIndex >= this.queue.length) {
             if (this.repeat === 'all') {
                 nextIndex = 0;
             } else {
@@ -326,6 +374,14 @@ export class Player {
 
     public previous() {
         if (this.queue.length === 0) return;
+
+        if (this.isShuffle && this.playHistory.length > 0) {
+            const prevIndex = this.playHistory.pop();
+            if (prevIndex !== undefined && prevIndex >= 0 && prevIndex < this.queue.length) {
+                this._skipTo(prevIndex, true);
+                return;
+            }
+        }
 
         let prevIndex = this.index - 1;
 
@@ -570,12 +626,14 @@ export class Player {
         this.audio.load();
     }
 
-    private _skipTo(index: number) {
+    private _skipTo(index: number, isGoingBack: boolean = false) {
         if (this.priorityTrack) this.priorityTrack = null;
 
         if (index < 0 || index >= this.queue.length) return;
 
         if (this.state.playing) this.audio.pause();
+
+        if (this.isShuffle && !isGoingBack && this.currentTrack) this.playHistory.push(this.index);
 
         this.index = index;
         const nextTrack = this.queue[this.index];
@@ -701,6 +759,7 @@ export class Player {
         this.startTime = null;
         this.endTime = null;
         this.duration = null;
+        this.playHistory = [];
 
         this._updateMediaSessionState('none');
         this._updateMediaSessionMetadata();

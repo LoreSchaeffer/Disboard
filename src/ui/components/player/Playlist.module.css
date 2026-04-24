@@ -110,6 +110,7 @@
     width: 12px;
     height: 12px;
     flex-shrink: 0;
+    fill: var(--text-secondary);
     transition: fill 200ms ease-in-out;
 }
 

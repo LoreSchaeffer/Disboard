@@ -65,6 +65,11 @@ const PlaylistItem = ({playlist, hide}: PlaylistItemProps) => {
                     return;
                 }
 
+                const isPlaying = player.getState().playing;
+
+                if (isPlaying) player.stop();
+                player.clearQueue();
+
                 const tracks = res.data.sort((a, b) => a.track_order - b.track_order).map(t => t.track);
 
                 tracks.forEach(track => {
@@ -83,6 +88,8 @@ const PlaylistItem = ({playlist, hide}: PlaylistItemProps) => {
 
                     player.addToQueue(playerTrack);
                 });
+
+                if (isPlaying) player.play();
             }
         ).finally(() => hide());
     }

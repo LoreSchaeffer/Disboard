@@ -59,7 +59,6 @@ export class DiscordBot {
         if (!this.client) throw new Error('Discord client not initialized');
 
         this.leaveChannel();
-
         this._initAudioResources();
 
         let guild = this.client.guilds.cache.get(guildId);
@@ -82,31 +81,33 @@ export class DiscordBot {
             selfMute: false
         });
 
-        this.connection.on(VoiceConnectionStatus.Ready, () => {
-            console.log('[Discord] Voice connection ready!');
-            this.isConnected = true;
-            this._startStreaming();
-        });
+        this.connection.subscribe(this.player);
 
-        this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
-            console.log('[Discord] Connection disconnected. Checking if it is a move or a close...');
+        this.connection.on('stateChange', async (oldState, newState) => {
+            if (newState.status === VoiceConnectionStatus.Ready) {
+                console.log('[Discord] Voice connection ready!');
+                this.isConnected = true;
 
-            try {
-                await Promise.race([
-                    entersState(this.connection!, VoiceConnectionStatus.Signalling, 5_000),
-                    entersState(this.connection!, VoiceConnectionStatus.Connecting, 5_000),
-                ]);
-                console.log('[Discord] It was a channel move/reconnect. Waiting for Ready state...');
-            } catch {
-                console.log('[Discord] Connection lost permanently.');
-                this.leaveChannel();
+                if (this.player.state.status !== AudioPlayerStatus.Playing) this._startStreaming();
+            } else if (newState.status === VoiceConnectionStatus.Disconnected) {
+                this.isConnected = false;
+                console.log('[Discord] Connection disconnected. Checking if it is a move or a close...');
+
+                try {
+                    await Promise.race([
+                        entersState(this.connection!, VoiceConnectionStatus.Signalling, 5_000),
+                        entersState(this.connection!, VoiceConnectionStatus.Connecting, 5_000),
+                    ]);
+                    console.log('[Discord] It was a channel move/reconnect. Waiting for Ready state...');
+                } catch {
+                    console.log('[Discord] Connection lost permanently (Kicked or Network drop).');
+                    this.leaveChannel();
+                }
+            } else if (newState.status === VoiceConnectionStatus.Destroyed) {
+                this.isConnected = false;
+                this.connection = null;
+                this._cleanupAudioResources();
             }
-        });
-
-        this.connection.on(VoiceConnectionStatus.Destroyed, () => {
-            this.isConnected = false;
-            this.connection = null;
-            this._cleanupAudioResources();
         });
     }
 
@@ -242,7 +243,7 @@ export class DiscordBot {
         this._cleanupAudioResources();
 
         this.audioStream = new PassThrough({
-            highWaterMark: 1024 * 1024 // 1MB buffer
+            highWaterMark: 1024 * 16
         });
 
         this.player = createAudioPlayer({
@@ -339,15 +340,13 @@ export class DiscordBot {
     }
 
     private _startStreaming() {
-        if (!this.connection || !this.player || !this.audioStream) return;
+        if (!this.player || !this.audioStream) return;
 
         const resource = createAudioResource(this.audioStream, {
             inputType: StreamType.Raw
         });
 
-        this.connection.subscribe(this.player);
         this.player.play(resource);
-
-        console.log('[Discord] Streaming started');
+        console.log('[Discord] Audio resource injected and streaming started');
     }
 }

@@ -44,6 +44,7 @@ const MusicBoardWin = () => {
 
     useEffect(() => {
         if (settings && settings.music && settings.music.repeat) player.setRepeatMode(settings.music.repeat);
+        if (settings && settings.music && settings.music.shuffle) player.setShuffleMode(settings.music.shuffle);
     }, [settings]);
 
     return (

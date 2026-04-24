@@ -8,6 +8,7 @@ import {clsx} from "clsx";
 import {PiBroomBold, PiXBold} from "react-icons/pi";
 import {getTrackCoverUrl} from "../../utils/utils";
 import {useWindow} from "../../context/WindowContext";
+import Separator from "../misc/Separator";
 
 type PlaylistProps = {
     show: boolean;
@@ -63,6 +64,7 @@ const Playlist = ({show, onClose}: PlaylistProps) => {
                 <PiBroomBold/>
                 <span>Clear Playlist</span>
             </div>
+            <Separator margin={'sm'} background={'tertiary'}/>
             <div
                 ref={tracksContainerRef}
                 className={styles.tracks}

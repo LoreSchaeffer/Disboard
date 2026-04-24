@@ -23,7 +23,7 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
 
     useEffect(() => {
         setVolume(settings['sfx'].volume);
-    }, [settings[boardType].volume]);
+    }, [settings['sfx'].volume]);
 
     useEffect(() => {
         if (muted) player.setVolume(0);
@@ -39,7 +39,7 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     const changeVolume = (_: number, newValue: number) => {
         if (muted && newValue > 0) setMuted(false);
         setVolume(newValue);
-        updateSettingsAsync({music: {volume: newValue}});
+        updateSettingsAsync({sfx: {volume: newValue}});
     };
 
     const toggleMute = () => {

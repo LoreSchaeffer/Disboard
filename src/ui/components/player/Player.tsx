@@ -14,6 +14,7 @@ import {
     PiPlaylistBold,
     PiRepeatBold,
     PiRepeatOnceBold,
+    PiShuffleBold,
     PiSkipBackFill,
     PiSkipForwardFill,
     PiSlidersHorizontalBold,
@@ -58,6 +59,11 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
 
         window.electron.settings.set({music: {repeat: nextMode}});
     };
+
+    const changeShuffleMode = () => {
+        player.setShuffleMode(!settings[boardType].shuffle);
+        window.electron.settings.set({music: {shuffle: !settings[boardType].shuffle}});
+    }
 
     const search = () => {
         window.electron.window.open('grid_media_selector', {boardType: boardType, action: 'play_now'} as GridMediaSelectorWin);
@@ -144,6 +150,12 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
                         title={'Search'}
                     />
                     <PlayerBtn
+                        icon={<PiShuffleBold/>}
+                        onClick={changeShuffleMode}
+                        className={settings[boardType].shuffle ? undefined : styles.disabledBtn}
+                        title={`Shuffle: ${settings[boardType].shuffle ? 'On' : 'Off'}`}
+                    />
+                    <PlayerBtn
                         icon={<PiPlaylistBold/>}
                         disabled={!queueExists}
                         title={queueExists ? 'Playlist' : undefined}
@@ -152,7 +164,6 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
                     {settings.musicApi && settings.musicApi.length > 0 && (
                         <PlayerBtn
                             icon={<PiListPlusBold/>}
-                            disabled={queueExists}
                             title={'Load Playlist'}
                             onClick={showAvailablePlaylists}
                         />

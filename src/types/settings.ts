@@ -38,7 +38,19 @@ export const RemoteServerSchema = z.object({
 export const SettingsSchema = z.object({
     openOnStartup: z.array(BoardTypeSchema).default(['music']),
 
-    music: BoardSettingsSchema.extend({repeat: RepeatModeSchema.default('none')}).default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1, repeat: 'none'}),
+    music: BoardSettingsSchema.extend({
+            repeat: RepeatModeSchema.default('none'),
+            shuffle: z.boolean().default(false),
+        }
+    ).default({
+        width: 1366,
+        height: 768,
+        volume: 50,
+        activeProfile: null,
+        zoom: 1,
+        repeat: 'none',
+        shuffle: false
+    }),
     sfx: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1}),
     ambient: BoardSettingsSchema.default({width: 1366, height: 768, volume: 50, activeProfile: null, zoom: 1}),
 

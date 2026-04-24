@@ -2,7 +2,9 @@ import styles from "./GridButton.module.css";
 import React, {CSSProperties, forwardRef, useMemo} from "react";
 import {clamp} from "../../../../shared/utils";
 import {clsx} from "clsx";
-import {SbGridBtn} from "../../../../types";
+import {BoardType, SbGridBtn} from "../../../../types";
+import {useProfiles} from "../../../context/ProfilesContext";
+import {usePlayer} from "../../../context/PlayerContext";
 
 type CustomCSSProperties = CSSProperties & {
     '--sb-bg'?: string;
@@ -22,6 +24,9 @@ type CustomCSSProperties = CSSProperties & {
 
     '--sb-image-size'?: string;
     '--sb-image-radius'?: string;
+
+    '--sb-progress'?: string;
+    '--sb-search-glow'?: string;
 }
 
 export type GridButtonProps = {
@@ -32,6 +37,7 @@ export type GridButtonProps = {
     progress?: number;
     zoom?: number;
     showImages?: boolean;
+    searchMatch?: boolean;
     className?: string;
     isDragging?: boolean;
     isDropping?: boolean;
@@ -48,12 +54,15 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
         progress = 0,
         zoom = 1,
         showImages = true,
+        searchMatch = false,
         className,
         isDragging = false,
         isDropping = false,
         onClick,
         onContextMenu
     }, ref) => {
+    const {boardType, activeGridProfile} = useProfiles();
+    const {player} = usePlayer();
 
     const btn: SbGridBtn = button || {
         id: '',
@@ -63,6 +72,18 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
     };
 
     if (!btn.title) btn.title = `Button ${row}-${col}`;
+
+    const onWheel = (e: React.WheelEvent<HTMLDivElement>, btn: SbGridBtn) => {
+        const direction = e.deltaY < 0 ? 1 : -1;
+
+        e.stopPropagation();
+
+        const initialVolume = btn.volumeOverride ?? 100;
+        const finalVolume = clamp(initialVolume + (direction * 2), 0, 100);
+
+        window.electron.gridProfiles.buttons.update(boardType as Exclude<BoardType, 'ambient'>, activeGridProfile.id, btn.id, {volumeOverride: finalVolume});
+        if (boardType === 'sfx') player.setSfxVolume(btn.id, finalVolume);
+    }
 
     const dynamicStyle: CustomCSSProperties = useMemo(() => {
         const zoomFactor = Math.pow(clamp(zoom, 0.1, 2), 0.8);
@@ -81,6 +102,7 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
             '--sb-border-active': btn.style?.borderColorActive || btn.style?.borderColor || undefined,
 
             '--sb-progress': btn.style?.borderColorActive || btn.style?.borderColor || 'var(--primary)',
+            '--sb-search-glow': btn.style?.borderColor || btn.style?.backgroundColor || btn.style?.textColor || 'var(--primary)',
 
             '--sb-font-size': `${11 * zoomFactor}pt`,
             '--sb-line-height': `${11 * zoomFactor * 1.2}pt`,
@@ -101,12 +123,13 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
                 className,
                 isDragging && styles.dragging,
                 isDropping && styles.dropping,
-                !showImages && styles.centered
+                !showImages && styles.centered,
+                searchMatch && styles.searchMatch
             )}
             style={dynamicStyle}
             onClick={(e) => onClick?.(e, btn, row, col)}
             onContextMenu={(e) => onContextMenu?.(e, btn, row, col)}
-            title={btn.title}
+            onWheel={(e) => onWheel?.(e, btn)}
         >
             {showImages && (
                 <img
@@ -128,7 +151,13 @@ const GridButton = forwardRef<HTMLDivElement, GridButtonProps>((
                 className={styles.progress}
                 style={{
                     width: `${progress}%`
-            }}
+                }}
+            ></div>
+            <div
+                className={styles.volume}
+                style={{
+                    height: `${btn.volumeOverride ?? 0}%`
+                }}
             ></div>
         </div>
     );

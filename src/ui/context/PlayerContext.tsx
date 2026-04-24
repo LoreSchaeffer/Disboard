@@ -6,7 +6,7 @@ import {useWindow} from "./WindowContext";
 
 type PlayerContextType = {
     player: Player;
-    status: PlayerState;
+    state: PlayerState;
     repeat: RepeatMode;
     queue: PlayerTrack[];
     index: number;
@@ -29,7 +29,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [player] = useState<Player>(() => new Player());
     const [previewPlayer] = useState<Player>(() => new Player());
 
-    const [status, setStatus] = useState<PlayerState>(player.getStatus());
+    const [state, setState] = useState<PlayerState>(player.getState());
     const [repeat, setRepeat] = useState<RepeatMode>(player.getRepeatMode());
     const [queue, setQueue] = useState<PlayerTrack[]>(player.getQueue());
     const [index, setIndex] = useState<number>(0);
@@ -38,14 +38,14 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     const [currentTime, setCurrentTime] = useState<Time>(new Time(0, 'ms'));
     const [activeSfx, setActiveSfx] = useState<Record<string, SfxState>>({});
 
-    const [previewStatus, setPreviewStatus] = useState<PlayerState>(previewPlayer.getStatus());
+    const [previewStatus, setPreviewStatus] = useState<PlayerState>(previewPlayer.getState());
     const [previewCurrentPlayerTrack, setPreviewCurrentPlayerTrack] = useState<PlayerTrack | null>(previewPlayer.getCurrentTrack());
     const [previewDuration, setPreviewDuration] = useState<Time>(new Time(0, 'ms'));
     const [previewCurrentTime, setPreviewCurrentTime] = useState<Time>(new Time(0, 'ms'));
 
     useEffect(() => {
-        const syncState = () => {
-            setStatus(player.getStatus());
+        const syncAndBroadcast = () => {
+            setState(player.getState());
             setRepeat(player.getRepeatMode());
             setQueue(player.getQueue());
             setIndex(player.getIndex());
@@ -53,46 +53,54 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
             const dur = player.getDuration();
             setDuration(dur ? dur : new Time(0, 'ms'));
+
+            window.electron.remoteServer.broadcast('player:state', data.boardType, player.getFullState());
         };
 
-        const handleTimeUpdate = (time: Time, dur: Time) => {
+        const handleTimeUpdate = (time: Time, duration: Time) => {
             setCurrentTime(time);
-            if (dur) setDuration(dur);
+            if (duration) setDuration(duration);
+            window.electron.remoteServer.broadcast('player:timeupdate', data.boardType, {currentTime: time.getTimeMs(), duration: duration ? duration.getTimeMs() : 0});
         };
 
-        player.on('play', syncState);
-        player.on('pause', syncState);
-        player.on('resume', syncState);
-        player.on('loading', (isLoading) => setStatus(prev => ({...prev, loading: isLoading})));
-
+        player.on('play', syncAndBroadcast);
+        player.on('pause', syncAndBroadcast);
+        player.on('resume', syncAndBroadcast);
         player.on('ended', () => {
-            syncState();
             setCurrentTime(new Time(0, 'ms'));
+            syncAndBroadcast();
         });
-
-        player.on('timeupdate', handleTimeUpdate);
-
-        player.on('trackchange', (track) => {
-            setCurrentPlayerTrack(track);
+        player.on('trackchange', () => {
             setCurrentTime(new Time(0, 'ms'));
             setDuration(new Time(0, 'ms'));
+            syncAndBroadcast();
         });
-
-        player.on('queueupdate', (newQueue) => setQueue(newQueue));
-        player.on('repeatupdate', (mode) => setRepeat(mode));
-
         player.on('error', () => {
-            syncState();
             setCurrentTime(new Time(0, 'ms'));
+            syncAndBroadcast();
         });
-
         player.on('reset', () => {
-            syncState();
             setCurrentTime(new Time(0, 'ms'));
             setDuration(new Time(0, 'ms'));
+            syncAndBroadcast();
         });
-
-        player.on('sfxupdate', setActiveSfx);
+        player.on('loading', (isLoading) => {
+            setState(prev => ({...prev, loading: isLoading}));
+            syncAndBroadcast();
+        });
+        player.on('queueupdate', (newQueue) => {
+            setQueue(newQueue);
+            syncAndBroadcast();
+        });
+        player.on('repeatupdate', (mode) => {
+            setRepeat(mode);
+            syncAndBroadcast();
+        });
+        player.on('sfxupdate', (sfx) => {
+            setActiveSfx(sfx);
+            syncAndBroadcast();
+        });
+        player.on('timeupdate', handleTimeUpdate);
 
         const unsubStopped = window.electron.player.onPreviewStopped(() => {
             if (!previewPlayer) return;
@@ -104,6 +112,8 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             if (!player) return;
             player.playNow(track);
         });
+
+        const unsubBroadcastState = window.electron.player.onBroadcastState(() => window.electron.remoteServer.broadcast('player:state', data.boardType, player.getFullState()));
 
         return () => {
             player.off('play');
@@ -121,12 +131,13 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
 
             unsubStopped();
             unsubPlayNow();
+            unsubBroadcastState();
         }
     }, [player]);
 
     useEffect(() => {
         const syncPreviewState = () => {
-            setPreviewStatus(previewPlayer.getStatus());
+            setPreviewStatus(previewPlayer.getState());
             setPreviewCurrentPlayerTrack(previewPlayer.getCurrentTrack());
 
             const dur = previewPlayer.getDuration();
@@ -142,25 +153,20 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
         previewPlayer.on('pause', syncPreviewState);
         previewPlayer.on('resume', syncPreviewState);
         previewPlayer.on('loading', (isLoading) => setPreviewStatus(prev => ({...prev, loading: isLoading})));
-
         previewPlayer.on('ended', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
         });
-
         previewPlayer.on('timeupdate', handlePreviewTimeUpdate);
-
         previewPlayer.on('trackchange', (track) => {
             setPreviewCurrentPlayerTrack(track);
             setPreviewCurrentTime(new Time(0, 'ms'));
             setPreviewDuration(new Time(0, 'ms'));
         });
-
         previewPlayer.on('error', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
         });
-
         previewPlayer.on('reset', () => {
             syncPreviewState();
             setPreviewCurrentTime(new Time(0, 'ms'));
@@ -183,7 +189,7 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
     return (
         <PlayerContext.Provider value={{
             player,
-            status,
+            state,
             repeat,
             queue,
             index,

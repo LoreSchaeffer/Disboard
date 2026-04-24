@@ -3,7 +3,7 @@ import React, {useEffect, useState} from "react";
 import {Track} from "../../../types";
 import {DataTable} from "../tables/DataTable";
 import {usePlayer} from "../../context/PlayerContext";
-import {PiCopyBold, PiFolderOpenFill, PiGlobeBold, PiPlayFill, PiTrash, PiYoutubeLogoFill} from "react-icons/pi";
+import {PiCopyBold, PiFolderOpenFill, PiGlobeBold, PiPlayFill, PiTrash, PiWarningFill, PiYoutubeLogoFill} from "react-icons/pi";
 import AudioWave from "../misc/AudioWave";
 import {Time} from "../../utils/time";
 import {clsx} from "clsx";
@@ -16,6 +16,7 @@ const TracksSettingsPage = () => {
     const [tracks, setTracks] = useState<Track[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [copiedBtn, setCopiedBtn] = useState<boolean>(false);
+    const [usedTracks, setUsedTracks] = useState<string[]>([]);
 
     useEffect(() => {
         window.electron.tracks.getAll().then((tracks) => {
@@ -23,7 +24,12 @@ const TracksSettingsPage = () => {
             setLoading(false);
         });
 
-        const unsub = window.electron.tracks.onChanged(setTracks);
+        window.electron.tracks.getUsed().then(setUsedTracks);
+
+        const unsub = window.electron.tracks.onChanged(tracks => {
+            setTracks(tracks);
+            window.electron.tracks.getUsed().then(setUsedTracks);
+        });
 
         return () => {
             unsub();
@@ -36,6 +42,8 @@ const TracksSettingsPage = () => {
     }
 
     const thumbnailRenderer = (track: Track) => {
+
+
         return (
             <div className={styles.thumbnailContainer}>
                 <img
@@ -63,6 +71,7 @@ const TracksSettingsPage = () => {
                         onClick={() => handlePlayPause(track)}
                     />
                 )}
+                {!usedTracks.includes(track.id) && <PiWarningFill className={styles.warningIcon}/>}
             </div>
         )
     }
@@ -128,7 +137,7 @@ const TracksSettingsPage = () => {
                     {id: 'thumbnail', text: '', sortable: false, searchable: false, render: thumbnailRenderer},
                     {id: 'title', text: 'Title', sortable: true, searchable: true, render: titleRenderer},
                     {id: 'board', text: 'Board', sortable: true, searchable: false, render: (t) => <span className={styles.tableSpan}>{t.board.charAt(0).toUpperCase() + t.board.slice(1)}</span>},
-                    {id: 'duration', text: 'Duration', sortable: true, searchable: false, render: (t) => <span className={styles.tableSpan}>{new Time(t.duration, 'ms').formatted()}</span>},
+                    {id: 'duration', text: 'Duration', sortable: true, searchable: false, render: (t) => <span className={styles.tableSpan}>{t.duration ? new Time(t.duration, 'ms').formatted() : '0:00'}</span>},
                     {id: 'source', text: 'Src', sortable: true, searchable: false, render: sourceRenderer},
                     {id: 'actions', text: '', sortable: false, searchable: false, render: actionsRenderer}
                 ]}

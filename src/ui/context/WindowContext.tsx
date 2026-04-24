@@ -1,4 +1,4 @@
-import {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
+import {createContext, PropsWithChildren, useCallback, useContext, useEffect, useRef, useState} from "react";
 import {DeepPartial, Route, Settings, StaticWinData, WindowInfo} from "../../types";
 import {deepMerge} from "../../main/utils/objects";
 
@@ -10,6 +10,8 @@ type WindowContextType = {
     settings: Settings | null;
     updateSettingsAsync: (settings: DeepPartial<Settings>) => void;
     data: StaticWinData<unknown> | null;
+    registerShortcut: (combo: string, callback: (e: KeyboardEvent) => void) => void;
+    unregisterShortcut: (combo: string) => void;
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined);
@@ -22,6 +24,7 @@ export default function WindowProvider({children}: PropsWithChildren) {
     const [settings, setSettings] = useState<Settings | null>(null);
     const [data, setData] = useState<StaticWinData<unknown> | null>(null);
 
+    const shortcutRegistry = useRef<Map<string, (e: KeyboardEvent) => void>>(new Map());
     const saveSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
@@ -41,7 +44,34 @@ export default function WindowProvider({children}: PropsWithChildren) {
             setSettings(settings);
         });
 
+        const handleShortcut = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+            const keys = [];
+
+            if (e.ctrlKey || e.metaKey) keys.push('ctrl');
+            if (e.shiftKey) keys.push('shift');
+            if (e.altKey) keys.push('alt');
+
+            const key = e.key.toLowerCase();
+            if (!['control', 'shift', 'alt', 'meta'].includes(key)) keys.push(key === ' ' ? 'space' : key);
+
+            const combo = keys.join('+');
+
+            if (settings && settings.debug) console.log('Combo received: ', combo);
+
+            const callback = shortcutRegistry.current.get(combo);
+            if (callback) {
+                e.preventDefault();
+                callback(e);
+            }
+        }
+
+        window.addEventListener('keydown', handleShortcut);
+
         return () => {
+            window.removeEventListener('keydown', handleShortcut);
+
             unsubSettings();
 
             if (saveSettingsTimeoutRef.current) {
@@ -69,6 +99,14 @@ export default function WindowProvider({children}: PropsWithChildren) {
         }, 250);
     }
 
+    const registerShortcut = useCallback((combo: string, callback: (e: KeyboardEvent) => void) => {
+        shortcutRegistry.current.set(combo.toLowerCase(), callback);
+    }, []);
+
+    const unregisterShortcut = useCallback((combo: string) => {
+        shortcutRegistry.current.delete(combo.toLowerCase());
+    }, []);
+
     return (
         <WindowContext.Provider value={{
             ready,
@@ -78,6 +116,8 @@ export default function WindowProvider({children}: PropsWithChildren) {
             settings,
             updateSettingsAsync,
             data,
+            registerShortcut,
+            unregisterShortcut
         }}>
             {children}
         </WindowContext.Provider>
@@ -88,4 +128,20 @@ export function useWindow() {
     const context = useContext(WindowContext);
     if (context === undefined) throw new Error('useWindow must be used within a WindowProvider');
     return context;
+}
+
+export function useShortcut(combo: string, callback: (e: KeyboardEvent) => void) {
+    const {registerShortcut, unregisterShortcut} = useWindow();
+
+    const callbackRef = useRef(callback);
+
+    useEffect(() => {
+        callbackRef.current = callback;
+    }, [callback]);
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => callbackRef.current(e);
+        registerShortcut(combo, handler);
+        return () => unregisterShortcut(combo);
+    }, [combo, registerShortcut, unregisterShortcut]);
 }

@@ -1,5 +1,5 @@
 import {BoardType, GridBtnWinData, GridMediaSelectorWinData, GridPos, MediaSelectorAction, WindowOptions} from "../types";
-import {BrowserWindow} from "electron";
+import {BrowserWindow, screen} from "electron";
 import path from "path";
 import {state} from "./state";
 import os from "node:os";
@@ -67,7 +67,8 @@ const createWin = (options: WindowOptions): BrowserWindow => {
         state.winStaticData.delete(win.id);
     });
 
-    if (options.onResize) win.on('resize', () => options.onResize!(win));
+    if (options.onResize) win.on('resize', () => options.onResize(win));
+    if (options.onMoved) win.on('moved', () => options.onMoved(win));
     if (settingsStore.get('debug')) win.webContents.openDevTools({mode: 'detach'});
 
     return win;
@@ -77,8 +78,30 @@ const createWin = (options: WindowOptions): BrowserWindow => {
 
 export const createBoardWin = (boardType: BoardType) => {
     let resizeTimeout: NodeJS.Timeout;
+    let moveTimeout: NodeJS.Timeout;
 
     const boardSettings = getBoardSettings(boardType);
+
+    let posX = boardSettings.position?.x;
+    let posY = boardSettings.position?.y;
+
+    if (posX !== undefined && posY !== undefined) {
+        const displays = screen.getAllDisplays();
+        const isVisible = displays.some(display => {
+            const bounds = display.workArea;
+            return (
+                posX >= bounds.x &&
+                posX < bounds.x + bounds.width &&
+                posY >= bounds.y &&
+                posY < bounds.y + bounds.height
+            );
+        });
+
+        if (!isVisible) {
+            posX = undefined;
+            posY = undefined;
+        }
+    }
 
     createWin({
         route: `${boardType}_board`,
@@ -86,6 +109,8 @@ export const createBoardWin = (boardType: BoardType) => {
         height: boardSettings.height,
         minWidth: 1080,
         minHeight: 608,
+        x: posX,
+        y: posY,
         data: {
             boardType: boardType
         },
@@ -102,6 +127,17 @@ export const createBoardWin = (boardType: BoardType) => {
                 boardSettings.height = height;
 
                 settingsStore.set(boardType, boardSettings);
+                broadcastData('settings:changed', settingsStore.store);
+            }, 250);
+        },
+        onMoved: (win) => {
+            clearTimeout(moveTimeout);
+
+            moveTimeout = setTimeout(() => {
+                if (win.isDestroyed()) return;
+
+                const bounds = win.getBounds();
+                settingsStore.set(`${boardType}.position`, {x: bounds.x, y: bounds.y});
                 broadcastData('settings:changed', settingsStore.store);
             }, 250);
         },
@@ -163,7 +199,7 @@ export const createGridBtnSettingsWin = (
     return createModalWin(parent, {
         route: 'grid_btn_settings',
         width: 500,
-        height: 600,
+        height: 650,
         resizable: false,
         data: {
             boardType: boardType,

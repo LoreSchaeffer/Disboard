@@ -6,21 +6,36 @@ import {useWindow} from "../../context/WindowContext";
 import {usePlayer} from "../../context/PlayerContext";
 import ProgressBar from "../forms/ProgressBar";
 import {formatTime} from "../../utils/time";
-import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiPlaylistBold, PiRepeatBold, PiRepeatOnceBold, PiSkipBackFill, PiSkipForwardFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopFill} from "react-icons/pi";
+import {
+    PiListPlusBold,
+    PiMagnifyingGlassBold,
+    PiPauseCircleFill,
+    PiPlayCircleFill,
+    PiPlaylistBold,
+    PiRepeatBold,
+    PiRepeatOnceBold,
+    PiShuffleBold,
+    PiSkipBackFill,
+    PiSkipForwardFill,
+    PiSlidersHorizontalBold,
+    PiSpeakerSimpleSlashBold,
+    PiStopFill
+} from "react-icons/pi";
 import {getVolumeIcon} from "../../utils/utils";
 import {clsx} from "clsx";
-import {useProfiles} from "../../context/ProfilesProvider";
+import {useProfiles} from "../../context/ProfilesContext";
 import {GridMediaSelectorWin, RepeatMode} from "../../../types";
 
 type PlayerProps = {
     showProfileSettings?: () => void;
     showPlaylist?: () => void;
+    showAvailablePlaylists?: () => void;
 };
 
-const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
+const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: PlayerProps) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType} = useProfiles();
-    const {player, status, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
+    const {player, state, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
 
     const [volume, setVolume] = useState<number>(settings[boardType].volume);
     const [muted, setMuted] = useState<boolean>(false);
@@ -44,6 +59,11 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
 
         window.electron.settings.set({music: {repeat: nextMode}});
     };
+
+    const changeShuffleMode = () => {
+        player.setShuffleMode(!settings[boardType].shuffle);
+        window.electron.settings.set({music: {shuffle: !settings[boardType].shuffle}});
+    }
 
     const search = () => {
         window.electron.window.open('grid_media_selector', {boardType: boardType, action: 'play_now'} as GridMediaSelectorWin);
@@ -70,14 +90,14 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
         <>
             <div className={styles.player}>
                 <div className={styles.leftColumn}>
-                    {status?.playing && currentTrack && <TrackInfo track={currentTrack} className={styles.trackInfo}/>}
+                    {state?.playing && currentTrack && <TrackInfo track={currentTrack} className={styles.trackInfo}/>}
                 </div>
 
                 <div className={styles.centerColumn}>
                     <div className={styles.playerButtons}>
                         <PlayerBtn
                             icon={<PiStopFill/>}
-                            disabled={!status?.playing}
+                            disabled={!state?.playing}
                             onClick={() => player.stop()}
                             title={'Stop'}
                         />
@@ -88,11 +108,11 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                             title={'Previous'}
                         />
                         <PlayerBtn
-                            icon={status?.playing && !status?.paused ? <PiPauseCircleFill/> : <PiPlayCircleFill/>}
+                            icon={state?.playing && !state?.paused ? <PiPauseCircleFill/> : <PiPlayCircleFill/>}
                             size={'large'}
                             disabled={!currentTrack && !queueExists}
                             onClick={() => player.playPause()}
-                            title={status?.playing && !status?.paused ? 'Pause' : 'Play'}
+                            title={state?.playing && !state?.paused ? 'Pause' : 'Play'}
                         />
                         <PlayerBtn
                             icon={<PiSkipForwardFill/>}
@@ -109,17 +129,17 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                     </div>
 
                     <div className={styles.progressGroup}>
-                        <span className={clsx(styles.progressTime, !status.playing && styles.hidden)}>{currentTime.formatted() || '00:00'}</span>
+                        <span className={clsx(styles.progressTime, !state.playing && styles.hidden)}>{currentTime.formatted() || '00:00'}</span>
                         <ProgressBar
                             className={styles.progressBar}
                             seekable
-                            disabled={!status?.playing}
-                            max={status.playing ? duration?.getTimeMs() : 99999999}
-                            val={status.playing ? currentTime.getTimeMs() : 0}
+                            disabled={!currentTrack}
+                            max={state.playing ? duration?.getTimeMs() : 99999999}
+                            val={state.playing ? currentTime.getTimeMs() : 0}
                             displayFunction={formatTime}
                             onChange={(_, newValue) => player.seek(newValue)}
                         />
-                        <span className={clsx(styles.progressTime, !status.playing && styles.hidden)}>{duration.formatted() || '00:00'}</span>
+                        <span className={clsx(styles.progressTime, !state.playing && styles.hidden)}>{duration.formatted() || '00:00'}</span>
                     </div>
                 </div>
 
@@ -130,11 +150,24 @@ const Player = ({showProfileSettings, showPlaylist}: PlayerProps) => {
                         title={'Search'}
                     />
                     <PlayerBtn
+                        icon={<PiShuffleBold/>}
+                        onClick={changeShuffleMode}
+                        className={settings[boardType].shuffle ? undefined : styles.disabledBtn}
+                        title={`Shuffle: ${settings[boardType].shuffle ? 'On' : 'Off'}`}
+                    />
+                    <PlayerBtn
                         icon={<PiPlaylistBold/>}
                         disabled={!queueExists}
                         title={queueExists ? 'Playlist' : undefined}
                         onClick={showPlaylist}
                     />
+                    {settings.musicApi && settings.musicApi.length > 0 && (
+                        <PlayerBtn
+                            icon={<PiListPlusBold/>}
+                            title={'Load Playlist'}
+                            onClick={showAvailablePlaylists}
+                        />
+                    )}
                     <PlayerBtn
                         icon={<PiSlidersHorizontalBold/>}
                         title={'Profile settings'}

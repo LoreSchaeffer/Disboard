@@ -19,7 +19,7 @@ import {usePlayer} from "../context/PlayerContext";
 import ResettableColorPicker from "../components/forms/color_picker/ResettableColorPicker";
 import {BoardType, BtnStyle, CropOptions, DeepPartial, EndTimeType, GridBtn, GridBtnWinData, PlayerTrack, SbGridBtn, SbGridProfile, TimeUnit} from "../../types";
 import {validateName} from "../../shared/validation";
-import {useProfiles} from "../context/ProfilesProvider";
+import {useProfiles} from "../context/ProfilesContext";
 import ProgressBar from "../components/forms/ProgressBar";
 
 const timeUnitOptions: { value: TimeUnit, label: string }[] = [
@@ -37,7 +37,7 @@ const GridBtnSettingsWin = () => {
     const {data} = useWindow();
     const {boardType, gridProfiles} = useProfiles();
     const {previewPlayer, previewStatus} = usePlayer();
-    const {setTitlebarContent} = useTitlebar();
+    const {setMainContent} = useTitlebar();
 
     const [profile, setProfile] = useState<SbGridProfile | undefined>(undefined);
     const [button, setButton] = useState<SbGridBtn | undefined>(undefined);
@@ -82,7 +82,7 @@ const GridBtnSettingsWin = () => {
     useEffect(() => {
         if (!profile || !button) return;
 
-        setTitlebarContent(
+        setMainContent(
             <div className={styles.tbData}>
                 <span className={styles.tbProfile}>{profile.name}</span>
                 <span className={styles.tbButton}>{button.row} - {button.col}</span>
@@ -90,7 +90,7 @@ const GridBtnSettingsWin = () => {
             'centered'
         );
 
-        return () => setTitlebarContent(null);
+        return () => setMainContent(null);
     }, [profile, button]);
 
     const previewBtnData: SbGridBtn | null = useMemo(() => {
@@ -180,6 +180,14 @@ const GridBtnSettingsWin = () => {
             const updated = {...prev};
             delete updated.title;
             return updated;
+        });
+    }
+
+    const handleLoopChange = (value: boolean | null) => {
+        if (!button) return;
+
+        setNewButton(prev => {
+            return {...prev, loop: value};
         });
     }
 
@@ -662,7 +670,7 @@ const GridBtnSettingsWin = () => {
                         />
                     </Col>
                 </Row>
-                <Row>
+                <Row className={styles.space}>
                     <Col size={2}>
                         <label className={styles.label}>Track ends</label>
                     </Col>
@@ -696,6 +704,18 @@ const GridBtnSettingsWin = () => {
                             options={timeUnitOptions}
                             value={getTimeUnit('endTimeUnit')}
                             onChange={(val) => handleEndTimeUnitChange(val as TimeUnit)}
+                        />
+                    </Col>
+                </Row>
+                <Row>
+                    <Col size={4}>
+                        <label className={styles.label}>Loop</label>
+                    </Col>
+                    <Col>
+                        <Input
+                            type={'checkbox'}
+                            checked={getValue('loop') ?? false}
+                            onChange={e => handleLoopChange(e.target.checked)}
                         />
                     </Col>
                 </Row>
@@ -814,7 +834,7 @@ const ColorPickerRow = ({
         const hsl = hexToHsl(color);
         if (!hsl) return color;
 
-        hsl.l = Math.min(100, hsl.l + 15);
+        hsl.l = Math.min(100, hsl.l + 8);
         return hslToHex(hsl);
     }
 
@@ -824,7 +844,7 @@ const ColorPickerRow = ({
         const hsl = hexToHsl(color);
         if (!hsl) return color;
 
-        hsl.l = Math.max(0, hsl.l - 15);
+        hsl.l = Math.max(0, hsl.l - 8);
         return hslToHex(hsl);
     }
 

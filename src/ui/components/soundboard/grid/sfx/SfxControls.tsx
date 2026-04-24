@@ -2,9 +2,9 @@ import styles from "./SfxControls.module.css";
 import {useWindow} from "../../../../context/WindowContext";
 import {usePlayer} from "../../../../context/PlayerContext";
 import React, {useEffect, useState} from "react";
-import {useProfiles} from "../../../../context/ProfilesProvider";
+import {useProfiles} from "../../../../context/ProfilesContext";
 import {GridMediaSelectorWin} from "../../../../../types";
-import {PiMagnifyingGlassBold, PiPauseCircleFill, PiPlayCircleFill, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopCircleFill} from "react-icons/pi";
+import {PiMagnifyingGlassBold, PiSlidersHorizontalBold, PiSpeakerSimpleSlashBold, PiStopCircleFill} from "react-icons/pi";
 import {getVolumeIcon} from "../../../../utils/utils";
 import PlayerBtn from "../../../player/PlayerBtn";
 import ProgressBar from "../../../forms/ProgressBar";
@@ -18,12 +18,12 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     const {boardType} = useProfiles();
     const {player, activeSfx} = usePlayer();
 
-    const [volume, setVolume] = useState<number>(settings[boardType].volume);
+    const [volume, setVolume] = useState<number>(settings['sfx'].volume);
     const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
-        setVolume(settings[boardType].volume);
-    }, [settings[boardType].volume]);
+        setVolume(settings['sfx'].volume);
+    }, [settings['sfx'].volume]);
 
     useEffect(() => {
         if (muted) player.setVolume(0);
@@ -39,7 +39,7 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     const changeVolume = (_: number, newValue: number) => {
         if (muted && newValue > 0) setMuted(false);
         setVolume(newValue);
-        updateSettingsAsync({music: {volume: newValue}});
+        updateSettingsAsync({sfx: {volume: newValue}});
     };
 
     const toggleMute = () => {

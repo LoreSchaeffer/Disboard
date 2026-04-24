@@ -7,11 +7,13 @@ export type PlayerState = {
     paused: boolean;
     seeking: boolean;
     loading: boolean;
+    shuffle: boolean;
 }
 
 export type SfxState = {
     playing: boolean;
     progress: number;
+    volume: number;
 }
 
 type EventHandlerMap = {
@@ -29,6 +31,7 @@ type EventHandlerMap = {
     reset?: () => void;
     loading?: (isLoading: boolean) => void;
     sfxupdate?: (activeSfx: Record<string, SfxState>) => void;
+    shuffleupdate?: (isShuffle: boolean) => void;
 };
 
 export class Player {
@@ -40,6 +43,9 @@ export class Player {
     private repeat: RepeatMode = 'none';
     private queue: PlayerTrack[] = [];
     private index: number = 0;
+
+    private isShuffle: boolean = false;
+    private playHistory: number[] = [];
 
     private activeSfx: Map<string, { audio: HTMLAudioElement, source: MediaElementAudioSourceNode }> = new Map();
     private sfxStates: Record<string, SfxState> = {};
@@ -71,7 +77,8 @@ export class Player {
             playing: false,
             paused: false,
             seeking: false,
-            loading: false
+            loading: false,
+            shuffle: false,
         };
 
         this.audio.preload = 'auto';
@@ -155,6 +162,8 @@ export class Player {
         this.audio.addEventListener('seeked', () => {
             this.state.seeking = false;
             this.eventHandlers['seeked']?.();
+
+            this._handleTimeUpdate(true);
         });
 
         this.audio.addEventListener('timeupdate', () => this._handleTimeUpdate());
@@ -204,6 +213,20 @@ export class Player {
         }
     }
 
+    public setShuffleMode(enable: boolean) {
+        if (this.isShuffle === enable) return;
+
+        this.isShuffle = enable;
+        this.state.shuffle = enable;
+
+        if (!enable) this.playHistory = [];
+        this.eventHandlers['shuffleupdate']?.(enable);
+    }
+
+    public getShuffleMode(): boolean {
+        return this.isShuffle;
+    }
+
 
     public addToQueue(track: PlayerTrack) {
         if (this.queue.length === 0 && this.currentTrack) {
@@ -224,6 +247,10 @@ export class Player {
         if (this.index > index) this.index--;
         else if (this.index >= this.queue.length) this.index = Math.max(0, this.queue.length - 1);
 
+        this.playHistory = this.playHistory
+            .filter(i => i !== index)
+            .map(i => (i > index ? i - 1 : i));
+
         this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
@@ -231,6 +258,7 @@ export class Player {
         this.stop();
         this.queue = [];
         this.index = 0;
+        this.playHistory = [];
         this.eventHandlers['queueupdate']?.([...this.queue]);
     }
 
@@ -309,7 +337,30 @@ export class Player {
 
         let nextIndex = this.index + 1;
 
-        if (nextIndex >= this.queue.length) {
+        if (this.isShuffle) {
+            const unplayedIndices = this.queue
+                .map((_, i) => i)
+                .filter(i => i !== this.index && !this.playHistory.includes(i));
+
+            if (unplayedIndices.length > 0) {
+                const randomIndex = Math.floor(Math.random() * unplayedIndices.length);
+                nextIndex = unplayedIndices[randomIndex];
+            } else {
+                if (this.repeat === 'all') {
+                    this.playHistory = [];
+                    const allExceptCurrent = this.queue
+                        .map((_, i) => i)
+                        .filter(i => i !== this.index);
+
+                    nextIndex = allExceptCurrent.length === 0
+                        ? this.index
+                        : allExceptCurrent[Math.floor(Math.random() * allExceptCurrent.length)];
+                } else {
+                    this.stop();
+                    return;
+                }
+            }
+        } else if (nextIndex >= this.queue.length) {
             if (this.repeat === 'all') {
                 nextIndex = 0;
             } else {
@@ -323,6 +374,14 @@ export class Player {
 
     public previous() {
         if (this.queue.length === 0) return;
+
+        if (this.isShuffle && this.playHistory.length > 0) {
+            const prevIndex = this.playHistory.pop();
+            if (prevIndex !== undefined && prevIndex >= 0 && prevIndex < this.queue.length) {
+                this._skipTo(prevIndex, true);
+                return;
+            }
+        }
 
         let prevIndex = this.index - 1;
 
@@ -348,9 +407,12 @@ export class Player {
         if (this.endTime && absoluteTimeS > this.endTime.getTimeS()) absoluteTimeS = this.endTime.getTimeS();
 
         this.audio.currentTime = absoluteTimeS;
+
+        this._handleTimeUpdate(true);
     }
 
-    public toggleSfx(buttonId: string, track: PlayerTrack) {
+
+    public toggleSfx(buttonId: string, loop: boolean, track: PlayerTrack) {
         if (this.activeSfx.has(buttonId)) {
             this.stopSfx(buttonId);
             return;
@@ -364,10 +426,11 @@ export class Player {
         const vol = track.volumeOverride !== undefined && track.volumeOverride !== null
             ? track.volumeOverride
             : this.masterVolume;
-        sfxAudio.volume = clamp(vol, 0, 100) / 100;
+        const initialVolume = clamp(vol, 0, 100);
+        sfxAudio.volume = initialVolume / 100;
 
         if (track.directStream) {
-            if (track.source.type === 'youtube' || track.source.type === 'url') sfxAudio.src = track.source.src;
+            if (track.source.type === 'youtube' || track.source.type === 'url' || track.source.type === 'music_api') sfxAudio.src = track.source.src;
             else sfxAudio.src = `disboard://file/${encodeURIComponent(track.source.src)}`;
         } else {
             sfxAudio.src = `disboard://track/${encodeURIComponent(track.id)}`;
@@ -377,7 +440,7 @@ export class Player {
         sfxSource.connect(this.masterGainNode);
 
         this.activeSfx.set(buttonId, {audio: sfxAudio, source: sfxSource});
-        this.sfxStates[buttonId] = {playing: true, progress: 0};
+        this.sfxStates[buttonId] = {playing: true, progress: 0, volume: initialVolume};
         this._emitSfx();
 
         let absoluteEndTimeS: number | null = null;
@@ -407,7 +470,19 @@ export class Player {
             this._emitSfx();
         };
 
-        sfxAudio.addEventListener('ended', cleanup);
+        const handleEnd = () => {
+            if (loop) {
+                sfxAudio.currentTime = startTimeS;
+                sfxAudio.play().catch(e => {
+                    console.error("SFX Replay error:", e);
+                    cleanup();
+                });
+            } else {
+                cleanup();
+            }
+        };
+
+        sfxAudio.addEventListener('ended', handleEnd);
 
         sfxAudio.addEventListener('loadedmetadata', () => {
             if (!track.duration) durationS = sfxAudio.duration;
@@ -419,7 +494,7 @@ export class Player {
             if (!this.sfxStates[buttonId]) return;
 
             if (absoluteEndTimeS !== null && sfxAudio.currentTime >= absoluteEndTimeS) {
-                cleanup();
+                handleEnd();
                 return;
             }
 
@@ -458,6 +533,18 @@ export class Player {
         this._emitSfx();
     }
 
+    public setSfxVolume(buttonId: string, volume: number) {
+        const sfx = this.activeSfx.get(buttonId);
+        const state = this.sfxStates[buttonId];
+
+        if (sfx && state) {
+            const clampedVol = clamp(volume, 0, 100);
+            sfx.audio.volume = clampedVol / 100;
+            state.volume = clampedVol;
+            this._emitSfx();
+        }
+    }
+
 
     public setVolume(volume: number) {
         this.masterVolume = clamp(volume, 0, 100);
@@ -483,8 +570,22 @@ export class Player {
         this.eventHandlers['repeatupdate']?.(mode);
     }
 
-    public getStatus(): PlayerState {
+    public getState(): PlayerState {
         return {...this.state};
+    }
+
+    public getFullState() {
+        return {
+            state: this.getState(),
+            currentTrack: this.getCurrentTrack(),
+            queue: this.getQueue(),
+            index: this.getIndex(),
+            repeatMode: this.getRepeatMode(),
+            masterVolume: this.masterVolume,
+            activeSfx: this.sfxStates,
+            duration: this.duration ? this.duration.getTimeMs() : 0,
+            currentTime: this.audio ? (this.audio.currentTime * 1000) : 0,
+        };
     }
 
     public getCurrentTrack(): PlayerTrack | null {
@@ -516,7 +617,7 @@ export class Player {
         this._calculateCropsAndDuration();
 
         if (this.currentTrack.directStream) {
-            if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url') this.audio.src = this.currentTrack.source.src;
+            if (this.currentTrack.source.type === 'youtube' || this.currentTrack.source.type === 'url' || this.currentTrack.source.type === 'music_api') this.audio.src = this.currentTrack.source.src;
             else this.audio.src = `disboard://file/${encodeURIComponent(this.currentTrack.source.src)}`;
         } else {
             this.audio.src = `disboard://track/${encodeURIComponent(this.currentTrack.id)}`;
@@ -525,12 +626,14 @@ export class Player {
         this.audio.load();
     }
 
-    private _skipTo(index: number) {
+    private _skipTo(index: number, isGoingBack: boolean = false) {
         if (this.priorityTrack) this.priorityTrack = null;
 
         if (index < 0 || index >= this.queue.length) return;
 
         if (this.state.playing) this.audio.pause();
+
+        if (this.isShuffle && !isGoingBack && this.currentTrack) this.playHistory.push(this.index);
 
         this.index = index;
         const nextTrack = this.queue[this.index];
@@ -573,8 +676,8 @@ export class Player {
         if (this.startTime) this.duration.subtract(this.startTime);
     }
 
-    private _handleTimeUpdate() {
-        if (this.state.seeking || !this.state.playing) return;
+    private _handleTimeUpdate(forceUIUpdate: boolean = false) {
+        if (!forceUIUpdate && (this.state.seeking || !this.state.playing)) return;
 
         let currentTimeMs = this.audio.currentTime * 1000;
         if (this.startTime) currentTimeMs -= this.startTime.getTimeMs();
@@ -600,6 +703,11 @@ export class Player {
 
         this.eventHandlers['ended']?.();
 
+        if (this.repeat === 'one') {
+            this._loadAndPlay();
+            return;
+        }
+
         if (this.priorityTrack) {
             this.priorityTrack = null;
 
@@ -607,26 +715,17 @@ export class Player {
                 this.currentTrack = this.queue[this.index];
                 this._loadAndPlay();
             } else {
-                this._resetPlayer();
+                if (this.repeat === 'all') this._loadAndPlay();
+                else this._resetPlayer();
             }
-
             return;
         }
 
         if (this.queue.length === 0) {
-            if (this.repeat === 'one' || this.repeat === 'all') {
-                this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
-                this.audio.play().catch(console.error);
-            } else {
-                this._resetPlayer();
-            }
+            if (this.repeat === 'all') this._loadAndPlay();
+            else this._resetPlayer();
         } else {
-            if (this.repeat === 'one') {
-                this.audio.currentTime = this.startTime ? this.startTime.getTimeS() : 0;
-                this.audio.play().catch(console.error);
-            } else {
-                this.next();
-            }
+            this.next();
         }
     }
 
@@ -644,8 +743,9 @@ export class Player {
 
     private _resetPlayer() {
         this.audio.pause();
+        this.audio.removeAttribute('src');
+        this.audio.load();
         this.audio.currentTime = 0;
-        this.audio.src = '';
 
         this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 
@@ -659,6 +759,7 @@ export class Player {
         this.startTime = null;
         this.endTime = null;
         this.duration = null;
+        this.playHistory = [];
 
         this._updateMediaSessionState('none');
         this._updateMediaSessionMetadata();

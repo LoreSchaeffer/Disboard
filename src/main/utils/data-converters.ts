@@ -1,8 +1,9 @@
-import {AmbientBtn, AmbientProfile, GridBtn, GridProfile, PlayerTrack, SbAmbientBtn, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {AmbientBtn, AmbientProfile, GridBtn, GridProfile, MATrack, PlayerTrack, SbAmbientBtn, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
 import {getYoutubeStream} from "./music-api";
 import {generateUUID} from "./misc";
 import {probeMedia} from "./ffmpeg";
+import {settingsStore} from "../storage/settings-store";
 
 const getTracksRecord = (): Record<string, Track> => {
     const record: Record<string, Track> = {};
@@ -54,7 +55,7 @@ export const convertAmbientProfile2SbAmbientProfile = (ambientProfile: AmbientPr
     }
 }
 
-export const createPlayerTrack = async (source: TrackSourceName, media: YTSearchResult | string): Promise<PlayerTrack | null> => {
+export const createPlayerTrack = async (source: TrackSourceName, media: YTSearchResult | MATrack | string, customTitle?: string): Promise<PlayerTrack | null> => {
     if (!source || !media) return null;
 
     let track: PlayerTrack;
@@ -77,7 +78,7 @@ export const createPlayerTrack = async (source: TrackSourceName, media: YTSearch
                         type: 'youtube',
                         src: stream
                     },
-                    title: ytResult.name,
+                    title: customTitle || ytResult.name,
                     duration: ytResult.duration * 1000,
                     directStream: true,
                     board: undefined
@@ -110,11 +111,27 @@ export const createPlayerTrack = async (source: TrackSourceName, media: YTSearch
                     type: source,
                     src: uri
                 },
-                title: title,
+                title: customTitle || title,
                 duration: duration,
                 directStream: true,
                 board: undefined
             };
+            break;
+        }
+        case 'music_api': {
+            const maTrack = media as MATrack;
+
+            track = {
+                id: maTrack.id,
+                source: {
+                    type: 'music_api',
+                    src: `${settingsStore.get('musicApi')}/api/tracks/play/${maTrack.id}`
+                },
+                title: customTitle || maTrack.title,
+                duration: maTrack.duration,
+                directStream: true,
+                board: undefined
+            }
             break;
         }
     }

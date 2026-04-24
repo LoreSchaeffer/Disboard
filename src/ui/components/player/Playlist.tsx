@@ -6,6 +6,9 @@ import React, {useEffect, useRef} from "react";
 import {PlayerTrack} from "../../../types";
 import {clsx} from "clsx";
 import {PiBroomBold, PiXBold} from "react-icons/pi";
+import {getTrackCoverUrl} from "../../utils/utils";
+import {useWindow} from "../../context/WindowContext";
+import Separator from "../misc/Separator";
 
 type PlaylistProps = {
     show: boolean;
@@ -61,6 +64,7 @@ const Playlist = ({show, onClose}: PlaylistProps) => {
                 <PiBroomBold/>
                 <span>Clear Playlist</span>
             </div>
+            <Separator margin={'sm'} background={'tertiary'}/>
             <div
                 ref={tracksContainerRef}
                 className={styles.tracks}
@@ -79,14 +83,15 @@ type TrackProps = {
 }
 
 const Track = ({index, track}: TrackProps) => {
+    const {settings} = useWindow();
     const {player} = usePlayer();
 
     const isActive = player.getIndex() === index;
-    const isPlaying = player.getStatus().playing;
+    const isPlaying = player.getState().playing;
 
     const handleClick = () => {
         if (!isActive) player.playFromQueue(index);
-        else if (player.getStatus().paused) player.playPause();
+        else if (player.getState().paused) player.playPause();
         else if (!isPlaying) player.play();
     }
 
@@ -98,14 +103,14 @@ const Track = ({index, track}: TrackProps) => {
         <div
             className={clsx(
                 styles.track,
-                player.getIndex() === index && player.getStatus().playing && styles.active
+                player.getIndex() === index && player.getState().playing && styles.active
             )}
             onClick={handleClick}
         >
             <span className={styles.trackIndex}>{index + 1}</span>
             <img
                 className={styles.trackImage}
-                src={track ? `disboard://thumbnail/${track.id}` : './images/track.png'}
+                src={getTrackCoverUrl(track, settings)}
                 alt={track.titleOverride || track.title || 'Unknown Title'}
                 onError={(e) => {
                     const img = e.currentTarget;

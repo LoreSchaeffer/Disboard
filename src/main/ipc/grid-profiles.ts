@@ -1,7 +1,7 @@
 import {app, dialog, ipcMain} from "electron";
 import {clamp} from "../../shared/utils";
 import path from "path";
-import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, SbGridBtn, SbGridProfile, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, DeepPartial, GridBtn, GridPos, GridProfile, IpcResponse, MATrack, SbGridBtn, SbGridProfile, TrackSourceName, YTSearchResult} from "../../types";
 import {getGridProfilesStore} from "../storage/profiles-store";
 import {convertGridBtn2SbGridBtn, convertGridProfile2SbGridProfile} from "../utils/data-converters";
 import {removeNameInvalidChars, validateName} from "../../shared/validation";
@@ -264,10 +264,10 @@ export const setupGridProfilesHandlers = () => {
         return {success: true};
     });
 
-    ipcMain.handle('grid_profiles:buttons:update_track', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): IpcResponse<void> => {
+    ipcMain.handle('grid_profiles:buttons:update_track', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): IpcResponse<void> => {
         if (!profileId || !gridPos || !source || !media) return {success: false, error: 'invalid_parameters'};
         if (source === 'youtube' && (typeof media !== 'object' || !('id' in media))) return {success: false, error: 'invalid_media'};
-        if (source !== 'youtube' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
+        if (source !== 'youtube' && source !== 'music_api' && (typeof media !== 'string' || (media as string).trim().length < 2)) return {success: false, error: 'invalid_media'};
 
         const profilesStore = getGridProfilesStore(boardType);
         const profiles = profilesStore.get('profiles') || [];

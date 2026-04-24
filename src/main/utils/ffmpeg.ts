@@ -43,7 +43,7 @@ export const probeMedia = (inputSource: string): Promise<ProbeResult> => {
     });
 };
 
-const downloadChunkedAudio = async (url: string, destPath: string): Promise<void> => {
+const downloadChunkedAudio = async (url: string, destPath: string, trackId: string): Promise<void> => {
     const initRes = await axios.get(url, {
         headers: {Range: 'bytes=0-0', 'User-Agent': USER_AGENT}
     });
@@ -72,14 +72,14 @@ const downloadChunkedAudio = async (url: string, destPath: string): Promise<void
             await fileHandle.write(res.data);
 
             const netPercent = Math.round(((end + 1) / totalBytes) * 100);
-            console.log(`Network Download: ${netPercent}%`);
+            console.log(`[Network] progress ${trackId}: ${netPercent}%`);
         }
     } finally {
         await fileHandle.close();
     }
 };
 
-export const downloadAudio = async (inputSource: string, outputDir: string, trackId: string): Promise<number> => {
+export const downloadAudio = async (inputSource: string, outputDir: string, trackId: string, trackTitle: string = 'Unknown Title'): Promise<number> => {
     await fs.mkdir(outputDir, {recursive: true});
 
     const isUrl = inputSource.startsWith('http');
@@ -89,13 +89,13 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
     let ffmpegSource = inputSource;
 
     if (isUrl) {
-        console.log(`[Network] Starting high-speed chunked download for ${trackId}...`);
+        console.log(`[Network] Starting high-speed chunked download for ${trackTitle} (${trackId})...`);
         try {
-            await downloadChunkedAudio(inputSource, rawTempPath);
+            await downloadChunkedAudio(inputSource, rawTempPath, trackId);
             ffmpegSource = rawTempPath;
-            console.log(`[Network] Download complete. Handing over to FFmpeg.`);
+            console.log(`[Network] Download of track ${trackTitle} (${trackId}) complete. Handing over to FFmpeg.`);
         } catch (e) {
-            console.error(`[Network] Chunked download failed, falling back to FFmpeg streaming:`, e.message);
+            console.error(`[Network] Chunked download of track ${trackTitle} (${trackId}) failed, falling back to FFmpeg streaming:`, e.message);
             ffmpegSource = inputSource;
         }
     }
@@ -110,7 +110,7 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
 
     const isSourceMp3 = probe.codec === 'mp3';
 
-    console.log(`[FFmpeg] Processing ${trackId}. Source Codec: ${probe.codec}. Strategy: ${isSourceMp3 ? 'DIRECT COPY' : 'TRANSCODE'}`);
+    console.log(`[FFmpeg] Processing ${trackTitle} (${trackId}). Source Codec: ${probe.codec}. Strategy: ${isSourceMp3 ? 'DIRECT COPY' : 'TRANSCODE'}`);
 
     return new Promise((resolve, reject) => {
         const command = ffmpeg(ffmpegSource).inputOptions(getInputOptions(ffmpegSource));
@@ -125,7 +125,8 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
                 .audioCodec('libmp3lame')
                 .audioBitrate(256)
                 .outputOptions([
-                    '-threads 0'
+                    '-threads 0',
+                    '-q:a 2'
                 ])
                 .format('mp3');
         }
@@ -141,7 +142,7 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
                     const currentProgress = clamp(Math.round(progress.percent), 0, 100);
 
                     if (currentProgress !== prevProgress) {
-                        console.log(`[FFmpeg] Progress for ${trackId}: ${currentProgress}%`);
+                        console.log(`[FFmpeg] Progress for ${trackTitle} (${trackId}): ${currentProgress}%`);
                         prevProgress = currentProgress;
                     }
                 } else if (progress.timemark && probe.duration) {
@@ -152,14 +153,14 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
                         const currentProgress = clamp(Math.round(calculatedPercent), 0, 100);
 
                         if (currentProgress !== prevProgress) {
-                            console.log(`[FFmpeg] Progress for ${trackId}: ${currentProgress}%`);
+                            console.log(`[FFmpeg] Progress for ${trackTitle} (${trackId}): ${currentProgress}%`);
                             prevProgress = currentProgress;
                         }
                     }
                 }
             })
             .on('error', async (err) => {
-                console.error(`[FFmpeg] Error processing ${trackId}:`, err);
+                console.error(`[FFmpeg] Error processing ${trackTitle} (${trackId}):`, err);
                 try {
                     await fs.unlink(ffmpegTempPath).catch(() => {
                         // Ignored

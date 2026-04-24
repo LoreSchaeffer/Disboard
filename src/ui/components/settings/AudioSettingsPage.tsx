@@ -64,8 +64,8 @@ const AudioSettingsPage = () => {
     }
 
     const handlePreview = (deviceId: 'main' | 'preview') => {
-        if (player.getStatus().playing) player.stop();
-        if (previewPlayer.getStatus().playing) previewPlayer.stop();
+        if (player.getState().playing) player.stop();
+        if (previewPlayer.getState().playing) previewPlayer.stop();
 
         if (deviceId === 'main') player.playNow(TEST_SOUND);
         else previewPlayer.playNow(TEST_SOUND);

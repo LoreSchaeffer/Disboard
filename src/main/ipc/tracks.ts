@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import path from "path";
 import {THUMBNAILS_DIR, TRACKS_DIR} from "../constants";
 import {removeTrackFromStore} from "../utils/downloads";
+import {musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
 
 export const setupTracksHandlers = () => {
     ipcMain.handle('tracks:get_all', (): Track[] => tracksStore.get('tracks'));
@@ -38,5 +39,22 @@ export const setupTracksHandlers = () => {
         });
 
         return {success: true};
+    });
+
+    ipcMain.handle('tracks:get_used', (): string[] => {
+        const usedTracks = new Set<string>();
+
+        const allProfiles = [
+            ...(musicBoardStore.get('profiles') || []),
+            ...(sfxBoardStore.get('profiles') || [])
+        ];
+
+        for (const profile of allProfiles) {
+            for (const btn of profile.buttons) {
+                if (btn.track) usedTracks.add(btn.track);
+            }
+        }
+
+        return Array.from(usedTracks);
     });
 };

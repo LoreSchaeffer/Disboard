@@ -6,7 +6,7 @@ import Input from "../../forms/Input";
 import {useEffect, useRef, useState} from "react";
 import {useClickOutside} from "../../../hooks/useClickOutside";
 import {useAnimatedUnmount} from "../../../hooks/useAnimatedUnmount";
-import {useProfiles} from "../../../context/ProfilesProvider";
+import {useProfiles} from "../../../context/ProfilesContext";
 import {validateName} from "../../../../shared/validation";
 import {BoardType} from "../../../../types";
 
@@ -81,8 +81,6 @@ const GridProfileSettings = ({show, onClose, mb = '0px'}: ProfileSettingsProps) 
     }
 
     if (!shouldRender) return null;
-
-    console.log(mb);
 
     return (
         <div

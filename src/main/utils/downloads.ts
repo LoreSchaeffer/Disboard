@@ -4,7 +4,7 @@ import axios, {isAxiosError} from "axios";
 import {THUMBNAILS_DIR, TRACKS_DIR, USER_AGENT} from "../constants";
 import sharp from "sharp";
 import {determineTitle, downloadAudio, extractCoverImage} from "./ffmpeg";
-import {BoardType, GridProfiles, Track, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, GridProfiles, MATrack, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
 import {getBestThumbnail, getVideoId, getYoutubeStream} from "./music-api";
 import {getGridProfilesStore, musicBoardStore, sfxBoardStore} from "../storage/profiles-store";
@@ -12,6 +12,7 @@ import {broadcastData} from "./broadcast";
 import {convertGridProfile2SbGridProfile} from "./data-converters";
 import Store from "electron-store";
 import {cacheStore} from "../storage/cache-store";
+import {settingsStore} from "../storage/settings-store";
 
 const updateTracksStore = (track: Track) => {
     const tracks = tracksStore.get('tracks') || [];
@@ -63,7 +64,7 @@ const downloadTrack = async (track: Track): Promise<void> => {
             ? await getYoutubeStream(getVideoId(track.source.src))
             : track.source.src;
 
-        track.duration = await downloadAudio(uri, TRACKS_DIR, track.id);
+        track.duration = await downloadAudio(uri, TRACKS_DIR, track.id, track.title);
         track.downloading = false;
 
         updateTracksStore(track);
@@ -145,14 +146,21 @@ export const createAndDownloadTrack = async (
     boardType: Exclude<BoardType, 'ambient'>,
     trackId: string,
     source: Exclude<TrackSourceName, 'list'>,
-    media: YTSearchResult | string,
+    media: YTSearchResult | string | MATrack,
     customTitle?: string
 ): Promise<Track> => {
+    const src = source === 'youtube'
+        ? (media as YTSearchResult).url
+        : source === 'music_api'
+            ? `${settingsStore.get('musicApi')}/api/tracks/play/${(media as MATrack).id}`
+            : (media as string);
+
+
     const track: Track = {
         id: trackId,
         source: {
             type: source,
-            src: source === 'youtube' ? (media as YTSearchResult).url : (media as string)
+            src: src
         },
         title: customTitle || (source === 'youtube' ? (media as YTSearchResult).name : undefined),
         duration: undefined,
@@ -246,7 +254,7 @@ export const fixMissingTracks = async () => {
                 console.error(`[Main] Failed to restore audio for ${track.id}`, e);
             }
         } else if (!thumbExists) {
-             try {
+            try {
                 const unreachableUrls = cacheStore.get('unreachableUrls') || [];
                 const fallbackThumbnailUrl = getFallbackThumbnailUrl(track) || '';
 

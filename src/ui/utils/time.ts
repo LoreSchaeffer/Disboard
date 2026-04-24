@@ -11,7 +11,7 @@ export const formatTime = (time: Time | number): string => {
 
     let formatted = '';
     if (hours > 0) formatted += hours + ':';
-    formatted += minutes.toString() + ':';
+    formatted += minutes.toString().padStart(2, '0') + ':';
     formatted += seconds.toString().padStart(2, '0');
 
     return formatted;

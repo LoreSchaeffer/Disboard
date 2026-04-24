@@ -5,24 +5,33 @@ export type ContentPos = 'default' | 'centered';
 
 type TitlebarContextType = {
     setTitle: (title: string) => void;
-    setTitlebarContent: (children: ReactNode, position?: ContentPos) => void;
+    setMainContent: (children: ReactNode, position?: ContentPos) => void;
+    setRightContent: (children: ReactNode) => void;
 };
 
 const TitlebarContext = createContext<TitlebarContextType | undefined>(undefined);
 
 export const TitlebarProvider = ({children}: PropsWithChildren) => {
     const [title, setTitle] = useState<string>('Disboard');
-    const [childrenContent, setChildrenContent] = useState<ReactNode>(null);
-    const [contentPos, setContentPos] = useState<ContentPos>('default');
+    const [mainContent, setMainContent] = useState<ReactNode>(null);
+    const [mainContentPos, setMainContentPos] = useState<ContentPos>('default');
+    const [rightContent, setRightContent] = useState<ReactNode>(null);
 
-    const setTitlebarContent = (children: ReactNode, position: ContentPos = 'default') => {
-        setChildrenContent(children);
-        setContentPos(position);
-    }
 
     return (
-        <TitlebarContext.Provider value={{setTitle, setTitlebarContent}}>
-            <Titlebar title={title} contentPos={contentPos}>{childrenContent}</Titlebar>
+        <TitlebarContext.Provider value={{
+            setTitle,
+            setMainContent: (children: ReactNode, position: ContentPos = 'default') => {
+                setMainContent(children);
+                setMainContentPos(position);
+            },
+            setRightContent: (children: ReactNode) => setRightContent(children),
+        }}>
+            <Titlebar
+                title={title}
+                contentPos={mainContentPos}
+                rightContent={rightContent}
+            >{mainContent}</Titlebar>
             {children}
         </TitlebarContext.Provider>
     );

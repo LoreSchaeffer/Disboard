@@ -11,8 +11,12 @@ import {
     GridPos,
     GridProfile,
     IpcResponse,
+    MATrack,
     MediaType,
     PlayerTrack,
+    Playlist,
+    PlaylistTrack,
+    RepeatMode,
     Route,
     SbAmbientBtn,
     SbAmbientProfile,
@@ -72,7 +76,7 @@ const gridProfilesApi = {
         get: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<SbGridBtn | null> => ipcRenderer.invoke('grid_profiles:buttons:get', boardType, profileId, buttonId),
         update: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string, updates: DeepPartial<GridBtn>): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update', boardType, profileId, buttonId, updates),
         swap: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, pos1: GridPos, pos2: GridPos): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:swap', boardType, profileId, pos1, pos2),
-        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
+        updateTrack: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, gridPos: GridPos, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:update_track', boardType, profileId, gridPos, source, media, customTitle),
         delete: (boardType: Exclude<BoardType, 'ambient'>, profileId: string, buttonId: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('grid_profiles:buttons:delete', boardType, profileId, buttonId),
     }
 }
@@ -100,8 +104,9 @@ const ambientProfilesApi = {
 const tracksApi = {
     getAll: (): Promise<Track[]> => ipcRenderer.invoke('tracks:get_all'),
     get: (id: string): Promise<Track | null> => ipcRenderer.invoke('tracks:get', id),
-    getVolatile: (source: TrackSourceName, media: YTSearchResult | string): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
+    getVolatile: (source: TrackSourceName, media: YTSearchResult | string | MATrack): Promise<IpcResponse<PlayerTrack>> => ipcRenderer.invoke('tracks:get_volatile', source, media),
     delete: (id: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('tracks:delete', id),
+    getUsed: (): Promise<string[]> => ipcRenderer.invoke('tracks:get_used'),
 
     onChanged: (func: (tracks: Track[]) => void) => createListener('tracks:changed', func),
 }
@@ -109,11 +114,15 @@ const tracksApi = {
 const systemApi = {
     openLink: (url: string) => ipcRenderer.send('system:open_link', url),
     openFileMediaSelector: (mediaType?: MediaType): Promise<IpcResponse<string>> => ipcRenderer.invoke('system:open_file_media_selector', mediaType),
+    openFile: (path?: string) => ipcRenderer.send('system:open_file', path),
 }
 
 const musicApi = {
     useApi: (): Promise<boolean> => ipcRenderer.invoke('musicapi:use_api'),
     search: (query: string): Promise<IpcResponse<YTSearchResult[]>> => ipcRenderer.invoke('musicapi:search', query),
+    getPlaylists: (): Promise<IpcResponse<Playlist[]>> => ipcRenderer.invoke('musicapi:get_playlists'),
+    getPlaylistTracks: (playlistId: string): Promise<IpcResponse<PlaylistTrack[]>> => ipcRenderer.invoke('musicapi:get_playlist_tracks', playlistId),
+    getTracks: (size?: number, sort?: string, direction?: 'asc' | 'desc'): Promise<IpcResponse<MATrack[]>> => ipcRenderer.invoke('musicapi:get_tracks', size, sort, direction),
 }
 
 const discordApi = {
@@ -125,10 +134,27 @@ const discordApi = {
 
 const playerApi = {
     stopPreview: () => ipcRenderer.send('player:preview_stopped'),
-    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
+    playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
 
     onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
     onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
+    onPlayButton: (func: (buttonId: string) => void) => createListener('player:on_play_button', func),
+    onStopSfx: (func: (buttonId?: string) => void) => createListener('player:on_stop_sfx', func),
+    onPlay: (func: () => void) => createListener('player:on_play', func),
+    onPause: (func: () => void) => createListener('player:on_pause', func),
+    onPlayPause: (func: () => void) => createListener('player:on_play_pause', func),
+    onStop: (func: () => void) => createListener('player:on_stop', func),
+    onNext: (func: () => void) => createListener('player:on_next', func),
+    onPrevious: (func: () => void) => createListener('player:on_previous', func),
+    onSeek: (func: (time: number) => void) => createListener('player:on_seek', func),
+    onBroadcastState: (func: () => void) => createListener('player:on_broadcast_state', func),
+    onVolumeChange: (func: (volume: number) => void) => createListener('player:on_volume_change', func),
+    onRepeatModeChange: (func: (mode: RepeatMode) => void) => createListener('on_repeat_mode_change', func),
+}
+
+const remoteServerApi = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    broadcast: (channel: string, ...args: any[]) => ipcRenderer.send('remote-server:broadcast', channel, ...args),
 }
 
 const api = {
@@ -141,6 +167,7 @@ const api = {
     music: musicApi,
     discord: discordApi,
     player: playerApi,
+    remoteServer: remoteServerApi,
 };
 
 contextBridge.exposeInMainWorld('electron', api);

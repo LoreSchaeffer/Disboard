@@ -12,6 +12,8 @@ import {createBoardWin} from "./main/windows";
 import {BoardType} from "./types";
 import {setupLogger} from "./main/utils/logger";
 import {fixMissingTracks} from "./main/utils/downloads";
+import {RemoteServer} from "./main/utils/remote/remote-server";
+import {registerRemoteServerHandlers} from "./main/utils/remote/rsc";
 
 registerProtocols();
 
@@ -20,7 +22,19 @@ const setupCorsHandler = () => {
         urls: ['http://*/*', 'https://*/*']
     };
 
+    const useMusicApi = settingsStore.get('musicApi');
+
     session.defaultSession.webRequest.onHeadersReceived(filter, (details, callback) => {
+        const isMusicApi = useMusicApi && details.url.startsWith(settingsStore.get('musicApi'));
+
+        if (isMusicApi) {
+            callback({
+                responseHeaders: details.responseHeaders,
+                statusLine: details.statusLine
+            });
+            return;
+        }
+
         const {responseHeaders} = details;
         if (responseHeaders) {
             responseHeaders['Access-Control-Allow-Origin'] = ['*'];
@@ -75,7 +89,12 @@ const initApp = async () => {
     state.discordBot = new DiscordBot();
     state.discordBot.init();
 
-    // 7. Launch board
+    // 7. Init Remote Server
+    registerRemoteServerHandlers();
+    state.remoteServer = new RemoteServer();
+    state.remoteServer.init();
+
+    // 8. Launch board
     console.log('[Main] Launching renderer...');
     const startupBoards: BoardType[] = settingsStore.get('openOnStartup') || ['music'];
     const boardsToOpen: BoardType[] = startupBoards.length > 0 ? startupBoards : ['music'];
@@ -84,7 +103,7 @@ const initApp = async () => {
         createBoardWin(boardType);
     });
 
-    // 8. Fix missing tracks
+    // 9. Fix missing tracks
     fixMissingTracks().catch(e => {
         console.error('[Main] Critical error during background track fix:', e);
     });

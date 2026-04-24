@@ -50,14 +50,17 @@
 
 .inputWrapper.primary .standardInput {
     border-color: var(--border-on-primary);
+    background-color: var(--background-primary);
 }
 
 .inputWrapper.secondary .standardInput {
     border-color: var(--border-on-secondary);
+    background-color: var(--background-secondary);
 }
 
 .inputWrapper.tertiary .standardInput {
     border-color: var(--border-on-tertiary);
+    background-color: var(--background-tertiary);
 }
 
 .inputWrapper.error .standardInput {

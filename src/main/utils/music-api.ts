@@ -1,5 +1,5 @@
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig} from "axios";
-import {ApiCredentials, YTSearchResult, YTStream} from "../../types";
+import {ApiCredentials, MATrack, Playlist, PlaylistTrack, YTSearchResult, YTStream} from "../../types";
 import {net} from "electron";
 import {state} from "../state";
 
@@ -74,6 +74,28 @@ export class MusicApi {
 
         if (res.status < 200 || res.status >= 300) throw new Error(`Get stream request failed with status ${res.status}`);
         return res.data?.content;
+    }
+
+    public async getPlaylists(): Promise<Playlist[]> {
+        const res = await this.api.get('/playlists');
+        if (res.status < 200 || res.status >= 300) return [];
+        return res.data?.content;
+    }
+
+    public async getPlaylistTracks(id: string): Promise<PlaylistTrack[]> {
+        const res = await this.api.get(`/playlists/${id}/tracks`);
+        if (res.status < 200 || res.status >= 300) throw new Error(`Get playlist tracks request failed with status ${res.status}`);
+        return res.data;
+    }
+
+    public async getTracks(size?: number, sort: string = 'title', direction: 'asc' | 'desc' = 'asc'): Promise<MATrack[]> {
+        const params: Record<string, unknown> = {};
+        params.size = size;
+        if (sort) params.sort = `${sort},${direction}`;
+
+        const res = await this.api.get<{ content: MATrack[] }>('/tracks', {params});
+        if (res.status < 200 || res.status >= 300) throw new Error(`Get tracks request failed with status ${res.status}`);
+        return res.data?.content ?? [];
     }
 
     public getStreamProxy = (audioUrl: string): string => {

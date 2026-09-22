@@ -57,7 +57,7 @@ export const setupPlayerRSHandlers = () => {
         if (!isBoardOpen('music')) return;
 
         const board = getBoardWin('music');
-        board.webContents.send('player:seek', time);
+        board.webContents.send('player:on_seek', time);
     });
 
     remoteMain.on('player:play_button', (_, boardType: BoardType, id: string) => {

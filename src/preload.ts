@@ -149,7 +149,7 @@ const playerApi = {
     onSeek: (func: (time: number) => void) => createListener('player:on_seek', func),
     onBroadcastState: (func: () => void) => createListener('player:on_broadcast_state', func),
     onVolumeChange: (func: (volume: number) => void) => createListener('player:on_volume_change', func),
-    onRepeatModeChange: (func: (mode: RepeatMode) => void) => createListener('on_repeat_mode_change', func),
+    onRepeatModeChange: (func: (mode: RepeatMode) => void) => createListener('player:on_repeat_mode_change', func),
 }
 
 const remoteServerApi = {

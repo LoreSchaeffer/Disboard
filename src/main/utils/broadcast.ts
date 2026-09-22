@@ -24,7 +24,7 @@ export type BroadcastChannelMap = {
     'player:on_previous': [],
     'player:on_seek': [time: number],
     'player:on_volume_change': [volume: number],
-    'on_repeat_mode_change': [mode: RepeatMode],
+    'player:on_repeat_mode_change': [mode: RepeatMode],
 }
 
 export const broadcastData = <K extends keyof BroadcastChannelMap>(

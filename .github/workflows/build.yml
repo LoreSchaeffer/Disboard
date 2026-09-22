@@ -3,8 +3,6 @@ name: Build Electron Application
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -39,12 +37,7 @@ jobs:
       - name: Install npm Dependencies
         run: npm ci
 
-      - name: Build and Package (Pull Request - Solo Test)
-        if: github.event_name == 'pull_request'
-        run: npm run make
-
-      - name: Build, Package & Publish Release (Push su Main)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      - name: Build, Package & Publish Release
         run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

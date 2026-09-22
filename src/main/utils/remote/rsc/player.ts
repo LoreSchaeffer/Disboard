@@ -29,7 +29,7 @@ export const setupPlayerRSHandlers = () => {
         if (!isBoardOpen('music')) return;
 
         const board = getBoardWin('music');
-        board.webContents.send('payer:on_play_pause');
+        board.webContents.send('player:on_play_pause');
     });
 
     remoteMain.on('player:next', () => {

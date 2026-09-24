@@ -87,11 +87,19 @@ export class DiscordBot {
             if (newState.status === VoiceConnectionStatus.Ready) {
                 console.log('[Discord] Voice connection ready!');
                 this.isConnected = true;
+                this.audioQueues.clear();
 
                 if (this.player.state.status !== AudioPlayerStatus.Playing) this._startStreaming();
             } else if (newState.status === VoiceConnectionStatus.Disconnected) {
                 this.isConnected = false;
                 console.log('[Discord] Connection disconnected. Checking if it is a move or a close...');
+
+                this.audioQueues.clear();
+                if (this.player) this.player.stop(true);
+                if (this.audioStream) {
+                    this.audioStream.destroy();
+                    this.audioStream = new PassThrough({ highWaterMark: 1024 * 16 });
+                }
 
                 try {
                     await Promise.race([
@@ -100,8 +108,20 @@ export class DiscordBot {
                     ]);
                     console.log('[Discord] It was a channel move/reconnect. Waiting for Ready state...');
                 } catch {
-                    console.log('[Discord] Connection lost permanently (Kicked or Network drop).');
+                    console.log('[Discord] Connection lost permanently (Kicked or Network drop). Attempting to reconnect...');
+                    const guildId = this.connection?.joinConfig.guildId;
+                    const channelId = this.connection?.joinConfig.channelId;
+                    
                     this.leaveChannel();
+                    
+                    if (guildId && channelId && settingsStore.get('discord.enabled')) {
+                        setTimeout(() => {
+                            console.log('[Discord] Reconnecting to voice channel...');
+                            this.joinChannel(guildId, channelId).catch(err => {
+                                console.error('[Discord] Reconnection failed:', err);
+                            });
+                        }, 5000);
+                    }
                 }
             } else if (newState.status === VoiceConnectionStatus.Destroyed) {
                 this.isConnected = false;
@@ -122,8 +142,12 @@ export class DiscordBot {
     }
 
     public writeAudioPacket(playerId: string, buffer: Buffer): void {
-        if (!this.isConnected || !this.audioStream || this.audioStream.destroyed) return;
+        if (!this.isConnected) return;
         if (this.connection?.state.status !== VoiceConnectionStatus.Ready) return;
+
+        if (!this.audioStream || this.audioStream.destroyed) {
+            this.audioStream = new PassThrough({ highWaterMark: 1024 * 16 });
+        }
 
         const now = Date.now();
         if (!this.audioQueues.has(playerId)) this.audioQueues.set(playerId, {buffer: [], lastSeen: now});
@@ -135,6 +159,11 @@ export class DiscordBot {
         if (source.buffer.length > 5) source.buffer.shift();
 
         this._tryMix();
+
+        if (this.player && this.player.state.status === AudioPlayerStatus.Idle) {
+            console.log('[Discord] Audio player is idle, restarting stream to resume audio...');
+            this._startStreaming();
+        }
     }
 
     public getStatus(): DiscordStatus {
@@ -275,18 +304,23 @@ export class DiscordBot {
         const chunksToMix: Buffer[] = [];
         for (const source of this.audioQueues.values()) chunksToMix.push(source.buffer.shift()!);
 
+        const MAX_BUFFER_SIZE = 1024 * 16;
+        
         if (chunksToMix.length === 1) {
+            if (this.audioStream.writableLength > MAX_BUFFER_SIZE) return;
             this.audioStream.write(chunksToMix[0]);
             return;
         }
 
-        const packetLength = chunksToMix[0].length;
+        const packetLength = Math.max(...chunksToMix.map(c => c.length));
         const mixed = Buffer.alloc(packetLength);
 
         for (let i = 0; i < packetLength; i += 2) {
             let sum = 0;
             for (const chunk of chunksToMix) {
-                if (i < chunk.length) sum += chunk.readInt16LE(i);
+                if (i + 1 < chunk.length) {
+                    sum += chunk.readInt16LE(i);
+                }
             }
 
             if (sum > 32767) sum = 32767;
@@ -295,6 +329,7 @@ export class DiscordBot {
             mixed.writeInt16LE(sum, i);
         }
 
+        if (this.audioStream.writableLength > MAX_BUFFER_SIZE) return;
         this.audioStream.write(mixed);
     }
 
@@ -322,6 +357,13 @@ export class DiscordBot {
 
         this.client.on('error', (error) => {
             console.error('[Discord] Client error:', error);
+            
+            setTimeout(() => {
+                if (settingsStore.get('discord.enabled')) {
+                    console.log('[Discord] Attempting to recover from client error...');
+                    this.init();
+                }
+            }, 5000);
         });
     }
 
@@ -340,7 +382,11 @@ export class DiscordBot {
     }
 
     private _startStreaming() {
-        if (!this.player || !this.audioStream) return;
+        if (!this.player) return;
+        
+        if (!this.audioStream || this.audioStream.destroyed) {
+            this.audioStream = new PassThrough({ highWaterMark: 1024 * 16 });
+        }
 
         const resource = createAudioResource(this.audioStream, {
             inputType: StreamType.Raw

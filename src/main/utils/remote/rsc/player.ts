@@ -77,9 +77,21 @@ export const setupPlayerRSHandlers = () => {
         getBoardWin(boardType).webContents.send('player:on_volume_change', clamp(volume, 0, 100));
     });
 
+    remoteMain.on('player:mute', (_, boardType: BoardType, mute: boolean) => {
+        if (!isBoardOpen(boardType)) return;
+
+        getBoardWin(boardType).webContents.send('player:on_mute_change', mute);
+    });
+
     remoteMain.on('player:repeat_mode', (_, mode: RepeatMode) => {
         if (!isBoardOpen('music')) return;
 
         getBoardWin('music').webContents.send('player:on_repeat_mode_change', mode);
+    });
+
+    remoteMain.on('player:shuffle_mode', (_, shuffle: boolean) => {
+        if (!isBoardOpen('music')) return;
+
+        getBoardWin('music').webContents.send('player:on_shuffle_mode_change', shuffle);
     });
 }

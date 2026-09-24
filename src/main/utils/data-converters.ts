@@ -1,6 +1,6 @@
 import {AmbientBtn, AmbientProfile, GridBtn, GridProfile, MATrack, PlayerTrack, SbAmbientBtn, SbAmbientProfile, SbGridBtn, SbGridProfile, Track, TrackSourceName, YTSearchResult} from "../../types";
 import {tracksStore} from "../storage/tracks-store";
-import {getYoutubeStream} from "./music-api";
+import {getBestThumbnail, getYoutubeStream} from "./music-api";
 import {generateUUID} from "./misc";
 import {probeMedia} from "./ffmpeg";
 import {settingsStore} from "../storage/settings-store";
@@ -76,7 +76,8 @@ export const createPlayerTrack = async (source: TrackSourceName, media: YTSearch
                     id: generateUUID(),
                     source: {
                         type: 'youtube',
-                        src: stream
+                        src: stream,
+                        thumbnail: getBestThumbnail(ytResult.thumbnails)
                     },
                     title: customTitle || ytResult.name,
                     duration: ytResult.duration * 1000,

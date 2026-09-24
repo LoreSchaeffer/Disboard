@@ -214,6 +214,14 @@ const GridSoundboard = ({gridHeight = 'calc(100vh - var(--titlebar-height) - 1px
                         onClick: () => setCopiedButton({...btn})
                     }
                 );
+
+                // TODO Replace with a proper solution for enabling this
+                if (settings.debug) items.push({
+                    label: 'Copy Track Id',
+                    icon: <PiCopyBold/>,
+                    onClick: () => window.electron.system.copy(btn.track?.id),
+                    disabled: !btn.track
+                })
             }
 
             if (copiedButton) {

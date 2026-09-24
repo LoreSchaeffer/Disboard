@@ -17,6 +17,12 @@ const BoardWin = ({children}: PropsWithChildren) => {
     const zoomRef = useRef<number>(1);
 
     useEffect(() => {
+        const unsubVolume = window.electron.player.onVolumeChange((volume) => {
+            player.setVolume(volume)
+            updateSettingsAsync({[boardType]: {volume: volume}});
+        });
+        const unsubMute = window.electron.player.onMuteChange((mute) => player.setMuted(mute));
+
         const handleMouseWheel = (e: WheelEvent) => {
             if (!e.ctrlKey) return;
             e.preventDefault();
@@ -34,6 +40,8 @@ const BoardWin = ({children}: PropsWithChildren) => {
         setTitle(`Disboard ${boardType.charAt(0).toUpperCase() + boardType.slice(1)}`);
 
         return () => {
+            unsubVolume();
+            unsubMute();
             window.removeEventListener('wheel', handleMouseWheel);
         }
     }, []);

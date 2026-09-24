@@ -63,7 +63,10 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             window.electron.remoteServer.broadcast('player:timeupdate', data.boardType, {currentTime: time.getTimeMs(), duration: duration ? duration.getTimeMs() : 0});
         };
 
-        player.on('play', syncAndBroadcast);
+        player.on('play', () => {
+            syncAndBroadcast();
+            if (data.boardType === 'music') window.electron.player.updateCurrentTrack(player.getCurrentTrack());
+        });
         player.on('pause', syncAndBroadcast);
         player.on('resume', syncAndBroadcast);
         player.on('ended', () => {
@@ -96,11 +99,16 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             setRepeat(mode);
             syncAndBroadcast();
         });
+        player.on('shuffleupdate', (isShuffle) => {
+            setState(prev => ({...prev, shuffle: isShuffle}));
+            syncAndBroadcast();
+        });
         player.on('sfxupdate', (sfx) => {
             setActiveSfx(sfx);
             syncAndBroadcast();
         });
         player.on('timeupdate', handleTimeUpdate);
+        player.on('muteupdate', () => syncAndBroadcast());
 
         const unsubStopped = window.electron.player.onPreviewStopped(() => {
             if (!previewPlayer) return;
@@ -122,9 +130,11 @@ export const PlayerProvider = ({children}: PropsWithChildren) => {
             player.off('loading');
             player.off('ended');
             player.off('timeupdate');
+            player.off('muteupdate');
             player.off('trackchange');
             player.off('queueupdate');
             player.off('repeatupdate');
+            player.off('shuffleupdate');
             player.off('error');
             player.off('reset');
             player.off('sfxupdate');

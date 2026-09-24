@@ -16,19 +16,17 @@ type SfxControlsProps = {
 const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     const {settings, updateSettingsAsync} = useWindow();
     const {boardType} = useProfiles();
-    const {player, activeSfx} = usePlayer();
+    const {player, activeSfx, state} = usePlayer();
 
     const [volume, setVolume] = useState<number>(settings['sfx'].volume);
-    const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
         setVolume(settings['sfx'].volume);
     }, [settings['sfx'].volume]);
 
     useEffect(() => {
-        if (muted) player.setVolume(0);
-        else player.setVolume(volume);
-    }, [volume, muted, player]);
+        player.setVolume(volume);
+    }, [volume, player]);
 
     if (boardType !== 'sfx') return null;
 
@@ -37,17 +35,17 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
     };
 
     const changeVolume = (_: number, newValue: number) => {
-        if (muted && newValue > 0) setMuted(false);
+        if (state?.muted && newValue > 0) player.setMuted(false);
         setVolume(newValue);
-        updateSettingsAsync({sfx: {volume: newValue}});
+        updateSettingsAsync({music: {volume: newValue}});
     };
 
     const toggleMute = () => {
-        if (!muted) setMuted(true);
-        else setMuted(false);
+        player.setMuted(!(state?.muted ?? false));
     };
 
-    const VolumeIcon = muted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
+    const isMuted = state?.muted ?? false;
+    const VolumeIcon = isMuted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
     const activeSfxCount = Object.values(activeSfx).length;
 
     return (
@@ -81,7 +79,7 @@ const SfxControls = ({showProfileSettings}: SfxControlsProps) => {
                     <PlayerBtn
                         icon={<VolumeIcon/>}
                         onClick={toggleMute}
-                        title={muted ? 'Unmute' : 'Mute'}
+                        title={isMuted ? 'Unmute' : 'Mute'}
                     />
                     <ProgressBar className={styles.volumeSlider} min={0} max={100} val={volume} seekable onChange={changeVolume}/>
                 </div>

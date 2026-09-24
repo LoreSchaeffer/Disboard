@@ -1,4 +1,4 @@
-import {BoardType, StaticWinData, WindowOptions} from "../types";
+import {BoardType, PlayerTrack, StaticWinData, WindowOptions} from "../types";
 import {MusicApi} from "./utils/music-api";
 import {DiscordBot} from "./utils/discord-bot";
 import {RemoteServer} from "./utils/remote/remote-server";
@@ -14,6 +14,8 @@ class StateManager {
     public musicBoardId: number = null;
     public sfxBoardId: number = null;
     public ambientBoardId: number = null;
+
+    public currentMusicTrack: PlayerTrack | null = null;
 }
 
 export const isBoardOpen = (boardType: BoardType): boolean => {

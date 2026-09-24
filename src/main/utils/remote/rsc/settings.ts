@@ -3,6 +3,7 @@ import {settingsStore} from "../../../storage/settings-store";
 import {BoardType, RepeatMode, Settings} from "../../../../types";
 import {broadcastData} from "../../broadcast";
 import {clamp} from "../../../../shared/utils";
+import {getGridProfilesStore} from "../../../storage/profiles-store";
 
 export const setupSettingsRSHandlers = () => {
     remoteMain.handle('settings:get', (): Settings => {
@@ -14,7 +15,8 @@ export const setupSettingsRSHandlers = () => {
         broadcastData('settings:changed', settingsStore.store);
     });
 
-    remoteMain.on('settings:set_active_profile', (_, boardType: BoardType, profileId: string) => {
+    remoteMain.on('settings:set_active_profile', (_, boardType: Exclude<BoardType, 'ambient'>, profileId: string) => {
+        if (!getGridProfilesStore(boardType).get('profiles').find(p => p.id === profileId)) return;
         settingsStore.set(`${boardType}.activeProfile`, profileId);
         broadcastData('settings:changed', settingsStore.store);
     });

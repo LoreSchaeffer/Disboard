@@ -115,6 +115,7 @@ const systemApi = {
     openLink: (url: string) => ipcRenderer.send('system:open_link', url),
     openFileMediaSelector: (mediaType?: MediaType): Promise<IpcResponse<string>> => ipcRenderer.invoke('system:open_file_media_selector', mediaType),
     openFile: (path?: string) => ipcRenderer.send('system:open_file', path),
+    copy: (str: string) => ipcRenderer.send('system:copy', str),
 }
 
 const musicApi = {
@@ -135,6 +136,7 @@ const discordApi = {
 const playerApi = {
     stopPreview: () => ipcRenderer.send('player:preview_stopped'),
     playNow: (boardType: Exclude<BoardType, 'ambient'>, source: TrackSourceName, media: YTSearchResult | string | MATrack, customTitle?: string): Promise<IpcResponse<void>> => ipcRenderer.invoke('player:play_now', boardType, source, media, customTitle),
+    updateCurrentTrack: (track: PlayerTrack) => ipcRenderer.send('player:update_current_track', track),
 
     onPreviewStopped: (func: () => void) => createListener('player:preview_stopped', func),
     onPlayNow: (func: (boardType: Exclude<BoardType, 'ambient'>, track: PlayerTrack) => void) => createListener('player:on_play_now', func),
@@ -149,7 +151,9 @@ const playerApi = {
     onSeek: (func: (time: number) => void) => createListener('player:on_seek', func),
     onBroadcastState: (func: () => void) => createListener('player:on_broadcast_state', func),
     onVolumeChange: (func: (volume: number) => void) => createListener('player:on_volume_change', func),
+    onMuteChange: (func: (mute: boolean) => void) => createListener('player:on_mute_change', func),
     onRepeatModeChange: (func: (mode: RepeatMode) => void) => createListener('player:on_repeat_mode_change', func),
+    onShuffleModeChange: (func: (shuffle: boolean) => void) => createListener('player:on_shuffle_mode_change', func),
 }
 
 const remoteServerApi = {

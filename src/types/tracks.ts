@@ -7,7 +7,8 @@ export const TrackSourceSchema = z.object({
     type: TrackSourceNameSchema.refine(val => val !== 'list', {
         message: "'list' type is not allowed as a track source",
     }),
-    src: z.string().optional()
+    src: z.string().optional(),
+    thumbnail: z.url().optional()
 });
 
 export const TrackSchema = z.object({

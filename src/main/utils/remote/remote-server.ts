@@ -4,8 +4,6 @@ import {RemoteEvent, RemoteMessage, RemoteWebSocket, Settings, WebsocketSettings
 import {remoteMain} from "./remote-main";
 import {createServer} from "node:http";
 import {generateUUID} from "../misc";
-import {net} from "electron";
-import {Readable} from "node:stream";
 
 const TIMEOUT = 15;
 
@@ -59,28 +57,13 @@ export class RemoteServer {
                         }
 
                         const resourcePath = pathname.slice(5);
+                        const match = remoteMain.getHttpHandler(resourcePath);
 
-                        const fetchHeaders = new Headers();
-                        if (req.headers.range) {
-                            fetchHeaders.set('Range', req.headers.range);
-                        }
-
-                        const fetchOptions: RequestInit = {
-                            method: req.method,
-                            headers: fetchHeaders
-                        };
-
-                        const intRes = await net.fetch(`disboard://${resourcePath}`, fetchOptions);
-                        res.statusCode = intRes.status;
-
-                        intRes.headers.forEach((value, key) => res.setHeader(key, value));
-
-                        if (intRes.body) {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const nodeStream = Readable.fromWeb(intRes.body as any);
-                            nodeStream.pipe(res);
+                        if (match) {
+                            await match.handler(req, res, match.subPath, parsedUrl);
                         } else {
-                            res.end();
+                            res.writeHead(404);
+                            res.end('Not Found');
                         }
                     } else {
                         res.writeHead(404);

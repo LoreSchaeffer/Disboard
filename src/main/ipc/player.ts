@@ -1,7 +1,8 @@
 import {ipcMain} from "electron";
 import {broadcastData} from "../utils/broadcast";
-import {BoardType, IpcResponse, MATrack, TrackSourceName, YTSearchResult} from "../../types";
+import {BoardType, IpcResponse, MATrack, PlayerTrack, TrackSourceName, YTSearchResult} from "../../types";
 import {createPlayerTrack} from "../utils/data-converters";
+import {state} from "../state";
 
 export const setupPlayerHandlers = () => {
     ipcMain.on('player:stop_preview', () => {
@@ -19,5 +20,9 @@ export const setupPlayerHandlers = () => {
         broadcastData('player:on_play_now', boardType, track);
 
         return {success: true};
+    });
+
+    ipcMain.on('player:update_current_track', (_, track: PlayerTrack) => {
+        state.currentMusicTrack = track;
     });
 }

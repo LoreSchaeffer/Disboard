@@ -8,6 +8,7 @@ export type PlayerState = {
     seeking: boolean;
     loading: boolean;
     shuffle: boolean;
+    muted: boolean;
 }
 
 export type SfxState = {
@@ -32,6 +33,7 @@ type EventHandlerMap = {
     loading?: (isLoading: boolean) => void;
     sfxupdate?: (activeSfx: Record<string, SfxState>) => void;
     shuffleupdate?: (isShuffle: boolean) => void;
+    muteupdate?: (muted: boolean) => void;
 };
 
 export class Player {
@@ -58,6 +60,7 @@ export class Player {
     private duration: Time | null = null;
 
     private masterVolume: number = 50;
+    private muted: boolean = false;
 
     private botMode: boolean = false;
     private captureMediaKeys: boolean = false;
@@ -79,6 +82,7 @@ export class Player {
             seeking: false,
             loading: false,
             shuffle: false,
+            muted: false,
         };
 
         this.audio.preload = 'auto';
@@ -198,7 +202,8 @@ export class Player {
             this._startRecording().catch(e => console.error('Failed to start recording:', e));
         } else {
             this._stopRecording();
-            this.localGateNode.gain.setTargetAtTime(1, this.audioContext.currentTime, 0.1);
+            const targetGain = this.muted ? 0 : 1.0;
+            this.localGateNode.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.1);
         }
     }
 
@@ -323,7 +328,7 @@ export class Player {
             let targetVol = this.masterVolume;
             if (this.currentTrack && this.currentTrack.volumeOverride !== undefined && this.currentTrack.volumeOverride !== null) targetVol = this.currentTrack.volumeOverride;
 
-            const normalizedVol = clamp(targetVol, 0, 100) / 100;
+            const normalizedVol = this.muted ? 0 : clamp(targetVol, 0, 100) / 100;
             this.masterGainNode.gain.linearRampToValueAtTime(normalizedVol, this.audioContext.currentTime + 0.2);
         }).catch(console.error);
     }
@@ -548,7 +553,27 @@ export class Player {
 
     public setVolume(volume: number) {
         this.masterVolume = clamp(volume, 0, 100);
-        this.masterGainNode.gain.setTargetAtTime(this.masterVolume / 100, this.audioContext.currentTime, 0.1);
+        this._applyVolume();
+    }
+
+    public setMuted(mute: boolean) {
+        if (this.muted === mute) return;
+
+        this.muted = mute;
+        this.state.muted = mute;
+
+        const targetLocalGain = (mute || this.botMode) ? 0 : 1.0;
+
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+        this.localGateNode.gain.setTargetAtTime(targetLocalGain, this.audioContext.currentTime, 0.1);
+
+        this._applyVolume();
+
+        this.eventHandlers['muteupdate']?.(mute);
+    }
+
+    public isMuted(): boolean {
+        return this.muted;
     }
 
     public async setOutputDevice(deviceId: string) {
@@ -738,7 +763,8 @@ export class Player {
             finalVolume = this.masterVolume;
         }
 
-        this.masterGainNode.gain.setTargetAtTime(clamp(finalVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
+        const targetGain = this.muted ? 0 : (clamp(finalVolume, 0, 100) / 100);
+        this.masterGainNode.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.1);
     }
 
     private _resetPlayer() {
@@ -746,8 +772,6 @@ export class Player {
         this.audio.removeAttribute('src');
         this.audio.load();
         this.audio.currentTime = 0;
-
-        this.masterGainNode.gain.setTargetAtTime(clamp(this.masterVolume, 0, 100) / 100, this.audioContext.currentTime, 0.1);
 
         this.state.playing = false;
         this.state.paused = false;
@@ -760,6 +784,8 @@ export class Player {
         this.endTime = null;
         this.duration = null;
         this.playHistory = [];
+
+        this._applyVolume();
 
         this._updateMediaSessionState('none');
         this._updateMediaSessionMetadata();

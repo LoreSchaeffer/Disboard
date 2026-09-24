@@ -119,9 +119,17 @@ export const getBestThumbnail = (thumbnails: ({ url: string; width: number; heig
 
 export const getTrackCoverUrl = (track?: PlayerTrack, settings?: Settings): string => {
     if (!track) return './images/track.png'
-    if (track.source.type === 'music_api') {
-        if (!settings) return './images/track.png';
-        return `${settings.musicApi}/api/tracks/cover/${track.id}`;
+
+    if (!track.directStream) {
+        return `disboard://thumbnail/${track.id}`;
+    } else {
+        if (track.source.type === 'music_api' && settings) {
+            return `${settings.musicApi}/api/tracks/cover/${track.id}`;
+        } else if (track.source.type === 'youtube') {
+            return track.source.thumbnail || './images/track.png';
+        } else {
+            return `disboard://thumbnail/${track.id}`;
+        }
     }
-    return `disboard://thumbnail/${track.id}`;
+
 }

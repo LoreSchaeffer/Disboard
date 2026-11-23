@@ -7,6 +7,11 @@ import {settingsStore} from "../../../storage/settings-store";
 export const setupThumbnailHandler = () => {
 
     remoteMain.handleHttp('thumbnail/', async (req, res, resId) => {
+        const abortController = new AbortController();
+        req.on('close', () => {
+            if (!res.writableEnded) abortController.abort();
+        });
+
         try {
             const fetchHeaders = new Headers();
             if (req.headers.range) {
@@ -15,7 +20,8 @@ export const setupThumbnailHandler = () => {
 
             const fetchOptions: RequestInit = {
                 method: req.method,
-                headers: fetchHeaders
+                headers: fetchHeaders,
+                signal: abortController.signal
             };
 
             let url;
@@ -45,7 +51,9 @@ export const setupThumbnailHandler = () => {
             } else {
                 res.end();
             }
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.name === 'AbortError') return;
+
             console.error('[HttpApi] Thumbnail Proxy Handler Error:', error);
             if (!res.headersSent) {
                 res.writeHead(500);

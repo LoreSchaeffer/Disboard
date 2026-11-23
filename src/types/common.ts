@@ -17,6 +17,7 @@ export type ProbeResult = {
     format: string;
     codec: string;
     duration: number;
+    sampleRate: number;
     tags: Record<string, string | number>;
 }
 

@@ -23,10 +23,15 @@ const MusicBoardWin = () => {
         const unsubNext = window.electron.player.onNext(() => player.next());
         const unsubPrevious = window.electron.player.onPrevious(() => player.previous());
         const unsubSeek = window.electron.player.onSeek((time) => player.seek(time));
-        const unsubVolume = window.electron.player.onVolumeChange((volume) => player.setVolume(volume));
+
         const unsubRepeatMode = window.electron.player.onRepeatModeChange((mode) => {
             player.setRepeatMode(mode);
             window.electron.settings.set({music: {repeat: mode}});
+        });
+
+        const unsubShuffleMode = window.electron.player.onShuffleModeChange((shuffle) => {
+            player.setShuffleMode(shuffle);
+            window.electron.settings.set({music: {shuffle}});
         });
 
         return () => {
@@ -37,14 +42,14 @@ const MusicBoardWin = () => {
             unsubNext();
             unsubPrevious();
             unsubSeek();
-            unsubVolume();
             unsubRepeatMode();
+            unsubShuffleMode();
         };
     }, []);
 
     useEffect(() => {
         if (settings && settings.music && settings.music.repeat) player.setRepeatMode(settings.music.repeat);
-        if (settings && settings.music && settings.music.shuffle) player.setShuffleMode(settings.music.shuffle);
+        if (settings && settings.music && settings.music.shuffle !== undefined) player.setShuffleMode(settings.music.shuffle);
     }, [settings]);
 
     return (

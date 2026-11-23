@@ -1,4 +1,4 @@
-import {app, dialog, ipcMain, shell} from "electron";
+import {app, dialog, ipcMain, shell, clipboard} from "electron";
 import path from "path";
 import {IpcResponse, MediaType} from "../../types";
 import {ALL_MEDIA_FILES, AUDIO_FILES, ROOT_DIR, VIDEO_FILES} from "../constants";
@@ -53,5 +53,13 @@ export const setupSystemHandlers = () => {
 
         const error = await shell.openPath(filePath);
         if (error) console.error(`[IPC] Cannot open path (${filePath}): ${error}`);
+    });
+
+    ipcMain.on('system:copy', async (_, str: string) => {
+        try {
+            clipboard.writeText(str);
+        } catch (e) {
+            console.log('[System] Failed to copy to clipboard:', e);
+        }
     });
 }

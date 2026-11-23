@@ -38,16 +38,14 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
     const {player, state, currentTrack, duration, currentTime, queue, index, repeat} = usePlayer();
 
     const [volume, setVolume] = useState<number>(settings[boardType].volume);
-    const [muted, setMuted] = useState<boolean>(false);
 
     useEffect(() => {
         setVolume(settings[boardType].volume);
     }, [settings[boardType].volume]);
 
     useEffect(() => {
-        if (muted) player.setVolume(0);
-        else player.setVolume(volume);
-    }, [volume, muted, player]);
+        player.setVolume(volume);
+    }, [volume, player]);
 
     if (boardType !== 'music') return null;
 
@@ -70,21 +68,21 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
     };
 
     const changeVolume = (_: number, newValue: number) => {
-        if (muted && newValue > 0) setMuted(false);
+        if (state?.muted && newValue > 0) player.setMuted(false);
         setVolume(newValue);
         updateSettingsAsync({music: {volume: newValue}});
     };
 
     const toggleMute = () => {
-        if (!muted) setMuted(true);
-        else setMuted(false);
+        player.setMuted(!(state?.muted ?? false));
     };
 
     const queueExists = queue && queue.length > 0;
     const isFirstTrack = queueExists && index === 0;
     const isLastTrack = queueExists && index === queue.length - 1;
     const repeatModeAll = settings[boardType].repeat === 'all';
-    const VolumeIcon = muted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
+    const isMuted = state?.muted ?? false;
+    const VolumeIcon = isMuted ? PiSpeakerSimpleSlashBold : getVolumeIcon(volume);
 
     return (
         <>
@@ -178,7 +176,7 @@ const Player = ({showProfileSettings, showPlaylist, showAvailablePlaylists}: Pla
                         <PlayerBtn
                             icon={<VolumeIcon/>}
                             onClick={toggleMute}
-                            title={muted ? 'Unmute' : 'Mute'}
+                            title={isMuted ? 'Unmute' : 'Mute'}
                         />
                         <ProgressBar className={styles.volumeSlider} min={0} max={100} val={volume} seekable onChange={changeVolume}/>
                     </div>

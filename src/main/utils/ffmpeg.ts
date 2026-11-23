@@ -37,6 +37,7 @@ export const probeMedia = (inputSource: string): Promise<ProbeResult> => {
                     format: data.format?.format_name || '',
                     codec: audioStream?.codec_name || 'unknown',
                     duration: Number(data.format?.duration) || 0,
+                    sampleRate: Number(audioStream?.sample_rate) || 0,
                     tags: data.format?.tags || {}
                 });
             });
@@ -108,9 +109,9 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
         throw new Error(`[FFmpeg] Error processing source: ${errorMessage}`);
     }
 
-    const isSourceMp3 = probe.codec === 'mp3';
+    const isSourceMp3 = probe.codec === 'mp3' && probe.sampleRate === 48000;
 
-    console.log(`[FFmpeg] Processing ${trackTitle} (${trackId}). Source Codec: ${probe.codec}. Strategy: ${isSourceMp3 ? 'DIRECT COPY' : 'TRANSCODE'}`);
+    console.log(`[FFmpeg] Processing ${trackTitle} (${trackId}). Source Codec: ${probe.codec}, SR: ${probe.sampleRate}Hz. Strategy: ${isSourceMp3 ? 'DIRECT COPY' : 'TRANSCODE'}`);
 
     return new Promise((resolve, reject) => {
         const command = ffmpeg(ffmpegSource).inputOptions(getInputOptions(ffmpegSource));
@@ -123,6 +124,7 @@ export const downloadAudio = async (inputSource: string, outputDir: string, trac
             command
                 .noVideo()
                 .audioCodec('libmp3lame')
+                .audioFrequency(48000)
                 .audioBitrate(256)
                 .outputOptions([
                     '-threads 0',

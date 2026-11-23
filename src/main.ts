@@ -14,6 +14,7 @@ import {setupLogger} from "./main/utils/logger";
 import {fixMissingTracks} from "./main/utils/downloads";
 import {RemoteServer} from "./main/utils/remote/remote-server";
 import {registerRemoteServerHandlers} from "./main/utils/remote/rsc";
+import {registerHttpHandlers} from "./main/utils/remote/http";
 
 registerProtocols();
 
@@ -91,6 +92,7 @@ const initApp = async () => {
 
     // 7. Init Remote Server
     registerRemoteServerHandlers();
+    registerHttpHandlers();
     state.remoteServer = new RemoteServer();
     state.remoteServer.init();
 
